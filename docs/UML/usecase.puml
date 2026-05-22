@@ -61,7 +61,7 @@ rectangle "MyCPT 시스템" {
   }
 
   package "시스템 내부" #FFF7ED {
-    usecase "LLM 캐시 조회 / 저장\nD · I · S · C 버킷 기반 (6⁴ = 1,296)" as UC_Cache
+    usecase "LLM 캐시 조회 / 저장\nD · I · S · C 버킷 기반 (9⁴ = 6,561)" as UC_Cache
     usecase "캐시 초기화" as UC_Clear
   }
 }
@@ -86,7 +86,7 @@ UC_Save   ..> UC_Login : <<include>>
 note right of UC_Cache
   캐시 미스 시에만 LLM API 호출
   캐시 히트 시 DB에서 즉시 반환
-  → 최대 1,296회 API 호출로 전체 커버
+  → 최대 6,561회 API 호출로 전체 커버
 end note
 
 note right of UC_Compat
