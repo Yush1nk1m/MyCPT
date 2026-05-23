@@ -56,19 +56,19 @@ rectangle "MyCPT 시스템" {
     usecase "카카오 로그인 / 로그아웃" as UC_Login
     usecase "결과 이력 조회" as UC_History
     usecase "타인 통계 비교\n나이대 · 성별 기준" as UC_Stats
-    usecase "동료 코드 생성" as UC_Code
-    usecase "케미\n동료 케미 보고서 발행" as UC_Compat
+    usecase "동료 초대 코드 생성\n다회용 · 7일마다 자동 갱신" as UC_Code
+    usecase "동료 초대 및 등록\n초대 링크 수락 시 양방향 관계 생성" as UC_ColleagueRegister
+    usecase "동료 케미 보고서 발행\n동료 목록에서 대상 선택" as UC_Compat
+    usecase "인앱 알림 확인\n읽음 처리" as UC_Notify
   }
 
   package "시스템 내부" #FFF7ED {
     usecase "LLM 캐시 조회 / 저장\nD · I · S · C 버킷 기반 (9⁴ = 6,561)" as UC_Cache
     usecase "캐시 초기화" as UC_Clear
+    usecase "만료 동료 코드 삭제" as UC_PeerCodeClean
+    usecase "오래된 읽음 알림 삭제" as UC_NotifyClean
   }
 }
-
-Guest  --> UC_Test
-Guest  --> UC_Result
-Guest  --> UC_Save
 
 Member --> UC_Test
 Member --> UC_Result
@@ -76,29 +76,48 @@ Member --> UC_Login
 Member --> UC_History
 Member --> UC_Stats
 Member --> UC_Code
-Member --> UC_Compat  : 코인 1개 소모
+Member --> UC_ColleagueRegister
+Member --> UC_Compat      : 코인 1개 소모
+Member --> UC_Notify
 
-Batch  --> UC_Clear   : 1 ~ 2달 주기
+Guest  --> UC_Test
+Guest  --> UC_Result
+Guest  --> UC_Save
+
+Batch  --> UC_Clear        : 1 ~ 2달 주기
+Batch  --> UC_PeerCodeClean : 주기적 실행
+Batch  --> UC_NotifyClean   : 주기적 실행
 
 UC_Result ..> UC_Cache : <<include>>
 UC_Save   ..> UC_Login : <<include>>
+UC_Compat ..> UC_Notify : <<include>>
 
 note right of UC_Cache
   캐시 미스 시에만 LLM API 호출
   캐시 히트 시 DB에서 즉시 반환
   → 최대 6,561회 API 호출로 전체 커버
+  보고서 원문에 이름 미포함 저장
+  렌더링 시 이름 삽입
 end note
 
 note right of UC_Compat
   캐싱 없이 매번 실시간 LLM 호출
-  정확도 우선 설계
+  발행 시점 DISC 스냅샷 저장
+  보고서 원문에 이름 미포함 저장
   코인 충전: 초기 3개 지급
   이후 24h마다 +1, 최대 3개 보유
 end note
 
+note right of UC_Code
+  보안: 7일 주기 갱신으로
+  코드 유추를 통한 타인 성향
+  열람 방지
+end note
+
 note bottom of UC_Test
   검사 완료 후 나이(출생연도) · 성별 입력
-  비회원: 통계 반영은 로그인 저장 시에만 적용
+  비회원: D/I/S/C 버킷값을 세션에 임시 저장
+  로그인 후 DB에 저장 및 통계 반영
 end note
 
 @enduml
