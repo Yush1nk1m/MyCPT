@@ -49,40 +49,48 @@ rectangle "MyCPT 시스템" {
   package "공통 기능" #EEF6FF {
     usecase "검사 응시\n횟수 제한 없음" as UC_Test
     usecase "결과 확인\nDISC 분석 · 강점 · 약점 등 6개 섹션" as UC_Result
-    usecase "로그인 후 결과 저장" as UC_Save
+    usecase "로그인 후 결과 저장\nsessionStorage 원점수 → 서버 전송" as UC_Save
+    usecase "타인 평정 응시\n링크 접속 → 24문항 → 피평정자 귀속" as UC_PeerAssess
   }
 
   package "회원 전용 기능" #F0FDF4 {
     usecase "카카오 로그인 / 로그아웃" as UC_Login
-    usecase "결과 이력 조회" as UC_History
-    usecase "타인 통계 비교\n나이대 · 성별 기준" as UC_Stats
+    usecase "프로필 설정\n닉네임 · 생년 · 성별 · 이미지" as UC_Profile
+    usecase "결과 이력 조회\n자기 평정 / 타인 평정 구분" as UC_History
+    usecase "통계 비교\n나이대 · 성별 기준 (자기 평정만 집계)" as UC_Stats
+    usecase "변화 추이 조회\n기간별 자기 평정 평균 및 추이" as UC_Trend
     usecase "동료 초대 코드 생성\n대문자+숫자 8자리 · 다회용 · 7일 갱신" as UC_Code
     usecase "동료 초대 및 등록\n링크 공유 또는 코드 직접 입력\n수락 시 양방향 관계 생성" as UC_ColleagueRegister
-    usecase "동료 케미 보고서 발행\n동료 목록에서 대상 선택 · 6개 섹션" as UC_Compat
+    usecase "타인 평정 링크 생성\n'나는 어떤 사람인가요?'\n일회용 토큰 · 7일 만료 · 라벨 입력" as UC_AssessLink
+    usecase "동료 케미 보고서 발행\n동료 목록에서 대상 선택 · 6개 섹션\n@Async LLM · SSE 완료 푸시" as UC_Compat
     usecase "인앱 알림 확인\n클릭 시 즉시 삭제" as UC_Notify
   }
 
   package "시스템 내부" #FFF7ED {
     usecase "LLM 캐시 조회 / 저장\nD · I · S · C 버킷 기반 (9⁴ = 6,561)\n온디맨드 만료 · 행 UPDATE 갱신" as UC_Cache
-    usecase "만료 동료 코드 삭제" as UC_PeerCodeClean
+    usecase "만료 동료 코드 삭제\n만료 평정 토큰 삭제 통합 실행" as UC_CleanBatch
   }
 }
 
 Guest  --> UC_Test
 Guest  --> UC_Result
 Guest  --> UC_Save
+Guest  --> UC_PeerAssess
 
 Member --> UC_Test
 Member --> UC_Result
 Member --> UC_Login
+Member --> UC_Profile
 Member --> UC_History
 Member --> UC_Stats
+Member --> UC_Trend
 Member --> UC_Code
 Member --> UC_ColleagueRegister
+Member --> UC_AssessLink
 Member --> UC_Compat      : 코인 1개 소모
 Member --> UC_Notify
 
-Batch  --> UC_PeerCodeClean : 주기적 실행
+Batch  --> UC_CleanBatch : 주기적 실행
 
 UC_Result ..> UC_Cache  : <<include>>
 UC_Save   ..> UC_Login  : <<include>>
@@ -97,9 +105,9 @@ note right of UC_Cache
 end note
 
 note right of UC_Compat
-  캐싱 없이 매번 실시간 LLM 호출
-  발행 시점 DISC 스냅샷 저장
-  보고서 원문에 이름 미포함 저장
+  캐싱 없이 매번 실시간 LLM 호출 (@Async)
+  발행 즉시 202 반환 → 완료 시 SSE 푸시
+  DISC 버킷 스냅샷 미저장 (보고서 텍스트로 충분)
   코인 충전: 초기 3개 지급
   이후 24h마다 +1 (온디맨드), 최대 3개
 end note
@@ -110,10 +118,32 @@ note right of UC_Code
   열람 방지
 end note
 
+note right of UC_AssessLink
+  일회용 토큰 (CHAR 32)
+  만료: 7일
+  used=TRUE 시 재접속 차단
+  라벨로 평정자 식별 가능
+  결과는 피평정자 계정에 귀속
+  누가 평정했는지 저장하지 않음
+end note
+
 note bottom of UC_Test
-  검사 완료 후 나이(출생연도) · 성별 입력 (최초 1회)
-  비회원: D/I/S/C 버킷값을 세션에 임시 저장
-  로그인 후 DB에 저장 및 통계 반영
+  비회원: DISC 원점수를 클라이언트 sessionStorage에 임시 보관
+  서버 세션 미발급 (플러딩 방어)
+  로그인 후 원점수를 서버로 전송하여 저장
+  통계 반영 및 결과 저장은 로그인 후에만 가능
+end note
+
+note bottom of UC_Save
+  sessionStorage의 DISC 원점수를
+  POST /results 로 전송
+  서버가 버킷값 산출 후 test_results INSERT
+end note
+
+note right of UC_Stats
+  생년/성별 입력 회원만 비교 가능
+  미입력 시 "정보 입력하고 비교하기" 안내
+  자기 평정(rater_type=SELF) 결과만 집계
 end note
 
 @enduml
