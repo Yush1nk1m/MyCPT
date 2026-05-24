@@ -3,7 +3,7 @@
 **문서 버전**: v0.1
 **작성일**: '26.05.24.
 **작성자**: 김유신
-**연관 문서**: service-design.md v0.6 / database-design.md v0.2
+**연관 문서**: service-design.md v0.6 / database-design.md v0.4
 
 ---
 

@@ -27,6 +27,7 @@
     - [1.1 테이블 목록](#11-테이블-목록)
     - [1.2 설계 원칙](#12-설계-원칙)
   - [2. ERD](#2-erd)
+  - [3. 테이블 명세 (DBML)](#3-테이블-명세-dbml)
   - [4. 인덱스 전략](#4-인덱스-전략)
   - [5. 배치 작업](#5-배치-작업)
 
@@ -63,7 +64,7 @@
 
 ## 2. ERD
 
-````mermaid
+```mermaid
 %%{init: {
   "theme": "base",
   "themeVariables": {
@@ -185,6 +186,7 @@ erDiagram
   disc_cache          ||--o{ test_results        : "버킷 참조 (복합 FK)"
   chemistry_reports   ||--o{ notifications       : "알림 트리거"
   colleagues          ||--o{ notifications       : "알림 트리거"
+```
 
 ---
 
@@ -387,7 +389,7 @@ Ref: chemistry_reports.requester_id  > users.id
 Ref: chemistry_reports.partner_id    > users.id
 
 Ref: notifications.user_id           > users.id
-````
+```
 
 ---
 

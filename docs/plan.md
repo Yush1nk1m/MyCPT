@@ -24,9 +24,9 @@
 - [x] **서비스 기획서** — service-design.md v0.6 완성
 - [x] **요구사항 명세서** — requirements-design.md v0.1 완성 (service-design.md에서 분리)
 - [x] **유즈케이스 다이어그램** — usecase.puml v0.6 완성
-- [x] **ERD + 테이블 명세** — database-design.md v0.3 완성 (Mermaid ERD + DBML 10개 테이블)
+- [x] **ERD + 테이블 명세** — database-design.md v0.4 완성 (Mermaid ERD + DBML 10개 테이블)
 - [x] **API 명세** — api-design.md v0.1 완성 (28개 엔드포인트)
-- [x] **DDL** — schema.sql v0.3 완성 (10개 테이블)
+- [x] **DDL** — schema.sql v0.4 완성 (10개 테이블)
 - [ ] **시퀀스 다이어그램** — 검사 응시 흐름, 캐시 조회 흐름, 케미 보고서 발행 흐름
 - [ ] **시스템 아키텍처 다이어그램** — 컴포넌트 간 관계 및 데이터 흐름
 - [ ] **화면 설계 (와이어프레임)** — 주요 페이지 레이아웃 스케치
