@@ -24,13 +24,13 @@
 - [x] **서비스 기획서** — service-design.md v0.6 완성
 - [x] **요구사항 명세서** — requirements-design.md v0.1 완성 (service-design.md에서 분리)
 - [x] **유즈케이스 다이어그램** — usecase.puml v0.6 완성
-- [x] **ERD + 테이블 명세** — database-design.md v0.4 완성 (Mermaid ERD + DBML 9개 테이블)
-- [x] **API 명세** — api-design.md v0.1 완성 (28개 엔드포인트)
-- [x] **DDL** — schema.sql v0.4 완성 (9개 테이블)
-- [ ] **화면 설계 (와이어프레임)** — 주요 6페이지. 완성 후 API 명세와 대조 필수
-- [ ] **시스템 아키텍처 다이어그램** — 컴포넌트 간 관계 및 데이터 흐름
-- [ ] **시퀀스 다이어그램** — 검사 응시 흐름, 캐시 조회 흐름, 케미 보고서 발행 흐름 (와이어프레임 후 작성)
-- [ ] **Spring 패키지 구조 설계** — 레이어드 아키텍처 기준 패키지 트리
+- [x] **ERD + 테이블 명세** — database-design.md v0.5 완성 (Mermaid ERD + DBML 10개 테이블. tests/disc_results 분리)
+- [x] **API 명세** — api-design.md v0.2 완성 (29개 엔드포인트. testType 추가, DELETE /users/me 추가)
+- [x] **DDL** — schema.sql v0.5 완성 (10개 테이블)
+- [x] **시스템 아키텍처 다이어그램** — architecture-design.md 완성 (컴포넌트 다이어그램 + 주요 데이터 흐름 3종)
+- [x] **시퀀스 다이어그램** — 3종 완성 (검사 채점/캐시 흐름, 케미 발행 @Async+SSE 흐름, 비회원→회원 결과 저장 연계)
+- [x] **Spring 패키지 구조 설계** — architecture-design.md에 포함. 레이어드 아키텍처 기준 패키지 트리
+- [ ] **화면 설계 (와이어프레임)** — 19개 화면 중 7개 완성. 나머지 12개는 Claude Design 토큰 충전 후 완성
 
 ---
 
@@ -42,28 +42,32 @@
 
 ### 일별 계획
 
-| 날짜       | 작업                                                                               | 산출물                                            | 완료 |
-| ---------- | ---------------------------------------------------------------------------------- | ------------------------------------------------- | ---- |
-| 05.23 (토) | 서비스 기획서 v0.5, 유즈케이스 다이어그램 v0.5, ERD + 테이블 명세 완성             | service-design.md, database-design.md             | [x]  |
-| 05.24 (일) | DDL 작성, API 명세 작성, 요구사항 명세서 분리                                      | schema.sql, api-design.md, requirements-design.md | [x]  |
-| 05.25 (월) | 와이어프레임 스케치 (메인, 검사, 결과, 케미, 동료, 내 정보 페이지) → API 명세 대조 | 와이어프레임, api-design.md 보완                  | [ ]  |
-| 05.26 (화) | 시스템 아키텍처 + Spring 패키지 구조 설계                                          | 아키텍처 문서                                     | [ ]  |
-| 05.27 (수) | 시퀀스 다이어그램 3종 작성 (검사 흐름, 캐시 HIT/MISS 흐름, 케미 발행 흐름)         | 시퀀스 다이어그램                                 | [ ]  |
-| 05.28 (목) | Spring Boot 프로젝트 초기화, 의존성 설정, DDL 기반 DB 스키마 적용                  | 프로젝트 레포지토리                               | [ ]  |
-| 05.29 (금) | 카카오 OAuth 앱 등록 및 Spring Security 기본 설정                                  | OAuth 연동 기반                                   | [ ]  |
+| 날짜       | 작업                                                                                                                          | 산출물                                            | 완료 |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---- |
+| 05.23 (토) | 서비스 기획서 v0.5, 유즈케이스 다이어그램 v0.5, ERD + 테이블 명세 완성                                                        | service-design.md, database-design.md             | [x]  |
+| 05.24 (일) | DDL 작성, API 명세 작성, 요구사항 명세서 분리                                                                                 | schema.sql, api-design.md, requirements-design.md | [x]  |
+| 05.25 (월) | 와이어프레임 스케치 (P1: 메인/검사/공유, P2: 결과/결과상세/동료&케미 완성. 나머지 12개 화면 미완성 — Claude Design 토큰 소진) | 와이어프레임 (진행 중)                            | [-]  |
+|            | 시스템 아키텍처 + Spring 패키지 구조 설계 (05.26 선행 완료)                                                                   | architecture-design.md                            | [x]  |
+|            | 시퀀스 다이어그램 3종 작성 (05.27 선행 완료)                                                                                  | sequence\_\*.puml 3종                             | [x]  |
+|            | 와이어프레임 대조 후 API 명세 개정 (v0.2), database-design.md v0.5 / schema.sql v0.5 개정                                     | api-design.md, database-design.md, schema.sql     | [x]  |
+| 05.26 (화) | 와이어프레임 나머지 12개 화면 완성 → API 명세 최종 대조                                                                       | 와이어프레임 완성, api-design.md 보완             | [ ]  |
+| 05.27 (수) | (선행 완료 — 05.25에 진행)                                                                                                    | —                                                 | [x]  |
+| 05.28 (목) | Spring Boot 프로젝트 초기화, 의존성 설정, DDL 기반 DB 스키마 적용                                                             | 프로젝트 레포지토리                               | [ ]  |
+| 05.29 (금) | 카카오 OAuth 앱 등록 및 Spring Security 기본 설정                                                                             | OAuth 연동 기반                                   | [ ]  |
 
 ### 체크리스트
 
 - [x] 서비스 기획서 완성 (service-design.md v0.6)
 - [x] 요구사항 명세서 완성 (requirements-design.md v0.1)
 - [x] 유즈케이스 다이어그램 완성 (usecase.puml v0.6)
-- [x] ERD 완성 (10개 테이블, FK 관계, 인덱스 명시)
-- [x] DDL 완성 (schema.sql v0.4)
-- [x] API 명세 완성 (api-design.md v0.1, 28개 엔드포인트)
-- [ ] 와이어프레임 주요 6페이지 완성 (메인/검사/결과/케미/동료/내 정보)
-- [ ] API 명세 와이어프레임 대조 및 보완
-- [ ] 아키텍처 다이어그램 완성
-- [ ] 시퀀스 다이어그램 3종 완성
+- [x] ERD 완성 (database-design.md v0.5. 10개 테이블, FK 관계, 인덱스 명시)
+- [x] DDL 완성 (schema.sql v0.5. 10개 테이블)
+- [x] API 명세 완성 (api-design.md v0.2. 29개 엔드포인트)
+- [x] 아키텍처 다이어그램 완성 (architecture-design.md)
+- [x] 시퀀스 다이어그램 3종 완성 (sequence_scoring / sequence_chemistry / sequence_guest_to_member)
+- [x] Spring 패키지 구조 설계 완성 (architecture-design.md 내 포함)
+- [ ] 와이어프레임 전체 완성 (19개 화면. 현재 7개 완성)
+- [ ] API 명세 와이어프레임 최종 대조 및 보완
 - [ ] Spring Boot 프로젝트 실행 확인
 - [ ] DB 테이블 생성 확인
 - [ ] 카카오 개발자 앱 등록 완료
@@ -101,7 +105,7 @@
 - [ ] 캐시 MISS 시 LLM 호출 후 INSERT 확인
 - [ ] 비회원 원점수 sessionStorage 저장 확인
 - [ ] 타인 평정 링크 생성 및 일회용 처리 확인
-- [ ] 타인 평정 응시 완료 시 라벨 포함 test_results 저장 확인
+- [ ] 타인 평정 응시 완료 시 라벨 포함 tests + disc_results 저장 확인
 - [ ] 결과 화면 6개 섹션 보고서 정상 표시 확인
 - [ ] 비회원 이름 "사용자"로 렌더링 확인
 
@@ -119,9 +123,9 @@
 | 날짜       | 작업                                                                                                        | 산출물                                | 완료 |
 | ---------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------- | ---- |
 | 06.06 (토) | 카카오 OAuth 로그인/로그아웃 완성 및 세션 관리. 프로필 설정 페이지 구현 (닉네임, 생년, 성별, 프로필 이미지) | AuthController, ProfileController     | [ ]  |
-| 06.07 (일) | '로그인하고 결과 저장' — sessionStorage 원점수를 `POST /results`로 전송, test_results INSERT                | ResultSaveService                     | [ ]  |
+| 06.07 (일) | '로그인하고 결과 저장' — sessionStorage 원점수를 `POST /results`로 전송, tests + disc_results INSERT        | ResultSaveService                     | [ ]  |
 | 06.08 (월) | 결과 이력 조회 페이지 구현 (자기/타인 평정 구분, 커서 기반 페이지네이션)                                    | 이력 페이지                           | [ ]  |
-| 06.09 (화) | 통계 집계 로직 구현 — 나이대/성별 기준 평균 산출 (자기 평정만), statistics 테이블 갱신                      | StatisticsService                     | [ ]  |
+| 06.09 (화) | 통계 집계 로직 구현 — 나이대/성별 기준 평균 산출 (자기 평정만), tests JOIN disc_results 집계 쿼리           | StatisticsService                     | [ ]  |
 | 06.10 (수) | 통계 비교 + 변화 추이 화면 구현 (`GET /statistics/comparison`, `GET /statistics/trend`)                     | 통계 페이지                           | [ ]  |
 | 06.11 (목) | 동료 초대 코드 생성/조회 API 구현 (대문자+숫자 8자리, 온디맨드 리프레시)                                    | PeerCodeService                       | [ ]  |
 | 06.12 (금) | 동료 등록 흐름 구현 (링크/코드 입력 → colleagues INSERT, UNION ALL 조회), 동료 등록 알림 전송               | ColleagueService, NotificationService | [ ]  |
@@ -131,7 +135,7 @@
 - [ ] 카카오 로그인 후 세션 유지 확인
 - [ ] 프로필 설정 (닉네임, 생년, 성별, 이미지) 정상 동작 확인
 - [ ] 프로필 이미지 업로드 — jpg/png/webp 형식, 10MB 이하 검증 확인
-- [ ] sessionStorage 원점수 전송 후 test_results 정상 저장 확인
+- [ ] sessionStorage 원점수 전송 후 tests + disc_results 정상 저장 확인
 - [ ] 결과 이력 목록 자기/타인 평정 구분 및 라벨 표시 확인
 - [ ] 나이대/성별 통계 비교 수치 정확성 확인 (자기 평정만 집계)
 - [ ] 생년/성별 미입력 시 average: null 반환 확인
