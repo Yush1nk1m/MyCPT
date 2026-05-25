@@ -1,0 +1,73 @@
+package com.mycpt.backend.domain.user.entity;
+
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "users")
+@Getter
+// protected 기본 생성자 정의하여 create() 정적 팩토리 메서드를 통해서만 객체 생성 가능
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class User {
+
+    // 고유 식별자
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    // 카카오가 발급하는 사용자 고유 식별자(숫자이지만 VARCHAR 타입으로 관리)
+    @Column(nullable = false, unique = true, length = 50)
+    private String kakaoId;
+
+    // 사용자 닉네임
+    @Column(nullable = false, length = 30)
+    private String nickname;
+
+    // 스토리지 오브젝트 키 또는 외부 이미지 URL
+    // 신규 가입 시 카카오 프로필 이미지 URL을 그대로 저장
+    // 프로필 이미지 업로드 후 S3 오브젝트 키로 교체
+    // null이면 프론트엔드에서 기본 이미지 사용
+    @Column(length = 300)
+    private String profileImageKey;
+
+    // 사용자 생년
+    // YEAR 타입과 매핑되지만 Java에서는 Integer 타입으로 관리
+    // 로그인 후 프로필 변경 전까지 null로 설정
+    @Column(columnDefinition = "YEAR")
+    private Integer birthYear;
+
+    // 사용자 성별(M/F/N)
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+
+    // 사용자 코인 잔액
+    @Column(nullable = false)
+    private int coins;
+
+    // 다음 코인 충전 예정 시각(null일 시 코인 망충)
+    private LocalDateTime nextCoinAt;
+
+    // 사용자 가입 시각
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    // 성별을 나타내기 위한 중첩 Enum
+    public enum Gender {M, F, N,}
+
+    // 정적 팩토리 메서드
+    // 1. 메서드 이름을 통해 의도 표현
+    // 2. 생성 시 반드시 설정해야 하는 필드(coins, createdAt) 누락 방지
+    public static User create(String kakaoId, String nickname, String profileImageKey) {
+        User user = new User();
+        user.kakaoId = kakaoId;
+        user.nickname = nickname;
+        user.profileImageKey = profileImageKey;
+        user.coins = 3; // 신규 가입 시 초기 코인은 3으로 설정
+        user.createdAt = LocalDateTime.now();
+        return user;
+    }
+}
