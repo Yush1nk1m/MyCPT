@@ -9,9 +9,10 @@
 
 ## 변경 이력
 
-| 버전 | 변경 내용                   | 날짜       |
-| ---- | --------------------------- | ---------- |
-| v0.1 | 초안 작성 (28개 엔드포인트) | '26.05.24. |
+| 버전 | 변경 내용                                                                                                      | 날짜       |
+| ---- | -------------------------------------------------------------------------------------------------------------- | ---------- |
+| v0.1 | 초안 작성 (28개 엔드포인트)                                                                                    | '26.05.24. |
+| v0.2 | POST /assessments testType 파라미터 추가. DELETE /users/me 신규 추가. 타인 평정 링크 클라이언트 URL 구조 명시. | '26.05.25. |
 
 ---
 
@@ -295,6 +296,34 @@ Spring Security 세션 쿠키 기반. 카카오 로그인 완료 후 `JSESSIONID
 
 ---
 
+### `DELETE /users/me` — 회원 탈퇴
+
+- 인증: 회원 전용
+- 설명: 회원 탈퇴를 처리한다. 탈퇴 사유를 선택적으로 전달할 수 있으며,
+  클라이언트에서 2단 확인(사유 선택 → 최종 확인) 후 호출한다.
+  탈퇴 즉시 세션을 무효화하고 카카오 연결을 해제한다.
+
+**요청 바디**
+
+{
+"reason": "서비스가 필요 없어졌어요"
+}
+
+| 필드     | 타입   | 필수     | 설명                  |
+| -------- | ------ | -------- | --------------------- |
+| `reason` | string | optional | 탈퇴 사유. 최대 200자 |
+
+**응답 바디 (200)**
+
+응답 바디 없음.
+
+| 응답 코드 | 설명               |
+| --------- | ------------------ |
+| `200`     | 탈퇴 성공          |
+| `401`     | 인증되지 않은 요청 |
+
+---
+
 ## 5. 결과
 
 ### `POST /results` — 결과 저장
@@ -418,14 +447,12 @@ Spring Security 세션 쿠키 기반. 카카오 로그인 완료 후 `JSESSIONID
 | -------- | ------ | --------------------------------------------------------------------- |
 | `report` | string | Markdown 형식 분석 보고서 전문. Next.js에서 react-markdown으로 렌더링 |
 
-````
-
-| 응답 코드 | 설명 |
-| --------- | ---- |
-| `200` | 성공 |
-| `401` | 인증되지 않은 요청 |
-| `403` | 본인 결과가 아닌 경우 |
-| `404` | 존재하지 않는 결과 ID |
+| 응답 코드 | 설명                  |
+| --------- | --------------------- |
+| `200`     | 성공                  |
+| `401`     | 인증되지 않은 요청    |
+| `403`     | 본인 결과가 아닌 경우 |
+| `404`     | 존재하지 않는 결과 ID |
 
 ---
 
@@ -434,19 +461,21 @@ Spring Security 세션 쿠키 기반. 카카오 로그인 완료 후 `JSESSIONID
 ### `POST /assessments` — 타인 평정 링크 생성
 
 - 인증: 회원 전용
-- 설명: "나는 어떤 사람인가요?" 타인 평정 일회용 링크를 생성한다. 코인 소모 없음. URL 조합은 클라이언트가 처리한다.
+- 설명: "나는 어떤 사람인가요?" 타인 평정 일회용 링크를 생성한다. 코인 소모 없음. URL 조합은 클라이언트가 처리한다. 클라이언트 URL 형식: `/a/{token}` (예: mycpt.kr/a/9f7d2a)
 
 **요청 바디**
 
 ```json
 {
+  "testType": "DISC",
   "label": "여자친구"
 }
-````
+```
 
-| 필드    | 타입   | 필수     | 설명                        |
-| ------- | ------ | -------- | --------------------------- |
-| `label` | string | optional | 평정자 식별 라벨. 최대 30자 |
+| 필드       | 타입   | 필수     | 설명                          |
+| ---------- | ------ | -------- | ----------------------------- |
+| `testType` | string | required | 검사 유형. 현재는 DISC만 유효 |
+| `label`    | string | optional | 평정자 식별 라벨. 최대 30자   |
 
 **응답 바디 (201)**
 
@@ -979,26 +1008,27 @@ data: { "colleagueId": 15, "message": "유신님이 동료로 등록되었습니
 | 6   | GET    | `/auth/me`                  | 회원        | 내 정보 조회             |
 | 7   | PATCH  | `/users/me`                 | 회원        | 프로필 정보 수정         |
 | 8   | POST   | `/users/me/profile-image`   | 회원        | 프로필 이미지 업로드     |
-| 9   | POST   | `/results`                  | 회원        | 결과 저장                |
-| 10  | GET    | `/results`                  | 회원        | 결과 이력 목록 조회      |
-| 11  | GET    | `/results/{id}`             | 회원        | 결과 상세 조회           |
-| 12  | POST   | `/assessments`              | 회원        | 타인 평정 링크 생성      |
-| 13  | GET    | `/assessments/{token}`      | 비회원 가능 | 평정 링크 접속           |
-| 14  | GET    | `/statistics/comparison`    | 회원        | 나이대/성별 평균 비교    |
-| 15  | GET    | `/statistics/trend`         | 회원        | 변화 추이 조회           |
-| 16  | GET    | `/peer-code`                | 회원        | 내 동료 코드 조회        |
-| 17  | GET    | `/colleagues/invite/{code}` | 회원        | 초대 코드 유효성 확인    |
-| 18  | POST   | `/colleagues`               | 회원        | 동료 등록                |
-| 19  | GET    | `/colleagues`               | 회원        | 동료 목록 조회           |
-| 20  | GET    | `/colleagues/{colleagueId}` | 회원        | 동료 프로필 조회         |
-| 21  | DELETE | `/colleagues/{colleagueId}` | 회원        | 동료 삭제                |
-| 22  | POST   | `/chemistry-reports`        | 회원        | 케미 보고서 발행         |
-| 23  | GET    | `/chemistry-reports`        | 회원        | 케미 보고서 이력 조회    |
-| 24  | GET    | `/chemistry-reports/{id}`   | 회원        | 케미 보고서 상세 조회    |
-| 25  | GET    | `/notifications/stream`     | 회원        | SSE 연결                 |
-| 26  | GET    | `/notifications`            | 회원        | 알림 목록 조회           |
-| 27  | DELETE | `/notifications/{id}`       | 회원        | 알림 삭제                |
-| 28  | GET    | `/coins`                    | 회원        | 코인 잔액 조회           |
+| 9   | DELETE | `/users/me`                 | 회원        | 회원 탈퇴                |
+| 10  | POST   | `/results`                  | 회원        | 결과 저장                |
+| 11  | GET    | `/results`                  | 회원        | 결과 이력 목록 조회      |
+| 12  | GET    | `/results/{id}`             | 회원        | 결과 상세 조회           |
+| 13  | POST   | `/assessments`              | 회원        | 타인 평정 링크 생성      |
+| 14  | GET    | `/assessments/{token}`      | 비회원 가능 | 평정 링크 접속           |
+| 15  | GET    | `/statistics/comparison`    | 회원        | 나이대/성별 평균 비교    |
+| 16  | GET    | `/statistics/trend`         | 회원        | 변화 추이 조회           |
+| 17  | GET    | `/peer-code`                | 회원        | 내 동료 코드 조회        |
+| 18  | GET    | `/colleagues/invite/{code}` | 회원        | 초대 코드 유효성 확인    |
+| 19  | POST   | `/colleagues`               | 회원        | 동료 등록                |
+| 20  | GET    | `/colleagues`               | 회원        | 동료 목록 조회           |
+| 21  | GET    | `/colleagues/{colleagueId}` | 회원        | 동료 프로필 조회         |
+| 22  | DELETE | `/colleagues/{colleagueId}` | 회원        | 동료 삭제                |
+| 23  | POST   | `/chemistry-reports`        | 회원        | 케미 보고서 발행         |
+| 24  | GET    | `/chemistry-reports`        | 회원        | 케미 보고서 이력 조회    |
+| 25  | GET    | `/chemistry-reports/{id}`   | 회원        | 케미 보고서 상세 조회    |
+| 26  | GET    | `/notifications/stream`     | 회원        | SSE 연결                 |
+| 27  | GET    | `/notifications`            | 회원        | 알림 목록 조회           |
+| 28  | DELETE | `/notifications/{id}`       | 회원        | 알림 삭제                |
+| 29  | GET    | `/coins`                    | 회원        | 코인 잔액 조회           |
 
 ---
 
