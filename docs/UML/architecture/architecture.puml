@@ -54,7 +54,7 @@ package "Client" #EEF6FF {
 package "Spring Boot 3.x" #EEEDFE {
 
   package "Presentation" #F5F3FF {
-    [REST Controllers\n(28개 엔드포인트)] as Controllers
+    [REST Controllers\n(30개 엔드포인트)] as Controllers
     [Spring Security\n+ Kakao OAuth 2.0] as Security
   }
 

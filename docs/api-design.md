@@ -1,6 +1,6 @@
 # MyCPT API 명세서
 
-**문서 버전**: v0.1
+**문서 버전**: v0.3
 **작성일**: '26.05.24.
 **작성자**: 김유신
 **연관 문서**: service-design.md v0.6 / database-design.md v0.4
@@ -9,10 +9,11 @@
 
 ## 변경 이력
 
-| 버전 | 변경 내용                                                                                                      | 날짜       |
-| ---- | -------------------------------------------------------------------------------------------------------------- | ---------- |
-| v0.1 | 초안 작성 (28개 엔드포인트)                                                                                    | '26.05.24. |
-| v0.2 | POST /assessments testType 파라미터 추가. DELETE /users/me 신규 추가. 타인 평정 링크 클라이언트 URL 구조 명시. | '26.05.25. |
+| 버전 | 변경 내용                                                                                                                            | 날짜       |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| v0.1 | 초안 작성 (28개 엔드포인트)                                                                                                          | '26.05.24. |
+| v0.2 | POST /assessments testType 파라미터 추가. DELETE /users/me 신규 추가. 타인 평정 링크 클라이언트 URL 구조 명시.                       | '26.05.25. |
+| v0.3 | POST /assessments/{token}/submit 신규 추가. POST /results 응답 코드 200 → 201. POST /chemistry-reports INSUFFICIENT_COINS 409 → 422. | '26.05.25. |
 
 ---
 
@@ -359,7 +360,7 @@ Spring Security 세션 쿠키 기반. 카카오 로그인 완료 후 `JSESSIONID
 
 | 응답 코드 | 설명                                        |
 | --------- | ------------------------------------------- |
-| `200`     | 저장 성공                                   |
+| `201`     | 저장 성공                                   |
 | `400`     | 원점수 범위 오류 / D+I+S+C 합계가 24가 아님 |
 | `401`     | 인증되지 않은 요청                          |
 
@@ -519,6 +520,53 @@ Spring Security 세션 쿠키 기반. 카카오 로그인 완료 후 `JSESSIONID
 | `400 EXPIRED_CODE` | 만료된 토큰                        |
 | `400 TOKEN_USED`   | 이미 사용된 토큰                   |
 | `404`              | 존재하지 않는 토큰                 |
+
+---
+
+### `POST /assessments/{token}/submit` — 타인 평정 제출
+
+- 인증: 비회원 가능
+- 설명: 타인 평정 응시를 완료하고 결과를 피평정자 계정에 저장한다. 채점, tests/disc_results 저장, 토큰 used=TRUE 처리가 단일 트랜잭션으로 실행된다. 응시자에게 결과는 노출하지 않는다.
+
+**경로 파라미터**
+
+| 파라미터 | 타입   | 설명               |
+| -------- | ------ | ------------------ |
+| `token`  | string | 32자리 일회용 토큰 |
+
+**요청 바디**
+
+```json
+{
+  "answers": [
+    { "questionId": 1, "most": 1, "least": 4 },
+    { "questionId": 2, "most": 3, "least": 2 }
+  ]
+}
+```
+
+| 필드                   | 타입   | 필수     | 설명                      |
+| ---------------------- | ------ | -------- | ------------------------- |
+| `answers`              | array  | required | 문항별 응답 (24개)        |
+| `answers[].questionId` | number | required | 문항 번호 (1~24)          |
+| `answers[].most`       | number | required | Most 선택 optionId (1~4)  |
+| `answers[].least`      | number | required | Least 선택 optionId (1~4) |
+
+**응답 바디 (201)**
+
+```json
+{
+  "message": "응시가 완료되었습니다."
+}
+```
+
+| 응답 코드          | 설명                                              |
+| ------------------ | ------------------------------------------------- |
+| `201`              | 응시 완료 및 저장 성공                            |
+| `400`              | 문항 수 불일치 / most와 least가 동일 / 범위 밖 값 |
+| `400 EXPIRED_CODE` | 만료된 토큰                                       |
+| `400 TOKEN_USED`   | 이미 사용된 토큰                                  |
+| `404`              | 존재하지 않는 토큰                                |
 
 ---
 
@@ -798,7 +846,7 @@ Spring Security 세션 쿠키 기반. 카카오 로그인 완료 후 `JSESSIONID
 | `400 NO_RESULT`          | 본인 또는 상대방의 자기 평정 결과 없음 |
 | `401`                    | 인증되지 않은 요청                     |
 | `403`                    | 동료 관계가 아닌 사용자                |
-| `409 INSUFFICIENT_COINS` | 코인 부족                              |
+| `422 INSUFFICIENT_COINS` | 코인 부족                              |
 
 ---
 
@@ -998,37 +1046,38 @@ data: { "colleagueId": 15, "message": "유신님이 동료로 등록되었습니
 
 ## 엔드포인트 목록 요약
 
-| #   | 메서드 | 경로                        | 인증        | 설명                     |
-| --- | ------ | --------------------------- | ----------- | ------------------------ |
-| 1   | GET    | `/questions`                | 비회원 가능 | 문항 조회                |
-| 2   | POST   | `/results/score`            | 비회원 가능 | 채점 및 결과 반환        |
-| 3   | GET    | `/auth/kakao`               | 비회원      | 카카오 로그인 리다이렉트 |
-| 4   | GET    | `/auth/kakao/callback`      | 비회원      | OAuth 콜백 처리          |
-| 5   | POST   | `/auth/logout`              | 회원        | 로그아웃                 |
-| 6   | GET    | `/auth/me`                  | 회원        | 내 정보 조회             |
-| 7   | PATCH  | `/users/me`                 | 회원        | 프로필 정보 수정         |
-| 8   | POST   | `/users/me/profile-image`   | 회원        | 프로필 이미지 업로드     |
-| 9   | DELETE | `/users/me`                 | 회원        | 회원 탈퇴                |
-| 10  | POST   | `/results`                  | 회원        | 결과 저장                |
-| 11  | GET    | `/results`                  | 회원        | 결과 이력 목록 조회      |
-| 12  | GET    | `/results/{id}`             | 회원        | 결과 상세 조회           |
-| 13  | POST   | `/assessments`              | 회원        | 타인 평정 링크 생성      |
-| 14  | GET    | `/assessments/{token}`      | 비회원 가능 | 평정 링크 접속           |
-| 15  | GET    | `/statistics/comparison`    | 회원        | 나이대/성별 평균 비교    |
-| 16  | GET    | `/statistics/trend`         | 회원        | 변화 추이 조회           |
-| 17  | GET    | `/peer-code`                | 회원        | 내 동료 코드 조회        |
-| 18  | GET    | `/colleagues/invite/{code}` | 회원        | 초대 코드 유효성 확인    |
-| 19  | POST   | `/colleagues`               | 회원        | 동료 등록                |
-| 20  | GET    | `/colleagues`               | 회원        | 동료 목록 조회           |
-| 21  | GET    | `/colleagues/{colleagueId}` | 회원        | 동료 프로필 조회         |
-| 22  | DELETE | `/colleagues/{colleagueId}` | 회원        | 동료 삭제                |
-| 23  | POST   | `/chemistry-reports`        | 회원        | 케미 보고서 발행         |
-| 24  | GET    | `/chemistry-reports`        | 회원        | 케미 보고서 이력 조회    |
-| 25  | GET    | `/chemistry-reports/{id}`   | 회원        | 케미 보고서 상세 조회    |
-| 26  | GET    | `/notifications/stream`     | 회원        | SSE 연결                 |
-| 27  | GET    | `/notifications`            | 회원        | 알림 목록 조회           |
-| 28  | DELETE | `/notifications/{id}`       | 회원        | 알림 삭제                |
-| 29  | GET    | `/coins`                    | 회원        | 코인 잔액 조회           |
+| #   | 메서드 | 경로                          | 인증        | 설명                     |
+| --- | ------ | ----------------------------- | ----------- | ------------------------ |
+| 1   | GET    | `/questions`                  | 비회원 가능 | 문항 조회                |
+| 2   | POST   | `/results/score`              | 비회원 가능 | 채점 및 결과 반환        |
+| 3   | GET    | `/auth/kakao`                 | 비회원      | 카카오 로그인 리다이렉트 |
+| 4   | GET    | `/auth/kakao/callback`        | 비회원      | OAuth 콜백 처리          |
+| 5   | POST   | `/auth/logout`                | 회원        | 로그아웃                 |
+| 6   | GET    | `/auth/me`                    | 회원        | 내 정보 조회             |
+| 7   | PATCH  | `/users/me`                   | 회원        | 프로필 정보 수정         |
+| 8   | POST   | `/users/me/profile-image`     | 회원        | 프로필 이미지 업로드     |
+| 9   | DELETE | `/users/me`                   | 회원        | 회원 탈퇴                |
+| 10  | POST   | `/results`                    | 회원        | 결과 저장                |
+| 11  | GET    | `/results`                    | 회원        | 결과 이력 목록 조회      |
+| 12  | GET    | `/results/{id}`               | 회원        | 결과 상세 조회           |
+| 13  | POST   | `/assessments`                | 회원        | 타인 평정 링크 생성      |
+| 14  | GET    | `/assessments/{token}`        | 비회원 가능 | 평정 링크 접속           |
+| 15  | POST   | `/assessments/{token}/submit` | 비회원 가능 | 타인 평정 제출           |
+| 16  | GET    | `/statistics/comparison`      | 회원        | 나이대/성별 평균 비교    |
+| 17  | GET    | `/statistics/trend`           | 회원        | 변화 추이 조회           |
+| 18  | GET    | `/peer-code`                  | 회원        | 내 동료 코드 조회        |
+| 19  | GET    | `/colleagues/invite/{code}`   | 회원        | 초대 코드 유효성 확인    |
+| 20  | POST   | `/colleagues`                 | 회원        | 동료 등록                |
+| 21  | GET    | `/colleagues`                 | 회원        | 동료 목록 조회           |
+| 22  | GET    | `/colleagues/{colleagueId}`   | 회원        | 동료 프로필 조회         |
+| 23  | DELETE | `/colleagues/{colleagueId}`   | 회원        | 동료 삭제                |
+| 24  | POST   | `/chemistry-reports`          | 회원        | 케미 보고서 발행         |
+| 25  | GET    | `/chemistry-reports`          | 회원        | 케미 보고서 이력 조회    |
+| 26  | GET    | `/chemistry-reports/{id}`     | 회원        | 케미 보고서 상세 조회    |
+| 27  | GET    | `/notifications/stream`       | 회원        | SSE 연결                 |
+| 28  | GET    | `/notifications`              | 회원        | 알림 목록 조회           |
+| 29  | DELETE | `/notifications/{id}`         | 회원        | 알림 삭제                |
+| 30  | GET    | `/coins`                      | 회원        | 코인 잔액 조회           |
 
 ---
 

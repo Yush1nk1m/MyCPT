@@ -76,7 +76,7 @@ activate Coin
 
 alt 코인 부족 (coins == 0)
   Coin --> Controller : INSUFFICIENT_COINS
-  Controller --> Client : 400 INSUFFICIENT_COINS
+  Controller --> Client : 422 INSUFFICIENT_COINS
   Client --> UserA : 코인 부족 안내
 else 코인 충분
   Coin -> DB : UPDATE users SET coins = coins - 1

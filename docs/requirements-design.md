@@ -6,7 +6,7 @@
 **문서 버전**: v0.1
 **작성일**: '26.05.24.
 **작성자**: 김유신
-**연관 문서**: service-design.md v0.6 / api-design.md v0.1 / database-design.md v0.3
+**연관 문서**: service-design.md v0.6 / api-design.md v0.3 / database-design.md v0.5
 
 ---
 
@@ -161,7 +161,7 @@
 1. 회원 A가 타인 평정 링크 생성 → 라벨 입력 (예: "여자친구") → 일회용 토큰 발급
 2. A가 링크를 대상자에게 공유
 3. 대상자가 링크 접속 → 24문항 응시 (A의 성향을 평정하는 문항)
-4. 응시 완료 → 결과가 A의 계정에 `rater_type=OTHER`, `label=여자친구`로 귀속
+4. 응시 완료 → `POST /assessments/{token}/submit` 호출 → 채점, tests/disc_results 저장(rater_type=OTHER, label=여자친구), 토큰 used=TRUE 처리가 단일 트랜잭션으로 실행 → 결과가 A의 계정에 귀속. 응시자에게는 결과 미노출.
 5. 토큰 `used=TRUE` 처리 → 동일 링크 재접속 차단
 6. A의 결과 이력에서 자기 평정 / 타인 평정 구분하여 조회 가능
 
