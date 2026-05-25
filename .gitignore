@@ -1,1 +1,8 @@
-docs/wireframe/*
+# Ignore the Wireframe directory
+docs/wireframe/
+
+# Ignore the .env.dev file
+.env.dev
+
+# Ignore the MySQL data directory
+infra/docker/dev/mysql/data/
