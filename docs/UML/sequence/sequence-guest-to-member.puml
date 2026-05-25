@@ -1,0 +1,127 @@
+@startuml MyCPT_Sequence_GuestToMember
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName "Apple SD Gothic Neo, sans-serif"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #26215C
+skinparam sequenceMessageAlign center
+
+skinparam participant {
+  BackgroundColor #FFFFFF
+  BorderColor #AFA9EC
+  FontColor #26215C
+  FontSize 12
+}
+
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #7F77DD
+  FontColor #3C3489
+  FontSize 12
+  FontStyle bold
+}
+
+skinparam sequence {
+  ArrowColor #7F77DD
+  ArrowFontColor #534AB7
+  ArrowFontSize 10
+  LifeLineBorderColor #AFA9EC
+  LifeLineBackgroundColor #F5F3FF
+  GroupBorderColor #534AB7
+  GroupBackgroundColor #EEEDFE
+  GroupFontColor #3C3489
+  GroupFontSize 11
+  GroupBodyBackgroundColor #F5F3FF
+  DividerBackgroundColor #EEEDFE
+  DividerBorderColor #534AB7
+  DividerFontColor #3C3489
+}
+
+skinparam note {
+  BackgroundColor #F5F3FF
+  BorderColor #AFA9EC
+  FontColor #534AB7
+  FontSize 10
+}
+
+actor "비회원" as Guest
+participant "Next.js\n(브라우저)" as Client
+participant "ResultController" as ResultCtrl
+participant "AuthController" as AuthCtrl
+participant "ResultService" as ResultSvc
+database "MySQL" as DB
+collections "Kakao OAuth" as Kakao
+
+== 비회원 검사 응시 ==
+
+Guest -> Client : 검사 시작
+Client -> ResultCtrl : POST /results/score\n{ answers: [...] }
+ResultCtrl --> Client : 200 OK\n{ rawScores, buckets, report }
+
+note right of Client
+  서버 세션 미발급
+  (플러딩 방어)
+end note
+
+Client -> Client : sessionStorage.setItem(\n  'disc_raw_scores',\n  { d, i, s, c 원점수 }\n)
+
+Client --> Guest : 결과 화면\n("사용자님의 강점은...")
+
+== 로그인 후 결과 저장 ==
+
+Guest -> Client : '로그인하고 결과 저장' 클릭
+Client -> Client : sessionStorage에서\n원점수 읽기
+
+Client -> AuthCtrl : GET /auth/kakao\n(카카오 로그인 리다이렉트)
+AuthCtrl --> Client : 302 → Kakao 로그인 페이지
+
+Guest -> Kakao : 카카오 로그인
+Kakao --> AuthCtrl : GET /auth/kakao/callback\n{ code }
+
+activate AuthCtrl
+AuthCtrl -> Kakao : 토큰 교환 및 사용자 정보 조회
+Kakao --> AuthCtrl : 카카오 사용자 정보
+
+alt 신규 회원
+  AuthCtrl -> DB : INSERT users\n(kakao_id, nickname, coins=3)
+  note right of DB
+    가입 시 코인 3개 초기 지급
+  end note
+else 기존 회원
+  AuthCtrl -> DB : SELECT users WHERE kakao_id=?
+end
+
+AuthCtrl --> Client : 302 → 결과 저장 페이지\n(JSESSIONID 발급)
+deactivate AuthCtrl
+
+== 원점수 서버 전송 ==
+
+Client -> Client : sessionStorage에서\n원점수 꺼내기
+
+alt sessionStorage에 원점수 있음
+  Client -> ResultCtrl : POST /results\n{ d, i, s, c 원점수 }
+  activate ResultCtrl
+
+  ResultCtrl -> ResultSvc : save(userId, rawScores)
+  activate ResultSvc
+  ResultSvc -> ResultSvc : 버킷값 산출\n(원점수 → 9단계 정규화)
+  ResultSvc -> DB : INSERT test_results\n(userId, rater_type=SELF,\n원점수, 버킷값)
+  DB --> ResultSvc : resultId
+  ResultSvc --> ResultCtrl : resultId
+  deactivate ResultSvc
+
+  ResultCtrl --> Client : 201 Created\n{ resultId }
+  deactivate ResultCtrl
+
+  Client -> Client : sessionStorage.removeItem(\n  'disc_raw_scores'\n)
+  Client --> Guest : 결과 저장 완료\n(닉네임으로 이름 교체 렌더링)
+
+else sessionStorage에 원점수 없음
+  note right of Client
+    로그인만 완료
+    결과 저장 스킵
+  end note
+  Client --> Guest : 메인 화면으로 이동
+end
+
+@enduml

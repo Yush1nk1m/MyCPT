@@ -1,0 +1,151 @@
+@startuml MyCPT_Sequence_Chemistry
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName "Apple SD Gothic Neo, sans-serif"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #26215C
+skinparam sequenceMessageAlign center
+
+skinparam participant {
+  BackgroundColor #FFFFFF
+  BorderColor #AFA9EC
+  FontColor #26215C
+  FontSize 12
+}
+
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #7F77DD
+  FontColor #3C3489
+  FontSize 12
+  FontStyle bold
+}
+
+skinparam sequence {
+  ArrowColor #7F77DD
+  ArrowFontColor #534AB7
+  ArrowFontSize 10
+  LifeLineBorderColor #AFA9EC
+  LifeLineBackgroundColor #F5F3FF
+  GroupBorderColor #534AB7
+  GroupBackgroundColor #EEEDFE
+  GroupFontColor #3C3489
+  GroupFontSize 11
+  GroupBodyBackgroundColor #F5F3FF
+  DividerBackgroundColor #EEEDFE
+  DividerBorderColor #534AB7
+  DividerFontColor #3C3489
+}
+
+skinparam note {
+  BackgroundColor #F5F3FF
+  BorderColor #AFA9EC
+  FontColor #534AB7
+  FontSize 10
+}
+
+actor "발행자 (회원 A)" as UserA
+actor "상대방 (회원 B)" as UserB
+participant "Next.js" as Client
+participant "ChemistryController" as Controller
+participant "CoinService" as Coin
+participant "ChemistryService\n(@Async)" as Chemistry
+participant "LlmService" as Llm
+participant "SseService" as Sse
+participant "NotificationService" as Notify
+database "MySQL" as DB
+
+== SSE 연결 수립 ==
+
+UserA -> Client : 페이지 진입
+Client -> Sse : GET /notifications/stream
+note right of Sse
+  SseEmitter 생성 후 보관
+  Last-Event-ID 기반 재전송 지원
+end note
+Sse --> Client : SSE 연결 유지 (text/event-stream)
+
+== 케미 보고서 발행 요청 ==
+
+UserA -> Client : 동료 목록에서 B 선택\n'케미 보고서 발행' 클릭
+Client -> Controller : POST /chemistry-reports\n{ partnerId: B }
+activate Controller
+
+Controller -> Coin : checkAndDeduct(userId: A)
+activate Coin
+
+alt 코인 부족 (coins == 0)
+  Coin --> Controller : INSUFFICIENT_COINS
+  Controller --> Client : 400 INSUFFICIENT_COINS
+  Client --> UserA : 코인 부족 안내
+else 코인 충분
+  Coin -> DB : UPDATE users SET coins = coins - 1
+  Coin -> DB : INSERT coin_transactions\n(amount=-1, reason=CHEMISTRY_REPORT)
+  Coin --> Controller : 차감 완료
+  deactivate Coin
+
+  Controller -> Chemistry : issueAsync(requesterId: A, partnerId: B)
+  note right of Chemistry
+    @Async — 별도 스레드에서 실행
+    호출 즉시 반환
+  end note
+
+  Controller --> Client : 202 Accepted
+  deactivate Controller
+  Client --> UserA : "보고서 생성 중..." 안내
+
+  == 비동기 LLM 호출 (별도 스레드) ==
+
+  activate Chemistry
+  Chemistry -> DB : SELECT 최신 자기 평정 버킷값\n(A의 d,i,s,c + B의 d,i,s,c)
+  DB --> Chemistry : A 버킷값, B 버킷값
+
+  alt A 또는 B의 검사 결과 없음
+    Chemistry -> Notify : sendNotification(A, "상대방 검사 결과 없음")
+    Chemistry -> Sse : push(userId: A, event: ERROR)
+  else 두 사람 모두 결과 있음
+    Chemistry -> Llm : generateChemistryReport(A버킷값, B버킷값)
+    activate Llm
+    Llm -> Llm : 케미 프롬프트 구성\n(6개 섹션 요청)
+    note right of Llm
+      섹션 구성:
+      1. 두 사람의 성향 요약
+      2. 협업 시너지
+      3. 갈등 포인트
+      4. 소통 방식 차이
+      5. 서로에게 맞는 역할
+      6. 협업 팁
+    end note
+    Llm --> Chemistry : Markdown 보고서
+    deactivate Llm
+
+    Chemistry -> DB : INSERT chemistry_reports\n(requesterId, partnerId, report)
+    DB --> Chemistry : reportId
+
+    == 발행자 SSE 푸시 ==
+    Chemistry -> Sse : push(userId: A,\nevent: CHEMISTRY_COMPLETE,\ndata: { reportId })
+    activate Sse
+    Sse --> Client : SSE 이벤트 전송
+    deactivate Sse
+    Client --> UserA : 토스트 알림\n"케미 보고서가 완성됐어요!"
+
+    == 상대방 인앱 알림 ==
+    Chemistry -> Notify : sendNotification(userId: B,\ntype: CHEMISTRY_REPORT,\ndata: { reportId })
+    activate Notify
+    Notify -> DB : INSERT notifications\n(userId: B, ...)
+    DB --> Notify : notificationId
+
+    alt B가 SSE 연결 중
+      Notify -> Sse : push(userId: B, event: NEW_NOTIFICATION)
+      Sse --> UserB : SSE 이벤트 전송
+      UserB -> Client : 알림 클릭
+      Client -> DB : DELETE /notifications/{id}
+      note right of DB : 알림 클릭 시 즉시 삭제
+    end
+
+    deactivate Notify
+  end
+  deactivate Chemistry
+end
+
+@enduml

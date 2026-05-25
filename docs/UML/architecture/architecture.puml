@@ -1,0 +1,153 @@
+@startuml MyCPT_Architecture
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName "Apple SD Gothic Neo, sans-serif"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #26215C
+
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #AFA9EC
+  BorderThickness 1.5
+  FontColor #26215C
+  FontSize 12
+  ArrowColor #7F77DD
+  ArrowFontColor #534AB7
+  ArrowFontSize 10
+}
+
+skinparam package {
+  BackgroundColor #EEEDFE
+  BorderColor #534AB7
+  BorderThickness 2
+  FontColor #3C3489
+  FontSize 13
+  FontStyle bold
+}
+
+skinparam database {
+  BackgroundColor #FFFFFF
+  BorderColor #AFA9EC
+  FontColor #26215C
+}
+
+skinparam cloud {
+  BackgroundColor #FFFFFF
+  BorderColor #AFA9EC
+  FontColor #26215C
+}
+
+skinparam note {
+  BackgroundColor #F5F3FF
+  BorderColor #AFA9EC
+  FontColor #534AB7
+  FontSize 10
+}
+
+skinparam linetype ortho
+
+package "Client" #EEF6FF {
+  [Next.js\n(SSR/SSG)] as NextJS
+  [sessionStorage\n(비회원 원점수 임시 보관)] as Session
+}
+
+package "Spring Boot 3.x" #EEEDFE {
+
+  package "Presentation" #F5F3FF {
+    [REST Controllers\n(28개 엔드포인트)] as Controllers
+    [Spring Security\n+ Kakao OAuth 2.0] as Security
+  }
+
+  package "Business" #F5F3FF {
+    [ScoringService\n채점 + 버킷 정규화] as Scoring
+    [CacheService\nLazy Caching] as Cache
+    [LlmService\nClaude API 호출] as Llm
+    [ChemistryService\n@Async 케미 발행] as Chemistry
+    [SseService\nSseEmitter 관리] as Sse
+    [CoinService\n온디맨드 충전] as Coin
+    [기타 Services\n(Auth/User/Result/\nAssessment/Statistics/\nColleague/Notification)] as OtherServices
+  }
+
+  package "Persistence" #F5F3FF {
+    [JPA Repositories] as Repos
+  }
+
+  [Spring Batch\n만료 코드/토큰 삭제] as Batch
+}
+
+database "MySQL" as MySQL {
+  [disc_cache\n(버킷 캐시)] as DiscCache
+  [test_results\ncolleagues\nnotifications\n기타 6개 테이블] as OtherTables
+}
+
+database "Redis" as Redis {
+  [세션 저장소\n+ @Cacheable] as RedisData
+}
+
+cloud "외부 서비스" #FFF7ED {
+  [Anthropic\nClaude API\n(claude-sonnet-4-6)] as ClaudeAPI
+  [Kakao OAuth] as Kakao
+  [AWS S3\n프로필 이미지\n(운영)] as S3
+}
+
+' Client ↔ Spring Boot
+NextJS   -down-> Controllers : HTTPS / REST
+NextJS   -down-> Sse         : GET /notifications/stream\n(SSE 연결 유지)
+Session  -down-> Controllers : POST /results\n(원점수 전송)
+
+' Security
+Security -right-> Controllers : 인증/인가
+
+' Controller → Service
+Controllers -down-> Scoring
+Controllers -down-> Cache
+Controllers -down-> Chemistry
+Controllers -down-> OtherServices
+
+' Service 내부 흐름
+Scoring     -right-> Cache       : 버킷값 전달
+Cache       -right-> Llm         : MISS/만료 시
+Chemistry   -right-> Llm         : @Async 호출
+Chemistry   -right-> Sse         : 완료 시 푸시
+Coin        -right-> OtherServices
+
+' Service → Repository
+Scoring         -down-> Repos
+Cache           -down-> Repos
+OtherServices   -down-> Repos
+Chemistry       -down-> Repos
+
+' Repository → DB
+Repos -down-> MySQL
+
+' Redis
+Cache         -right-> Redis : @Cacheable\n(disc_cache)
+Security      -right-> Redis : 세션 저장
+
+' 외부 연동
+Llm       -right-> ClaudeAPI
+Security  -down->  Kakao
+OtherServices -right-> S3   : 이미지 업로드
+
+' Batch
+Batch -down-> Repos : 만료 peer_codes\n만료 assessment_tokens
+
+note bottom of Cache
+  캐시 HIT + 유효 → 즉시 반환
+  캐시 HIT + 만료 → LLM → UPDATE
+  캐시 MISS → LLM → INSERT
+end note
+
+note right of Chemistry
+  발행 요청 → 202 즉시 반환
+  @Async로 LLM 호출
+  완료 시 SSE 푸시
+end note
+
+note bottom of Redis
+  개발: 서버 메모리 세션
+  운영: Redis 세션 저장소
+  + disc_cache @Cacheable
+end note
+
+@enduml

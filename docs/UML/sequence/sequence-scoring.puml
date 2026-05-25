@@ -1,0 +1,142 @@
+@startuml MyCPT_Sequence_Scoring
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName "Apple SD Gothic Neo, sans-serif"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #26215C
+skinparam sequenceMessageAlign center
+
+skinparam participant {
+  BackgroundColor #FFFFFF
+  BorderColor #AFA9EC
+  FontColor #26215C
+  FontSize 12
+}
+
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #7F77DD
+  FontColor #3C3489
+  FontSize 12
+  FontStyle bold
+}
+
+skinparam sequence {
+  ArrowColor #7F77DD
+  ArrowFontColor #534AB7
+  ArrowFontSize 10
+  LifeLineBorderColor #AFA9EC
+  LifeLineBackgroundColor #F5F3FF
+  GroupBorderColor #534AB7
+  GroupBackgroundColor #EEEDFE
+  GroupFontColor #3C3489
+  GroupFontSize 11
+  GroupBodyBackgroundColor #F5F3FF
+  DividerBackgroundColor #EEEDFE
+  DividerBorderColor #534AB7
+  DividerFontColor #3C3489
+  ReferenceBackgroundColor #EEF6FF
+  ReferenceBorderColor #534AB7
+}
+
+skinparam note {
+  BackgroundColor #F5F3FF
+  BorderColor #AFA9EC
+  FontColor #534AB7
+  FontSize 10
+}
+
+actor "사용자\n(비회원/회원)" as User
+participant "Next.js" as Client
+participant "ResultController" as Controller
+participant "ScoringService" as Scoring
+participant "CacheService" as CacheService
+participant "LlmService" as Llm
+database "Redis" as Redis
+database "disc_cache\n(MySQL)" as DB
+
+User -> Client : 24문항 응답 완료
+
+Client -> Controller : POST /results/score\n{ answers: [...] }
+activate Controller
+
+Controller -> Scoring : score(answers)
+activate Scoring
+
+note right of Scoring
+  D + I + S + C = 24 검증
+  원점수 → 버킷값 (1~9) 정규화
+end note
+
+Scoring -> Scoring : DISC 원점수 산출
+Scoring -> Scoring : 버킷값 정규화\n(원점수 -24~+48 → 9단계)
+Scoring --> Controller : { d, i, s, c 원점수 + 버킷값 }
+deactivate Scoring
+
+Controller -> CacheService : getReport(d, i, s, c 버킷값)
+activate CacheService
+
+CacheService -> Redis : GET disc_cache:{d}:{i}:{s}:{c}
+activate Redis
+
+alt Redis 캐시 HIT
+  Redis --> CacheService : 캐시 데이터 반환
+  deactivate Redis
+  CacheService --> Controller : 보고서 반환
+  note right of CacheService : Redis HIT → DB 조회 생략
+
+else Redis 캐시 MISS
+  Redis --> CacheService : null
+  deactivate Redis
+
+  CacheService -> DB : SELECT WHERE d=? AND i=? AND s=? AND c=?
+  activate DB
+
+  alt 캐시 HIT + 유효 (created_at >= 만료 기준)
+    DB --> CacheService : 캐시 행 반환
+    deactivate DB
+    CacheService -> Redis : SET disc_cache:{d}:{i}:{s}:{c}
+    CacheService --> Controller : 보고서 반환
+
+  else 캐시 HIT + 만료 (created_at < 만료 기준)
+    DB --> CacheService : 만료된 캐시 행 반환
+    deactivate DB
+    CacheService -> Llm : generateReport(버킷값)
+    activate Llm
+    Llm -> Llm : 프롬프트 구성\n(6개 섹션 요청)
+    Llm --> CacheService : Markdown 보고서
+    deactivate Llm
+    CacheService -> DB : UPDATE SET report=?, created_at=NOW()\nWHERE d=? AND i=? AND s=? AND c=?
+    note right of DB : 행 DELETE 없이 UPDATE\nFK 참조 무결성 유지
+    CacheService -> Redis : SET disc_cache:{d}:{i}:{s}:{c}
+    CacheService --> Controller : 보고서 반환
+
+  else 캐시 MISS (행 없음)
+    CacheService -> Llm : generateReport(버킷값)
+    activate Llm
+    Llm -> Llm : 프롬프트 구성\n(6개 섹션 요청)
+    Llm --> CacheService : Markdown 보고서
+    deactivate Llm
+    CacheService -> DB : INSERT (d, i, s, c, report, created_at)
+    CacheService -> Redis : SET disc_cache:{d}:{i}:{s}:{c}
+    CacheService --> Controller : 보고서 반환
+  end
+
+end
+
+deactivate CacheService
+
+Controller --> Client : 200 OK\n{ rawScores, buckets, report }
+deactivate Controller
+
+alt 비회원
+  Client -> Client : sessionStorage에\nDISC 원점수 저장
+  note right of Client
+    서버 세션 미발급
+    (플러딩 방어)
+  end note
+end
+
+Client --> User : 결과 화면 표시\n(보고서 렌더링 시 이름 삽입)
+
+@enduml
