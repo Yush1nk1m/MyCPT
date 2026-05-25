@@ -1,46 +1,23 @@
 -- ============================================================
--- MyCPT 데이터베이스 스키마
--- Version : v0.4
--- Based on : database-design.md v0.4 / service-design.md v0.6
---
--- 생성 순서 (FK 의존성 기준)
---   1. users
---   2. disc_cache             ← test_results 의 복합 FK 타깃
---                                보고서 Markdown 단일 TEXT로 통합
---   3. test_results           ← rater_type, label 컬럼 추가
---   4. coin_transactions
---   5. peer_codes
---   6. assessment_tokens      ← 타인 평정 일회용 링크 토큰
---   7. colleagues
---   8. chemistry_reports      ← 보고서 Markdown 단일 TEXT로 통합
---   9. notifications
---  (statistics 테이블 제거 — MVP에서 직접 집계 쿼리로 대체)
+-- MyCPT DDL
+-- 버전: v0.5
+-- 작성일: '26.05.25.
+-- 변경: test_results → tests + disc_results 분리 (Class Table Inheritance)
 -- ============================================================
-
--- 기존 테이블 제거 (개발 환경 재초기화용, 운영 시 제거)
-DROP TABLE IF EXISTS notifications;
-DROP TABLE IF EXISTS chemistry_reports;
-DROP TABLE IF EXISTS colleagues;
-DROP TABLE IF EXISTS assessment_tokens;
-DROP TABLE IF EXISTS peer_codes;
-DROP TABLE IF EXISTS coin_transactions;
-DROP TABLE IF EXISTS test_results;
-DROP TABLE IF EXISTS disc_cache;
-DROP TABLE IF EXISTS users;
 
 -- ============================================================
 -- 1. users
 -- ============================================================
 CREATE TABLE users (
-    id                  BIGINT          NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
-    kakao_id            VARCHAR(50)     NOT NULL                  COMMENT '카카오 고유 식별자',
-    nickname            VARCHAR(30)     NOT NULL                  COMMENT '서비스 닉네임 (카카오 닉네임 초기값, 수정 가능)',
-    profile_image_key   VARCHAR(300)    NULL                      COMMENT '스토리지 오브젝트 키. NULL 이면 기본 이미지 사용',
-    birth_year          YEAR            NULL                      COMMENT '카카오 로그인 후 프로필 설정 시 입력. NULL 이면 미입력 상태',
-    gender              ENUM('M','F','N') NULL                    COMMENT 'M: 남성 / F: 여성 / N: 선택 안 함',
-    coins               TINYINT         NOT NULL DEFAULT 3        COMMENT '현재 코인 잔액 (0~3)',
-    next_coin_at        DATETIME        NULL                      COMMENT '다음 코인 충전 예정 시각. NULL 이면 만충 상태',
-    created_at          DATETIME        NOT NULL                  COMMENT '가입 시각',
+    id                BIGINT       NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
+    kakao_id          VARCHAR(50)  NOT NULL                  COMMENT '카카오 고유 식별자',
+    nickname          VARCHAR(30)  NOT NULL                  COMMENT '서비스 닉네임 (카카오 닉네임 초기값, 수정 가능)',
+    profile_image_key VARCHAR(300) NULL                      COMMENT '스토리지 오브젝트 키. NULL이면 기본 이미지 사용',
+    birth_year        YEAR         NULL                      COMMENT '로그인 후 프로필 설정 시 입력. NULL이면 미입력 상태',
+    gender            ENUM('M','F','N') NULL                 COMMENT 'M: 남성, F: 여성, N: 선택 안 함',
+    coins             TINYINT      NOT NULL DEFAULT 3        COMMENT '현재 코인 잔액 (0~3)',
+    next_coin_at      DATETIME     NULL                      COMMENT '다음 코인 충전 예정 시각. NULL이면 만충 상태',
+    created_at        DATETIME     NOT NULL                  COMMENT '가입 시각',
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_kakao_id (kakao_id)
@@ -48,55 +25,74 @@ CREATE TABLE users (
 
 -- ============================================================
 -- 2. disc_cache
---    복합 PK (d, i, s, c) — 행 DELETE 없이 UPDATE 로만 갱신
---    test_results 가 복합 FK 로 참조하므로 먼저 생성
---    보고서를 Markdown 단일 TEXT로 저장 — 검사 유형 확장 시 스키마 변경 없음
+--    users/tests 보다 먼저 생성 — disc_results에서 FK 참조
+--    행 DELETE 없이 UPDATE 갱신 → FK 참조 무결성 항상 유지
 -- ============================================================
 CREATE TABLE disc_cache (
-    d           TINYINT     NOT NULL    COMMENT 'D 버킷값 (1~9)',
-    i           TINYINT     NOT NULL    COMMENT 'I 버킷값 (1~9)',
-    s           TINYINT     NOT NULL    COMMENT 'S 버킷값 (1~9)',
-    c           TINYINT     NOT NULL    COMMENT 'C 버킷값 (1~9)',
-    report      TEXT        NOT NULL    COMMENT 'Markdown 형식 분석 보고서 전문. 이름 미포함. 렌더링 시 이름 삽입',
-    created_at  DATETIME    NOT NULL    COMMENT '캐시 생성 시각 (온디맨드 만료 판단 기준)',
+    d           TINYINT  NOT NULL  COMMENT 'D 버킷값 (1~9). 복합 PK 구성',
+    i           TINYINT  NOT NULL  COMMENT 'I 버킷값 (1~9)',
+    s           TINYINT  NOT NULL  COMMENT 'S 버킷값 (1~9)',
+    c           TINYINT  NOT NULL  COMMENT 'C 버킷값 (1~9)',
+    report      TEXT     NOT NULL  COMMENT 'Markdown 형식 분석 보고서 전문. 이름 미포함. 렌더링 시 이름 삽입',
+    created_at  DATETIME NOT NULL  COMMENT '캐시 생성 시각 (온디맨드 만료 판단 기준)',
 
     PRIMARY KEY (d, i, s, c)
 ) COMMENT = 'DISC 버킷 기반 보고서 캐시. 최대 9^4 = 6,561 행. 행 삭제 없이 UPDATE 갱신. Markdown 단일 TEXT';
 
 -- ============================================================
--- 3. test_results
+-- 3. tests
+--    Class Table Inheritance 부모 테이블.
+--    검사 유형 무관 공통 메타데이터 (rater_type, label, test_type) 저장.
+--    DISC → disc_results, MBTI → mbti_results(추후), Big5 → big5_results(추후)
 -- ============================================================
-CREATE TABLE test_results (
-    id          BIGINT      NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
-    user_id     BIGINT      NOT NULL                  COMMENT 'FK → users.id. 결과 귀속 대상 (피평정자)',
-    rater_type  ENUM('SELF','OTHER') NOT NULL DEFAULT 'SELF'
-                                                      COMMENT 'SELF: 자기 평정 / OTHER: 타인 평정',
-    label       VARCHAR(30) NULL                      COMMENT '타인 평정 시 식별 라벨 (예: 여자친구). 자기 평정은 NULL',
-    d_score     TINYINT     NOT NULL                  COMMENT 'D 원점수 (-24 ~ +48)',
-    i_score     TINYINT     NOT NULL                  COMMENT 'I 원점수 (-24 ~ +48)',
-    s_score     TINYINT     NOT NULL                  COMMENT 'S 원점수 (-24 ~ +48)',
-    c_score     TINYINT     NOT NULL                  COMMENT 'C 원점수 (-24 ~ +48)',
-    d_bucket    TINYINT     NOT NULL                  COMMENT 'D 버킷값 (1~9). disc_cache 복합 FK',
-    i_bucket    TINYINT     NOT NULL                  COMMENT 'I 버킷값 (1~9)',
-    s_bucket    TINYINT     NOT NULL                  COMMENT 'S 버킷값 (1~9)',
-    c_bucket    TINYINT     NOT NULL                  COMMENT 'C 버킷값 (1~9)',
-    created_at  DATETIME    NOT NULL                  COMMENT '검사 완료 시각',
+CREATE TABLE tests (
+    id          BIGINT      NOT NULL AUTO_INCREMENT            COMMENT '내부 식별자',
+    user_id     BIGINT      NOT NULL                           COMMENT 'FK → users.id. 결과 귀속 대상 (피평정자)',
+    rater_type  ENUM('SELF','OTHER') NOT NULL DEFAULT 'SELF'   COMMENT 'SELF: 자기 평정 / OTHER: 타인 평정',
+    test_type   VARCHAR(20) NOT NULL DEFAULT 'DISC'            COMMENT '검사 유형 (DISC / MBTI / BIG5 등)',
+    label       VARCHAR(30) NULL                               COMMENT '타인 평정 식별 라벨 (예: 여자친구). 자기 평정은 NULL. assessment_tokens.label 에서 복사',
+    created_at  DATETIME    NOT NULL                           COMMENT '검사 완료 시각',
 
     PRIMARY KEY (id),
-    KEY idx_test_results_user_id (user_id),
-    KEY idx_test_results_rater_type (rater_type),
+    KEY idx_tests_user_id      (user_id),
+    KEY idx_tests_user_type    (user_id, test_type),
+    KEY idx_tests_rater_type   (rater_type),
 
-    CONSTRAINT fk_test_results_user
+    CONSTRAINT fk_tests_user
         FOREIGN KEY (user_id)
-        REFERENCES users (id),
-
-    CONSTRAINT fk_test_results_disc_cache
-        FOREIGN KEY (d_bucket, i_bucket, s_bucket, c_bucket)
-        REFERENCES disc_cache (d, i, s, c)
-) COMMENT = '회원 검사 결과 이력. 자기/타인 평정 구분. 비회원은 클라이언트 sessionStorage 보관 후 로그인 시 원점수 전송';
+        REFERENCES users (id)
+) COMMENT = '검사 응시 헤더. 유형 무관 공통 메타데이터. Class Table Inheritance 부모 테이블';
 
 -- ============================================================
--- 4. coin_transactions
+-- 4. disc_results
+--    tests 1:1 확장 테이블. DISC 전용 원점수 + 버킷값 저장.
+--    test_id를 PK로 사용하여 1:1 관계를 스키마 레벨에서 강제.
+-- ============================================================
+CREATE TABLE disc_results (
+    test_id  BIGINT  NOT NULL  COMMENT 'PK 겸 FK → tests.id. 1:1 관계 강제',
+    d_score  TINYINT NOT NULL  COMMENT 'D 원점수 (-24 ~ +48)',
+    i_score  TINYINT NOT NULL  COMMENT 'I 원점수 (-24 ~ +48)',
+    s_score  TINYINT NOT NULL  COMMENT 'S 원점수 (-24 ~ +48)',
+    c_score  TINYINT NOT NULL  COMMENT 'C 원점수 (-24 ~ +48)',
+    d_bucket TINYINT NOT NULL  COMMENT 'D 버킷값 (1~9). disc_cache 복합 FK 구성',
+    i_bucket TINYINT NOT NULL  COMMENT 'I 버킷값 (1~9)',
+    s_bucket TINYINT NOT NULL  COMMENT 'S 버킷값 (1~9)',
+    c_bucket TINYINT NOT NULL  COMMENT 'C 버킷값 (1~9)',
+
+    PRIMARY KEY (test_id),
+    KEY idx_disc_results_cache (d_bucket, i_bucket, s_bucket, c_bucket),
+
+    CONSTRAINT fk_disc_results_test
+        FOREIGN KEY (test_id)
+        REFERENCES tests (id),
+
+    CONSTRAINT fk_disc_results_disc_cache
+        FOREIGN KEY (d_bucket, i_bucket, s_bucket, c_bucket)
+        REFERENCES disc_cache (d, i, s, c)
+) COMMENT = 'DISC 검사 전용 결과. tests 1:1 확장. 원점수 + 버킷값 저장. test_id PK로 1:1 관계 강제';
+
+-- ============================================================
+-- 5. coin_transactions
 -- ============================================================
 CREATE TABLE coin_transactions (
     id              BIGINT      NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
@@ -116,7 +112,7 @@ CREATE TABLE coin_transactions (
 ) COMMENT = '코인 충전/차감 이력. 이상 감지 및 CS 대응 용도';
 
 -- ============================================================
--- 5. peer_codes
+-- 6. peer_codes
 -- ============================================================
 CREATE TABLE peer_codes (
     id          BIGINT      NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
@@ -136,16 +132,15 @@ CREATE TABLE peer_codes (
 ) COMMENT = '동료 초대 코드. 사용자당 1행, 7일 만료, 온디맨드 리프레시';
 
 -- ============================================================
--- 6. assessment_tokens
---    "나는 어떤 사람인가요?" 타인 평정 일회용 링크 토큰
---    사용 완료(used=true) 후 재접속 차단으로 중복 제출 방지
---    만료 토큰 삭제: peer_codes 배치와 통합하여 매일 새벽 실행
+-- 7. assessment_tokens
+--    used=TRUE 처리로 중복 제출 방지
+--    만료 토큰은 peer_codes 배치와 통합 삭제
 -- ============================================================
 CREATE TABLE assessment_tokens (
     id          BIGINT      NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
     subject_id  BIGINT      NOT NULL                  COMMENT 'FK → users.id. 평정 대상자 (링크 생성한 회원)',
     token       CHAR(32)    NOT NULL                  COMMENT '일회용 랜덤 토큰',
-    label       VARCHAR(30) NULL                      COMMENT '평정자 식별 라벨 (예: 여자친구). 결과 저장 시 test_results.label 에 복사',
+    label       VARCHAR(30) NULL                      COMMENT '평정자 식별 라벨 (예: 여자친구). 결과 저장 시 tests.label 에 복사',
     used        BOOLEAN     NOT NULL DEFAULT FALSE    COMMENT '사용 여부. TRUE 이면 재접속 차단',
     expires_at  DATETIME    NOT NULL                  COMMENT '만료 시각 (생성 시점 +7일)',
     created_at  DATETIME    NOT NULL                  COMMENT '생성 시각',
@@ -161,7 +156,7 @@ CREATE TABLE assessment_tokens (
 ) COMMENT = '타인 평정 일회용 링크 토큰. 7일 만료. used=TRUE 시 재제출 차단';
 
 -- ============================================================
--- 7. colleagues
+-- 8. colleagues
 --    user_a_id < user_b_id 저장 규칙 → UNIQUE (user_a_id, user_b_id) 만으로 중복 방지
 -- ============================================================
 CREATE TABLE colleagues (
@@ -190,17 +185,15 @@ CREATE TABLE colleagues (
 -- SELECT user_a_id AS colleague_id FROM colleagues WHERE user_b_id = :userId
 
 -- ============================================================
--- 8. chemistry_reports
---    보고서를 Markdown 단일 TEXT로 저장
---    검사 유형(DISC/MBTI/BIG5 등)에 무관하게 섹션 구조 자유롭게 변경 가능
+-- 9. chemistry_reports
 -- ============================================================
 CREATE TABLE chemistry_reports (
-    id              BIGINT      NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
-    requester_id    BIGINT      NOT NULL                  COMMENT 'FK → users.id. 보고서 발행자',
-    partner_id      BIGINT      NOT NULL                  COMMENT 'FK → users.id. 보고서 대상자',
-    test_type       VARCHAR(20) NOT NULL DEFAULT 'DISC'   COMMENT '검사 유형 (DISC / MBTI / BIG5 등)',
-    report          TEXT        NOT NULL                  COMMENT 'Markdown 형식 케미 보고서 전문. 이름 미포함. 렌더링 시 이름 삽입',
-    created_at      DATETIME    NOT NULL                  COMMENT '발행 시각',
+    id              BIGINT      NOT NULL AUTO_INCREMENT            COMMENT '내부 식별자',
+    requester_id    BIGINT      NOT NULL                           COMMENT 'FK → users.id. 보고서 발행자',
+    partner_id      BIGINT      NOT NULL                           COMMENT 'FK → users.id. 보고서 대상자',
+    test_type       VARCHAR(20) NOT NULL DEFAULT 'DISC'            COMMENT '검사 유형 (DISC / MBTI / BIG5 등)',
+    report          TEXT        NOT NULL                           COMMENT 'Markdown 형식 케미 보고서 전문. 이름 미포함. 렌더링 시 발행자/상대 이름 삽입',
+    created_at      DATETIME    NOT NULL                           COMMENT '발행 시각',
 
     PRIMARY KEY (id),
     KEY idx_chemistry_reports_requester_id (requester_id),
@@ -217,13 +210,13 @@ CREATE TABLE chemistry_reports (
 ) COMMENT = '케미 보고서. Markdown 단일 TEXT로 검사 유형 무관 확장 가능. 이름 미포함 원문 저장';
 
 -- ============================================================
--- 9. notifications
+-- 10. notifications
 -- ============================================================
 CREATE TABLE notifications (
     id              BIGINT          NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
     user_id         BIGINT          NOT NULL                  COMMENT 'FK → users.id. 수신자',
-    type            ENUM('CHEMISTRY_REPORT', 'COLLEAGUE_REGISTERED') NOT NULL
-                                                              COMMENT 'CHEMISTRY_REPORT: 케미 보고서 발행 / COLLEAGUE_REGISTERED: 동료 등록',
+    type            ENUM('CHEMISTRY_REPORT','COLLEAGUE_REGISTERED') NOT NULL
+                                                              COMMENT 'CHEMISTRY_REPORT: 케미 보고서 완료 / COLLEAGUE_REGISTERED: 동료 등록',
     reference_id    BIGINT          NOT NULL                  COMMENT '관련 엔티티 id (chemistry_reports.id 또는 colleagues.id)',
     message         VARCHAR(255)    NOT NULL                  COMMENT '알림 문구',
     created_at      DATETIME        NOT NULL                  COMMENT '알림 발생 시각',
@@ -235,9 +228,3 @@ CREATE TABLE notifications (
         FOREIGN KEY (user_id)
         REFERENCES users (id)
 ) COMMENT = '인앱 알림. 클릭 시 즉시 DELETE. 배치 불필요';
-
--- statistics 테이블 없음
--- MVP에서는 test_results 직접 집계 쿼리로 대체
--- GET /statistics/comparison → test_results WHERE rater_type='SELF' GROUP BY age_group, gender
--- GET /statistics/trend     → test_results WHERE user_id=? AND rater_type='SELF' AND created_at >= ?
--- 사용자 수만 명 초과 시점에 집계 테이블 또는 Redis 캐싱 도입 검토
