@@ -3,7 +3,7 @@
 > **My ComPeTency**
 > DISC 이론 기반 직무 역량 성향 분석 서비스
 
-**문서 버전**: v0.6
+**문서 버전**: v0.7
 **작성일**: '26.05.24.
 **작성자**: 김유신
 
@@ -19,6 +19,7 @@
 | v0.4 | 케미 기능 상세화, 데이터 모델 전면 개정                                                                        | '26.05.23. |
 | v0.5 | disc_cache 온디맨드 만료, 알림 클릭 시 즉시 삭제, 8개 테이블 컬럼 수준 명세 완성                               | '26.05.23. |
 | v0.6 | 요구사항 섹션 → requirements-design.md 분리. 기술 스택 확정 (Next.js, Redis, AWS S3, SSE). 스토리지 전략 추가. | '26.05.24. |
+| v0.7 | 기술 스택 Java 25, Spring 3.5.14 버전 확정                                                                     |
 
 ---
 
@@ -243,7 +244,7 @@ amount     = Math.min(chargeable, 3 - current_coins)
 
 | 영역        | 기술                                                |
 | ----------- | --------------------------------------------------- |
-| 백엔드      | Java 21, Spring Boot 3.x                            |
+| 백엔드      | Java 25, Spring Boot 3.5.14                         |
 | 인증        | Spring Security, Kakao OAuth 2.0                    |
 | DB          | MySQL                                               |
 | 캐시 (DB)   | disc_cache 테이블 (온디맨드 만료, Lazy Caching)     |
