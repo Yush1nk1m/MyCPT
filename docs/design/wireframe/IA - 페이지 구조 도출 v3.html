@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>MyCPT — IA / 페이지 구조 도출 v0.3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:        oklch(0.22 0.012 250);
+    --ink-soft:   oklch(0.42 0.010 250);
+    --ink-faint:  oklch(0.62 0.008 250);
+    --paper:      oklch(0.985 0.005 85);
+    --paper-2:    oklch(0.965 0.008 80);
+    --line:       oklch(0.78 0.010 250);
+    --line-soft:  oklch(0.88 0.008 250);
+    --accent:     oklch(0.62 0.13 40);
+    --accent-2:   oklch(0.92 0.04 40);
+    --highlight:  oklch(0.92 0.10 95);
+    --guest:      oklch(0.55 0.09 220);
+    --guest-bg:   oklch(0.95 0.03 220);
+    --member:     oklch(0.50 0.11 150);
+    --member-bg:  oklch(0.94 0.04 150);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    padding: 56px 40px 96px;
+    background-image:
+      radial-gradient(oklch(0.85 0.01 250 / 0.18) 1px, transparent 1px);
+    background-size: 22px 22px;
+    background-position: -1px -1px;
+  }
+  .page { max-width: 1180px; margin: 0 auto; }
+
+  /* ============ Header ============ */
+  .doc-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 32px; padding-bottom: 18px; border-bottom: 2px dashed var(--line);
+    margin-bottom: 28px;
+  }
+  .doc-head h1 {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 56px;
+    line-height: 0.95;
+    margin: 0 0 6px;
+    color: var(--ink);
+    letter-spacing: -0.5px;
+  }
+  .doc-head h1 .scribble {
+    color: var(--accent);
+    font-style: italic;
+  }
+  .doc-head .sub {
+    font-size: 14px;
+    color: var(--ink-soft);
+    max-width: 560px;
+  }
+  .meta {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faint);
+    line-height: 1.7;
+    white-space: nowrap;
+  }
+  .meta b { color: var(--ink); font-weight: 600; }
+
+  /* ============ Section heads ============ */
+  section { margin-top: 56px; }
+  .sec-head {
+    display: flex; align-items: baseline; gap: 14px;
+    margin-bottom: 18px;
+  }
+  .sec-head .num {
+    font-family: 'Caveat', cursive; font-weight: 700;
+    font-size: 38px; color: var(--accent); line-height: 1;
+  }
+  .sec-head h2 {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 32px;
+    margin: 0;
+    color: var(--ink);
+  }
+  .sec-head .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    border: 1px dashed var(--line);
+    padding: 3px 8px;
+    border-radius: 999px;
+    margin-left: auto;
+  }
+  .sec-note {
+    color: var(--ink-soft);
+    margin: -6px 0 18px;
+    font-size: 13.5px;
+  }
+
+  /* ============ Assumptions ============ */
+  .assumptions {
+    border: 1.5px dashed var(--line);
+    border-radius: 14px;
+    padding: 18px 22px;
+    background: var(--paper-2);
+  }
+  .assumptions h3 {
+    font-family: 'Caveat', cursive;
+    font-size: 24px; margin: 0 0 10px;
+    color: var(--ink);
+  }
+  .assumptions ul { margin: 0; padding-left: 20px; }
+  .assumptions li { margin: 4px 0; color: var(--ink-soft); }
+  .assumptions li b { color: var(--ink); }
+
+  /* ============ Legend ============ */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    margin-bottom: 18px;
+    font-size: 12.5px;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: white;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink);
+  }
+  .chip .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--ink);
+  }
+  .chip.guest .dot { background: var(--guest); }
+  .chip.member .dot { background: var(--member); }
+  .chip.shared .dot { background: var(--accent); }
+  .chip.api {
+    border-style: dashed;
+    color: var(--ink-soft);
+  }
+
+  /* ============ Sitemap Tree ============ */
+  .sitemap {
+    background: white;
+    border: 2px solid var(--ink);
+    border-radius: 18px;
+    padding: 30px 28px 36px;
+    position: relative;
+    box-shadow: 6px 6px 0 oklch(0.90 0.01 250);
+  }
+  .sitemap::before {
+    content: '〜  sitemap  〜';
+    position: absolute; top: -14px; left: 24px;
+    background: var(--paper);
+    padding: 0 10px;
+    font-family: 'Caveat', cursive;
+    font-size: 20px;
+    color: var(--accent);
+  }
+
+  /* root */
+  .root-row {
+    display: flex; justify-content: center; margin-bottom: 22px;
+  }
+  .root {
+    display: inline-block;
+    border: 2px solid var(--ink);
+    background: var(--highlight);
+    padding: 10px 22px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    transform: rotate(-0.3deg);
+  }
+  .branches {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 22px;
+    position: relative;
+  }
+  .branch {
+    border: 1.5px solid var(--ink);
+    border-radius: 12px;
+    background: var(--paper-2);
+    padding: 14px 14px 18px;
+    position: relative;
+  }
+  .branch.shared { background: oklch(0.97 0.02 40); border-color: var(--accent); }
+  .branch.guest { background: var(--guest-bg); border-color: var(--guest); }
+  .branch.member { background: var(--member-bg); border-color: var(--member); }
+  .branch h4 {
+    margin: 0 0 4px;
+    font-family: 'Caveat', cursive;
+    font-size: 24px; font-weight: 700;
+    color: var(--ink);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .branch h4 .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    color: white;
+  }
+  .branch.shared h4 .badge { background: var(--accent); }
+  .branch.guest h4 .badge { background: var(--guest); }
+  .branch.member h4 .badge { background: var(--member); }
+  .branch p.cap {
+    margin: 0 0 12px; font-size: 12px; color: var(--ink-soft);
+  }
+  .page-list { list-style: none; margin: 0; padding: 0; }
+  .page-list li {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 7px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--ink);
+    position: relative;
+    transition: transform 0.1s ease;
+  }
+  .page-list li:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  .page-list li .name {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .page-list li .path { color: var(--ink-faint); }
+  .page-list li .modal {
+    display: inline-block;
+    margin-left: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--accent);
+    padding: 1px 5px;
+    border: 1px dashed var(--accent);
+    border-radius: 3px;
+    vertical-align: middle;
+  }
+  .page-list li .auth-flag {
+    position: absolute; right: 8px; top: 8px;
+    width: 7px; height: 7px; border-radius: 50%;
+  }
+  .page-list li.g .auth-flag { background: var(--guest); }
+  .page-list li.m .auth-flag { background: var(--member); }
+  .page-list li.s .auth-flag { background: var(--accent); }
+
+  /* connectors from root to branches (CSS-only) */
+  .connectors {
+    height: 0; position: relative;
+    margin: -22px 0 22px;
+  }
+
+  /* ============ Catalog Table ============ */
+  .catalog {
+    background: white;
+    border: 1.5px solid var(--ink);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  table.cat {
+    width: 100%; border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  table.cat thead th {
+    background: var(--ink);
+    color: var(--paper);
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+  table.cat tbody td {
+    padding: 11px 12px;
+    border-top: 1px dashed var(--line-soft);
+    vertical-align: top;
+  }
+  table.cat tbody tr.group-row td {
+    background: var(--paper-2);
+    border-top: 2px solid var(--ink);
+    font-family: 'Caveat', cursive;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    padding: 8px 12px;
+  }
+  table.cat tbody tr:hover:not(.group-row) td {
+    background: oklch(0.98 0.02 80);
+  }
+  table.cat .nm { font-weight: 600; color: var(--ink); }
+  table.cat .pth {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--ink-soft);
+    display: block; margin-top: 2px;
+  }
+  table.cat .auth {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  table.cat .auth.g { background: var(--guest-bg); color: var(--guest); }
+  table.cat .auth.m { background: var(--member-bg); color: var(--member); }
+  table.cat .auth.s { background: var(--accent-2); color: var(--accent); }
+  table.cat .api-list { list-style: none; padding: 0; margin: 0; }
+  table.cat .api-list li {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  table.cat .api-list li b {
+    display: inline-block;
+    width: 46px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  table.cat .comp {
+    color: var(--ink-soft);
+    font-size: 12px;
+  }
+
+  /* ============ Flows ============ */
+  .flows {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  .flow {
+    border: 1.5px solid var(--ink);
+    border-radius: 14px;
+    background: white;
+    padding: 20px;
+    position: relative;
+  }
+  .flow .flow-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .flow h3 {
+    font-family: 'Caveat', cursive;
+    font-size: 26px; font-weight: 700;
+    margin: 0; color: var(--ink);
+  }
+  .flow .uc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 2px 7px; border-radius: 999px;
+  }
+  .flow-steps {
+    list-style: none;
+    padding: 0; margin: 0;
+    counter-reset: step;
+  }
+  .flow-steps li {
+    padding: 7px 0 7px 36px;
+    border-bottom: 1px dashed var(--line-soft);
+    position: relative;
+  }
+  .flow-steps li:last-child { border-bottom: none; }
+  .flow-steps li::before {
+    counter-increment: step;
+    content: counter(step);
+    background: var(--ink);
+    color: var(--paper);
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    position: absolute;
+    left: 0;
+    top: 9px;
+  }
+  .flow-steps li .screen {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--ink-faint);
+    display: block;
+    margin-top: 2px;
+  }
+  .flow-steps li .screen b { color: var(--accent); font-weight: 600; }
+
+  /* ============ Next steps ============ */
+  .next {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 18px;
+    padding: 28px 32px;
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 28px;
+  }
+  .next h2 {
+    font-family: 'Caveat', cursive;
+    font-size: 38px;
+    margin: 0 0 12px;
+    color: var(--paper);
+  }
+  .next p { margin: 0 0 14px; color: oklch(0.85 0.01 250); }
+  .priority-list {
+    list-style: none; padding: 0; margin: 0;
+  }
+  .priority-list li {
+    display: flex; gap: 10px; align-items: baseline;
+    padding: 9px 0;
+    border-bottom: 1px dashed oklch(0.45 0.01 250);
+    font-size: 13px;
+  }
+  .priority-list li:last-child { border-bottom: none; }
+  .priority-list .p {
+    font-family: 'Caveat', cursive;
+    font-size: 24px;
+    color: var(--accent);
+    width: 30px;
+    flex-shrink: 0;
+  }
+  .priority-list .nm { font-weight: 600; color: var(--paper); margin-right: 6px; }
+  .priority-list .why { color: oklch(0.75 0.01 250); font-size: 12px; }
+
+  .q-list { list-style: none; padding: 0; margin: 8px 0 0; }
+  .q-list li {
+    padding: 7px 0;
+    border-bottom: 1px dashed oklch(0.45 0.01 250);
+    font-size: 12.5px;
+    color: oklch(0.85 0.01 250);
+  }
+  .q-list li::before {
+    content: 'Q.';
+    font-family: 'Caveat', cursive;
+    color: var(--accent);
+    margin-right: 8px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  /* footer */
+  footer {
+    margin-top: 70px;
+    padding-top: 18px;
+    border-top: 2px dashed var(--line);
+    display: flex; justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--ink-faint);
+  }
+
+  /* helpers */
+  .annot {
+    font-family: 'Caveat', cursive;
+    color: var(--accent);
+    font-size: 18px;
+    position: absolute;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ============ HEAD ============ -->
+  <div class="doc-head">
+    <div>
+      <h1>MyCPT &mdash; <span class="scribble">페이지 구조 도출</span></h1>
+      <div class="sub">
+        개발 문서(service / requirements / api / database)를 역으로 매핑해
+        서비스에 필요한 화면 단위와 동선을 정리합니다. 와이어프레임 착수 전 IA(Information Architecture) 초안.
+      </div>
+    </div>
+    <div class="meta">
+      <div><b>doc</b>  IA v0.3 ← v0.2</div>
+      <div><b>src</b>  service v0.6 / req v0.1 / api v0.1</div>
+      <div><b>date</b> 2026.05.24</div>
+      <div><b>screens</b> 14 + 6 modals</div>
+    </div>
+  </div>
+
+  <!-- ============ 0. Assumptions ============ -->
+  <section style="margin-top: 20px;">
+    <div class="assumptions">
+      <h3>전제 / 도출 기준 <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin-left:8px;">✓ v0.3 메인·탭 구조 확정</span></h3>
+      <ul>
+        <li><b>프레임</b> — Next.js 기반 <b>모바일 우선</b> 반응형 웹앱.</li>
+        <li><b>메인 화면 = 4개 친숙어 CTA</b> — <i>"나는 누구일까? / 남이 보는 내 모습 / 우리 잘 맞을까? / 이 서비스는 무엇인가요?"</i>. 연령대와 무관하게 기능을 단번에 이해하는 것을 목표 <i style="color:var(--accent);">(확정)</i>.</li>
+        <li><b>하단 탭바 4개</b> — <b>홈 / 검사 결과 / 동료 &amp; 케미 / 내 정보</b>. 회원·비회원 모두에게 노출되며, 비회원이 잠긴 항목을 탭하면 <b>"로그인이 필요해요" 토스트</b> 안내 <i style="color:var(--accent);">(확정 · v0.2의 "부가 기능" → "내 정보"로 명칭 변경)</i>.</li>
+        <li><b>메인 CTA ↔ 하단 탭</b> — 같은 목적지로 이동. CTA는 친숙한 진입, 탭은 빠른 진입(보조 동선). 두 진입점이 같은 화면을 가리키도록 유지.</li>
+        <li><b>검사 응시 = 풀스크린 시트</b> — `/test` 라우트 없음. 메인 위에 시트로 오버레이. Step 1(유형 선택)은 자유롭게 닫기 가능, Step 2(응시 중) 이후 닫기 시 확인 다이얼로그 <i style="color:var(--accent);">(확정)</i>.</li>
+        <li><b>공유(타인 평정) 모달</b> — <b>검사 모달과 동일 컴포넌트</b>를 재사용. Step만 분기 — 유형 선택 후 "응시" 대신 <b>초대 링크 생성 + 카카오톡 공유</b>. 회원 전용 <i style="color:var(--accent);">(확정)</i>.</li>
+        <li><b>마이페이지 진입</b> — 헤더 프로필 칩 + 하단 "내 정보" 탭 첫 항목 — <b>두 경로 모두</b> 진입 가능 <i style="color:var(--accent);">(확정)</i>.</li>
+        <li><b>모달 6종</b> — 검사 응시(풀스크린 시트) / 타인 평정 공유(동일 컴포넌트) / 동료 등록 / 케미 발행 확인 / 서비스 소개 시트 / 알림 드롭다운. 코인 잔량 안내는 케미 발행 확인 모달에 통합.</li>
+        <li><b>케미 비동기 발행</b> — 발행 즉시 "케미 보고서 발행 중입니다…" 토스트 1회 노출 후 자동 사라짐 → SSE 완료 이벤트 도착 시 토스트 + 알림 종 뱃지 동시 표시 <i style="color:var(--accent);">(확정)</i>.</li>
+        <li><b>전역 요소</b> — 상단 헤더(로고 · 알림 종 · 프로필 칩 또는 카카오 로그인 버튼), 하단 탭바, SSE 토스트 영역, 푸터(면책 조항: "참고용 성향 분석, 심리 진단 아님").</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 0.5 Main Screen Mock ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="num">00</span>
+      <h2>메인 화면 — 친숙어 4-CTA</h2>
+      <span class="tag">Wireframe Anchor</span>
+    </div>
+    <p class="sec-note">첨부 모형 기반. 헤더(프로필 칩) + 본문(4개 알약 CTA) + 하단 탭바(4탭) 의 3분할 구조. CTA는 친숙한 진입, 탭은 빠른 진입.</p>
+
+    <div style="display: grid; grid-template-columns: 320px 1fr; gap: 28px; align-items: start;">
+
+      <!-- mobile mock -->
+      <div style="border: 2px solid var(--ink); border-radius: 28px; padding: 16px 14px; background: white; box-shadow: 6px 6px 0 oklch(0.90 0.01 250); position: relative;">
+        <!-- header strip -->
+        <div style="border: 1.5px solid var(--ink); border-radius: 10px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; background: var(--paper-2); margin-bottom: 14px;">
+          <div style="font-family: 'Caveat', cursive; font-size: 18px; font-weight: 700;">MyCPT</div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="position: relative; width: 22px; height: 22px; border: 1.2px solid var(--ink); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px;">○<span style="position: absolute; top: -3px; right: -3px; width: 7px; height: 7px; background: var(--accent); border-radius: 50%; border: 1.5px solid white;"></span></div>
+            <div style="border: 1.2px solid var(--ink); padding: 2px 4px 2px 9px; border-radius: 999px; display: flex; align-items: center; gap: 5px; background: white;">
+              <span style="font-family: 'Inter'; font-size: 10px; font-weight: 600;">닉네임</span>
+              <span style="width: 18px; height: 18px; border-radius: 50%; background: oklch(0.85 0.08 80); border: 1px solid var(--ink); font-size: 7px; display: flex; align-items: center; justify-content: center;">사진</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 CTAs -->
+        <div style="display: flex; flex-direction: column; gap: 14px; padding: 12px 8px 24px;">
+          <!-- 1 -->
+          <div style="border: 1.5px solid var(--ink); border-radius: 999px; padding: 14px 18px; text-align: center; background: oklch(0.96 0.04 95); position: relative;">
+            <div style="font-family: 'Inter'; font-size: 13.5px; font-weight: 700; color: var(--ink);">나는 누구일까?</div>
+            <div style="font-size: 10.5px; color: var(--ink-soft); margin-top: 2px;">(성향 검사)</div>
+            <span style="position: absolute; right: -10px; top: -10px; background: var(--accent); color: white; font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 6px; border-radius: 999px; transform: rotate(8deg);">누구나</span>
+          </div>
+          <!-- 2 (locked for guest demo) -->
+          <div style="border: 1.5px solid var(--ink); border-radius: 999px; padding: 14px 18px; text-align: center; background: white; position: relative;">
+            <div style="font-family: 'Inter'; font-size: 13.5px; font-weight: 700; color: var(--ink);">남이 보는 내 모습</div>
+            <div style="font-size: 10.5px; color: var(--ink-soft); margin-top: 2px;">(친구가 나의 성향을 평가)</div>
+            <span style="position: absolute; right: -8px; top: -10px; background: var(--member); color: white; font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 6px; border-radius: 999px;">🔒 회원</span>
+          </div>
+          <!-- 3 -->
+          <div style="border: 1.5px solid var(--ink); border-radius: 999px; padding: 14px 18px; text-align: center; background: white; position: relative;">
+            <div style="font-family: 'Inter'; font-size: 13.5px; font-weight: 700; color: var(--ink);">우리 잘 맞을까?</div>
+            <div style="font-size: 10.5px; color: var(--ink-soft); margin-top: 2px;">(동료와의 성격 케미 검사)</div>
+            <span style="position: absolute; right: -8px; top: -10px; background: var(--member); color: white; font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 6px; border-radius: 999px;">🔒 회원</span>
+          </div>
+          <!-- 4 -->
+          <div style="border: 1.5px solid var(--ink); border-radius: 999px; padding: 14px 18px; text-align: center; background: white;">
+            <div style="font-family: 'Inter'; font-size: 13.5px; font-weight: 700; color: var(--ink);">이 서비스는 무엇인가요?</div>
+            <div style="font-size: 10.5px; color: var(--ink-soft); margin-top: 2px;">(서비스 소개)</div>
+          </div>
+        </div>
+
+        <!-- bottom tab bar -->
+        <div style="border-top: 1.5px solid var(--ink); display: grid; grid-template-columns: repeat(4, 1fr); margin: 0 -14px -16px; background: var(--paper-2); border-radius: 0 0 26px 26px;">
+          <div style="text-align: center; padding: 12px 4px 14px; font-size: 10.5px; font-weight: 700; color: var(--accent); border-right: 1px solid var(--line);">홈</div>
+          <div style="text-align: center; padding: 12px 4px 14px; font-size: 10.5px; color: var(--ink-soft); border-right: 1px solid var(--line); line-height: 1.25;">검사 결과
+</div>
+          <div style="text-align: center; padding: 12px 4px 14px; font-size: 10.5px; color: var(--ink-soft); border-right: 1px solid var(--line); line-height: 1.25;">동료 &amp;<br>케미</div>
+          <div style="text-align: center; padding: 12px 4px 14px; font-size: 10.5px; color: var(--ink-soft);">내 정보</div>
+        </div>
+
+        <!-- annotations -->
+        <span class="annot" style="left: -110px; top: 28px; transform: rotate(-4deg); width: 95px; text-align: right; line-height: 1.1;">헤더 칩 →<br>/me 진입</span>
+        <span class="annot" style="right: -110px; top: 170px; transform: rotate(3deg); width: 100px; line-height: 1.1;">잠금 표시는<br>회원 전용 안내</span>
+        <span class="annot" style="left: -110px; bottom: 30px; transform: rotate(-4deg); width: 95px; text-align: right; line-height: 1.1;">탭바는<br>모두에게 노출</span>
+      </div>
+
+      <!-- explanations -->
+      <div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <!-- 1 -->
+          <div style="border: 1.5px solid var(--ink); border-radius: 12px; padding: 14px; background: white;">
+            <div style="font-family: 'Caveat', cursive; font-size: 22px; font-weight: 700; color: var(--accent);">①  나는 누구일까?</div>
+            <div style="font-size: 12px; color: var(--ink-soft); margin: 4px 0 8px;">친숙어: 심리검사</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; line-height: 1.7; color: var(--ink);">
+              → <b>검사 응시 풀스크린 시트</b><br>
+              <span style="color: var(--ink-faint);">overlay on /</span><br>
+              <span style="display: inline-block; margin-top: 4px; padding: 1.5px 6px; background: var(--accent-2); color: var(--accent); font-weight: 700; font-size: 9.5px; border-radius: 4px;">PUBLIC</span> 누구나 응시
+            </div>
+          </div>
+
+          <!-- 2 -->
+          <div style="border: 1.5px solid var(--ink); border-radius: 12px; padding: 14px; background: white;">
+            <div style="font-family: 'Caveat', cursive; font-size: 22px; font-weight: 700; color: var(--accent);">②  남이 보는 내 모습</div>
+            <div style="font-size: 12px; color: var(--ink-soft); margin: 4px 0 8px;">친숙어: 친구에게 공유하기</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; line-height: 1.7; color: var(--ink);">
+              → <b>타인 평정 공유 모달</b> (검사 모달 재활용)<br>
+              <span style="color: var(--ink-faint);">유형 선택 → 링크 생성 → 카카오톡 공유</span><br>
+              <span style="display: inline-block; margin-top: 4px; padding: 1.5px 6px; background: var(--member-bg); color: var(--member); font-weight: 700; font-size: 9.5px; border-radius: 4px;">🔒 MEMBER</span> 비회원 탭 시 토스트
+            </div>
+          </div>
+
+          <!-- 3 -->
+          <div style="border: 1.5px solid var(--ink); border-radius: 12px; padding: 14px; background: white;">
+            <div style="font-family: 'Caveat', cursive; font-size: 22px; font-weight: 700; color: var(--accent);">③  우리 잘 맞을까?</div>
+            <div style="font-size: 12px; color: var(--ink-soft); margin: 4px 0 8px;">친숙어: 동료와의 케미 검사</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; line-height: 1.7; color: var(--ink);">
+              → <b>/colleagues</b> (= 동료 &amp; 케미 탭)<br>
+              <span style="color: var(--ink-faint);">CTA와 탭은 동일 목적지</span><br>
+              <span style="display: inline-block; margin-top: 4px; padding: 1.5px 6px; background: var(--member-bg); color: var(--member); font-weight: 700; font-size: 9.5px; border-radius: 4px;">🔒 MEMBER</span> 비회원 탭 시 토스트
+            </div>
+          </div>
+
+          <!-- 4 -->
+          <div style="border: 1.5px solid var(--ink); border-radius: 12px; padding: 14px; background: white;">
+            <div style="font-family: 'Caveat', cursive; font-size: 22px; font-weight: 700; color: var(--accent);">④  이 서비스는 무엇인가요?</div>
+            <div style="font-size: 12px; color: var(--ink-soft); margin: 4px 0 8px;">친숙어: 서비스 소개 &amp; 약관</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; line-height: 1.7; color: var(--ink);">
+              → <b>서비스 소개 시트</b> (메인 오버레이)<br>
+              <span style="color: var(--ink-faint);">3~5장 온보딩 + 약관·개인정보 링크</span><br>
+              <span style="display: inline-block; margin-top: 4px; padding: 1.5px 6px; background: var(--accent-2); color: var(--accent); font-weight: 700; font-size: 9.5px; border-radius: 4px;">PUBLIC</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- locked toast pattern -->
+        <div style="margin-top: 16px; border: 1.5px dashed var(--ink); border-radius: 12px; padding: 14px 16px; background: var(--paper-2);">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <span style="font-family: 'Caveat', cursive; font-size: 20px; font-weight: 700;">🔒 잠김 패턴</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-faint);">guest-locked-action</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px; font-size: 12px; color: var(--ink-soft); line-height: 1.55;">
+              비회원이 회원 전용 CTA 또는 탭(② ③ / 검사 결과 / 동료 &amp; 케미 / 내 정보)을 탭하면 <b style="color:var(--ink);">opacity 0.5 + 자물쇠 아이콘</b>으로 흐릿하게 표시되고, 클릭 시 <b style="color:var(--ink);">하단 토스트 1회 노출</b>. 토스트의 액션으로 카카오 로그인 진입 유도.
+            </div>
+            <!-- mock toast -->
+            <div style="background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 999px; font-size: 11.5px; display: flex; align-items: center; gap: 10px;">
+              <span>🔒 로그인이 필요해요</span>
+              <span style="background: var(--accent); padding: 3px 8px; border-radius: 999px; font-weight: 600; font-size: 10.5px;">카카오로 시작</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 0.7 Header Pattern ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="num">00b</span>
+      <h2>헤더 / 탭바 패턴</h2>
+      <span class="tag">Mockup confirmed</span>
+    </div>
+    <p class="sec-note">상단 헤더 + 하단 탭바의 2단 글로벌 네비. 헤더 우측은 인증 상태에 따라 분기되고, 하단 탭바는 두 상태 모두에 노출됩니다 (잠김 항목은 흐릿 + 자물쇠).</p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+      <!-- Logged out -->
+      <div style="background: white; border: 1.5px solid var(--ink); border-radius: 14px; padding: 18px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <span style="font-family: 'Caveat', cursive; font-size: 22px; color: var(--ink);">A. 비회원 상태</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--guest); background: var(--guest-bg); padding: 2px 7px; border-radius: 999px;">GUEST</span>
+        </div>
+        <!-- mock header -->
+        <div style="border: 1.5px solid var(--ink); border-radius: 10px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; background: var(--paper-2);">
+          <div style="font-family: 'Caveat', cursive; font-size: 22px; font-weight: 700; color: var(--ink);">MyCPT</div>
+          <div style="border: 1.5px solid var(--ink); padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 600; background: oklch(0.95 0.04 95); font-family: 'JetBrains Mono', monospace;">💬 카카오로 시작</div>
+        </div>
+        <ul style="margin: 12px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-soft); line-height: 1.7;">
+          <li>우상단: <b style="color: var(--ink);">카카오 로그인</b> CTA 알약</li>
+          <li>메인 4-CTA 중 ① "나는 누구일까?" / ④ "이 서비스는 무엇인가요?"는 정상 노출, ② ③은 자물쇠 표시</li>
+          <li>알림 종 · 프로필 칩 표시 안 함</li>
+        </ul>
+      </div>
+
+      <!-- Logged in -->
+      <div style="background: white; border: 1.5px solid var(--ink); border-radius: 14px; padding: 18px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <span style="font-family: 'Caveat', cursive; font-size: 22px; color: var(--ink);">B. 회원 상태</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--member); background: var(--member-bg); padding: 2px 7px; border-radius: 999px;">MEMBER</span>
+        </div>
+        <!-- mock header -->
+        <div style="border: 1.5px solid var(--ink); border-radius: 10px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; background: var(--paper-2);">
+          <div style="font-family: 'Caveat', cursive; font-size: 22px; font-weight: 700; color: var(--ink);">MyCPT</div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="position: relative; width: 24px; height: 24px; border: 1.5px solid var(--ink); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px;">○<span style="position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; border: 1.5px solid white;"></span></div>
+            <div style="border: 1.5px solid var(--ink); padding: 3px 6px 3px 11px; border-radius: 999px; display: flex; align-items: center; gap: 6px; background: white; transform: rotate(-0.3deg);">
+              <span style="font-family: 'Inter'; font-size: 11px; font-weight: 600;">닉네임</span>
+              <span style="width: 22px; height: 22px; border-radius: 50%; background: oklch(0.85 0.08 80); border: 1px solid var(--ink); font-size: 8.5px; display: flex; align-items: center; justify-content: center; color: var(--ink); font-family: 'Inter';">사진</span>
+            </div>
+          </div>
+        </div>
+        <ul style="margin: 12px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-soft); line-height: 1.7;">
+          <li><b style="color: var(--ink);">[닉네임][사진]</b> 칩 클릭 → <b style="color: var(--accent);">/me</b> 마이페이지 (하단 "내 정보" 탭 첫 항목과 동일 목적지)</li>
+          <li><b style="color: var(--ink);">알림 종</b> — 케미 완료·동료 등록 등 SSE 이벤트. 탭 시 드롭다운 오픈, 미열람 시 빨간 점</li>
+          <li>코인 잔량은 "내 정보 → 코인" / 케미 발행 확인 모달에서 표시 (헤더 미노출)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 1. Sitemap ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="num">01</span>
+      <h2>사이트맵</h2>
+      <span class="tag">Information Architecture</span>
+    </div>
+    <div class="legend">
+      <span class="chip shared"><span class="dot"></span>공용 (auth-agnostic)</span>
+      <span class="chip guest"><span class="dot"></span>비회원 가능</span>
+      <span class="chip member"><span class="dot"></span>회원 전용</span>
+      <span class="chip api">●  Modal &nbsp;|&nbsp;  /path  엔드포인트 매핑은 §2 참조</span>
+    </div>
+
+    <div class="sitemap">
+      <div class="root-row">
+        <div class="root">/ &nbsp; MyCPT &nbsp;·&nbsp; 4-Tab</div>
+      </div>
+
+      <div class="branches">
+
+        <!-- Tab 1 : 홈 -->
+        <div class="branch shared">
+          <h4>홈 <span class="badge">Home</span></h4>
+          <p class="cap">4개 CTA의 진입 화면. 검사·공유·소개의 진입점.</p>
+          <ul class="page-list">
+            <li class="s">
+              <span class="auth-flag"></span>
+              <span class="name">메인</span>
+              <span class="path">/</span>
+              <span class="modal">+ 4 modals</span>
+            </li>
+            <li class="s">
+              <span class="auth-flag"></span>
+              <span class="name">검사 응시 (풀스크린 시트)</span>
+              <span class="path">overlay on /  · ① 나는 누구일까?</span>
+            </li>
+            <li class="m">
+              <span class="auth-flag"></span>
+              <span class="name">타인 평정 공유 (시트)</span>
+              <span class="path">overlay on /  · ② 남이 보는 내 모습</span>
+            </li>
+            <li class="s">
+              <span class="auth-flag"></span>
+              <span class="name">서비스 소개 (시트)</span>
+              <span class="path">overlay on /  · ④ 이 서비스는?</span>
+            </li>
+            <li class="g">
+              <span class="auth-flag"></span>
+              <span class="name">타인 평정 응시 (외부 진입)</span>
+              <span class="path">/assessments/[token]</span>
+            </li>
+            <li class="g">
+              <span class="auth-flag"></span>
+              <span class="name">카카오 콜백</span>
+              <span class="path">/auth/kakao/callback</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Tab 2 : 검사 결과 -->
+        <div class="branch member">
+          <h4>검사 결과 <span class="badge">Results</span></h4>
+          <p class="cap">자기/타인 평정 결과 이력. 친숙어 탭 명칭 적용.</p>
+          <ul class="page-list">
+            <li class="m">
+              <span class="auth-flag"></span>
+              <span class="name">결과 이력</span>
+              <span class="path">/results  ·  탭: 내 결과 / 친구가 본 내 모습</span>
+            </li>
+            <li class="m">
+              <span class="auth-flag"></span>
+              <span class="name">결과 상세</span>
+              <span class="path">/results/[id]</span>
+            </li>
+          </ul>
+          <p style="margin: 10px 0 0; font-family: 'Caveat', cursive; font-size: 15px; color: var(--ink-faint); line-height: 1.3;">※ 비회원 탭 시 토스트<br>"로그인이 필요해요"</p>
+        </div>
+
+        <!-- Tab 3 : 동료 & 케미 -->
+        <div class="branch member">
+          <h4>동료 &amp; 케미 <span class="badge">Peers</span></h4>
+          <p class="cap">메인 ③ "우리 잘 맞을까?"와 동일 진입.</p>
+          <ul class="page-list">
+            <li class="m">
+              <span class="auth-flag"></span>
+              <span class="name">동료 목록</span>
+              <span class="path">/colleagues</span>
+              <span class="modal">+ 등록 모달</span>
+            </li>
+            <li class="m">
+              <span class="auth-flag"></span>
+              <span class="name">동료 프로필</span>
+              <span class="path">/colleagues/[id]</span>
+              <span class="modal">+ 발행 확인 모달</span>
+            </li>
+            <li class="g">
+              <span class="auth-flag"></span>
+              <span class="name">동료 초대 수락</span>
+              <span class="path">/invite/[code]</span>
+            </li>
+            <li class="m">
+              <span class="auth-flag"></span>
+              <span class="name">케미 보고서 이력</span>
+              <span class="path">/chemistry</span>
+            </li>
+            <li class="m">
+              <span class="auth-flag"></span>
+              <span class="name">케미 보고서 상세</span>
+              <span class="path">/chemistry/[id]</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Tab 4 : 내 정보 -->
+        <div class="branch member">
+          <h4>내 정보 <span class="badge">Account</span></h4>
+          <p class="cap">v0.2의 "부가 기능" → 명칭 변경. 리스트 계층형.</p>
+          <ul class="page-list">
+            <li class="m">
+              <span class="auth-flag"></span>
+              <span class="name">마이페이지 (허브)</span>
+              <span class="path">/me  ·  ← 헤더 칩 / 탭 첫 항목</span>
+            </li>
+            <li class="m">
+              <span class="auth-flag"></span>
+              <span class="name">알림 센터</span>
+              <span class="path">/me/notifications</span>
+              <span class="modal">+ 헤더 드롭다운</span>
+            </li>
+            <li class="m">
+              <span class="auth-flag"></span>
+              <span class="name">코인 / 사용 이력</span>
+              <span class="path">/me/coins</span>
+            </li>
+            <li class="m">
+              <span class="auth-flag"></span>
+              <span class="name">통계 비교 · 변화 추이</span>
+              <span class="path">/me/insights</span>
+            </li>
+            <li class="s">
+              <span class="auth-flag"></span>
+              <span class="name">서비스 소개 &amp; 약관</span>
+              <span class="path">/me/about  ·  비회원도 접근</span>
+            </li>
+            <li class="s">
+              <span class="auth-flag"></span>
+              <span class="name">고객 문의 / FAQ</span>
+              <span class="path">/me/help</span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+      <p style="margin: 28px 0 0; font-family: 'Caveat', cursive; font-size: 20px; color: var(--ink-soft); text-align: center;">
+        ※ 전역 컴포넌트 — 상단 헤더(로고·알림 종·프로필 칩 또는 로그인 버튼), 하단 탭바(4탭), SSE 토스트 영역, 푸터(면책 조항)
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 2. Page Catalog ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="num">02</span>
+      <h2>화면 카탈로그</h2>
+      <span class="tag">Screen × API mapping</span>
+    </div>
+    <p class="sec-note">각 화면이 호출/구독하는 API를 매핑해, 와이어프레임 단계에서 누락된 화면이 없는지 검증합니다.</p>
+
+    <div class="catalog">
+      <table class="cat">
+        <thead>
+          <tr>
+            <th style="width: 24%;">화면</th>
+            <th style="width: 8%;">접근</th>
+            <th style="width: 30%;">핵심 컴포넌트</th>
+            <th style="width: 38%;">연결 API</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- group: 1. 홈 -->
+          <tr class="group-row"><td colspan="4">①  홈 (Home) &nbsp; — &nbsp; 메인 + 4-CTA 진입점</td></tr>
+
+          <tr>
+            <td>
+              <span class="nm">메인</span>
+              <span class="pth">/</span>
+            </td>
+            <td><span class="auth s">공용</span></td>
+            <td class="comp">헤더 칩(또는 카카오 로그인) · 본문에 4-CTA 알약(① 나는 누구일까? / ② 남이 보는 내 모습 🔒 / ③ 우리 잘 맞을까? 🔒 / ④ 이 서비스는?) · 하단 탭바 · 회원이면 ②③ 잠금 해제</td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /auth/me (옵셔널, 로그인 상태 판별)</li>
+                <li><b>GET</b> /results?limit=1 (회원일 때 최근 요약)</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">검사 응시 (풀스크린 시트)</span>
+              <span class="pth">overlay on /  ·  ① 나는 누구일까?</span>
+            </td>
+            <td><span class="auth s">공용</span></td>
+            <td class="comp">
+              <b>Step 1.</b> 검사 유형 선택 (DISC · MBTI/Big5 "준비 중") — <i style="color:var(--accent);">자유롭게 닫기 가능</i><br>
+              <b>Step 2.</b> 24문항 진행바 + Most/Least 강제선택 — <i style="color:var(--accent);">닫기 시 확인 다이얼로그</i><br>
+              <b>Step 3.</b> DISC 4축 + 6 섹션 보고서. 비회원: "카카오로 결과 저장" CTA / 회원: 자동 저장 + "결과 상세로"
+            </td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /questions</li>
+                <li><b>POST</b> /results/score</li>
+                <li><b>GET</b> /auth/kakao (비회원 저장 진입)</li>
+                <li><b>POST</b> /results (저장)</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">타인 평정 공유 (풀스크린 시트)</span>
+              <span class="pth">overlay on /  ·  ② 남이 보는 내 모습</span>
+            </td>
+            <td><span class="auth m">회원</span></td>
+            <td class="comp">검사 모달과 <b>동일 컴포넌트 재사용</b>, Step만 분기 — <b>Step 1.</b> 검사 유형 선택 → <b>Step 2.</b> 라벨 입력 (예: "여자친구") → <b>Step 3.</b> 일회용 링크 발급 + <b>카카오톡 공유</b> 버튼 활성화 / URL 복사</td>
+            <td>
+              <ul class="api-list">
+                <li><b>POST</b> /assessments (token 발급)</li>
+                <li><b>Kakao</b> SDK share</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">서비스 소개 (시트)</span>
+              <span class="pth">overlay on /  ·  ④ 이 서비스는?</span>
+            </td>
+            <td><span class="auth s">공용</span></td>
+            <td class="comp">3~5장 온보딩 캐러셀 · 면책 조항 ("참고용 성향 분석, 심리 진단 아님") · 약관 / 개인정보처리방침 / 문의 링크</td>
+            <td>
+              <ul class="api-list">
+                <li>— static —</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">타인 평정 응시 (외부 진입)</span>
+              <span class="pth">/assessments/[token]</span>
+            </td>
+            <td><span class="auth g">비회원 OK</span></td>
+            <td class="comp">"OOO님은 어떤 사람인가요?" 인트로 · 24문항 응시 · 일회용 토큰 검증 / 만료 안내 · 응시 완료 시 "감사합니다" 종료 화면</td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /assessments/{token}</li>
+                <li><b>POST</b> /results/score (rater=OTHER)</li>
+              </ul>
+            </td>
+          </tr>
+
+          <!-- group: 2. 검사 결과 -->
+          <tr class="group-row"><td colspan="4">②  검사 결과 (Results) &nbsp; — &nbsp; 친숙어 탭으로 분리</td></tr>
+
+          <tr>
+            <td>
+              <span class="nm">검사 결과</span>
+              <span class="pth">/results</span>
+            </td>
+            <td><span class="auth m">회원</span></td>
+            <td class="comp">
+              상단 탭 2개 — <b>"내 검사 결과"</b> (rater=SELF) / <b>"친구가 본 내 모습"</b> (rater=OTHER)<br>
+              <span style="color: var(--ink-faint); font-size: 11px;">친숙어 탭 명칭. 라벨 칩 · 커서 페이지네이션 · 카드 리스트</span>
+            </td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /results?rater=SELF|OTHER&cursor=…</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">결과 상세</span>
+              <span class="pth">/results/[id]</span>
+            </td>
+            <td><span class="auth m">회원</span></td>
+            <td class="comp">DISC 시각화 · 6 섹션 보고서 · 평정자 라벨(타인 평정 시) · 공유 안내</td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /results/{id}</li>
+              </ul>
+            </td>
+          </tr>
+
+          <!-- group: 3. 동료 & 케미 -->
+          <tr class="group-row"><td colspan="4">③  동료 &amp; 케미 (Peers) &nbsp; — &nbsp; ③ "우리 잘 맞을까?" 동선</td></tr>
+
+          <tr>
+            <td>
+              <span class="nm">동료 목록</span>
+              <span class="pth">/colleagues</span>
+            </td>
+            <td><span class="auth m">회원</span></td>
+            <td class="comp">내 동료 코드 카드(복사·갱신) · 동료 카드 그리드 · "동료 등록" CTA → 등록 모달(코드 입력)</td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /peer-code · /colleagues</li>
+                <li><b>POST</b> /colleagues (등록)</li>
+                <li><b>DELETE</b> /colleagues/{id}</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">동료 프로필</span>
+              <span class="pth">/colleagues/[id]</span>
+            </td>
+            <td><span class="auth m">회원</span></td>
+            <td class="comp">상대 프로필 · 이 동료와의 케미 보고서 이력 · "케미 발행" CTA → 코인 차감 확인 모달 → 발행 즉시 토스트</td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /colleagues/{id}</li>
+                <li><b>GET</b> /coins (잔량 표시)</li>
+                <li><b>POST</b> /chemistry-reports (202)</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">동료 초대 수락</span>
+              <span class="pth">/invite/[code]</span>
+            </td>
+            <td><span class="auth g">비회원→로그인</span></td>
+            <td class="comp">초대자 프로필 · "동료로 등록하기" 버튼 · 로그인 미완 시 카카오 로그인 유도</td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /colleagues/invite/{code}</li>
+                <li><b>POST</b> /colleagues</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">케미 보고서 이력</span>
+              <span class="pth">/chemistry</span>
+            </td>
+            <td><span class="auth m">회원</span></td>
+            <td class="comp">발행자/대상자 구분 · 발행 일시 · 미열람 뱃지 · 발행 중 상태 카드</td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /chemistry-reports</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">케미 보고서 상세</span>
+              <span class="pth">/chemistry/[id]</span>
+            </td>
+            <td><span class="auth m">회원</span></td>
+            <td class="comp">두 사람 아바타 · 6 섹션 Markdown 렌더 · 발행 중일 때는 스켈레톤 + "발행 중…" 상태, SSE 완료 이벤트 도착 시 자동 렌더</td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /chemistry-reports/{id}</li>
+                <li><b>SSE</b> /notifications/stream</li>
+              </ul>
+            </td>
+          </tr>
+
+          <!-- group: 4. 내 정보 -->
+          <tr class="group-row"><td colspan="4">④  내 정보 (Account) &nbsp; — &nbsp; v0.2 "부가 기능" → 명칭 변경, 리스트 계층형</td></tr>
+
+          <tr>
+            <td>
+              <span class="nm">마이페이지 (허브)</span>
+              <span class="pth">/me  ·  ← 헤더 칩 / 탭 첫 항목</span>
+            </td>
+            <td><span class="auth m">회원</span></td>
+            <td class="comp">
+              <b>리스트 계층형 (첨부 모형 기준)</b> — 상단 큰 프로필 이미지(✎ 펜 아이콘, 탭 시 이미지 변경) · 닉네임 표시 · "내 정보 수정" 항목 · 알림 · 코인 · 인사이트 · 서비스 소개 · 문의 · "로그아웃"(즉시) / "회원탈퇴"(사유+2단 확인) 분리
+            </td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /auth/me · /coins</li>
+                <li><b>POST</b> /users/me/profile-image</li>
+                <li><b>POST</b> /auth/logout</li>
+                <li><b>DELETE</b> /users/me</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">내 정보 수정</span>
+              <span class="pth">/me/profile</span>
+            </td>
+            <td><span class="auth m">회원</span></td>
+            <td class="comp">닉네임 · 생년 · 성별 · 프로필 이미지 (jpg/png/webp · 10MB) · 통계 반영 안내. 필수 정보만 노출</td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /auth/me</li>
+                <li><b>PATCH</b> /users/me</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">알림 센터</span>
+              <span class="pth">/me/notifications</span>
+            </td>
+            <td><span class="auth m">회원</span></td>
+            <td class="comp">알림 리스트 · 클릭 시 이동 + 즉시 삭제 · 헤더에는 드롭다운 형태로 동일 데이터 노출</td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /notifications</li>
+                <li><b>DEL</b> /notifications/{id}</li>
+                <li><b>SSE</b> /notifications/stream</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">코인 / 사용 이력</span>
+              <span class="pth">/me/coins</span>
+            </td>
+            <td><span class="auth m">회원</span></td>
+            <td class="comp">현재 잔량(최대 3) · 다음 충전까지 카운트다운 · 사용 이력 · 안내(케미 1회 = 1코인)</td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /coins</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">통계 비교 · 변화 추이 (인사이트)</span>
+              <span class="pth">/me/insights</span>
+            </td>
+            <td><span class="auth m">회원</span></td>
+            <td class="comp">탭 2개(비교 / 추이) · 나이대·성별 필터 · 평균 대비 차이 그래프 · 생년/성별 미입력 시 "프로필 보완하기" 유도</td>
+            <td>
+              <ul class="api-list">
+                <li><b>GET</b> /statistics/comparison</li>
+                <li><b>GET</b> /statistics/trend</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">서비스 소개 &amp; 약관</span>
+              <span class="pth">/me/about</span>
+            </td>
+            <td><span class="auth s">공용</span></td>
+            <td class="comp">메인 ④ CTA와 동일 콘텐츠. 풀페이지 형태. 약관 / 개인정보처리방침 / 면책 / 버전 정보</td>
+            <td>
+              <ul class="api-list">
+                <li>— static —</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="nm">고객 문의 / FAQ</span>
+              <span class="pth">/me/help</span>
+            </td>
+            <td><span class="auth s">공용</span></td>
+            <td class="comp">자주 묻는 질문 아코디언 · 문의 이메일/카카오 채널 링크</td>
+            <td>
+              <ul class="api-list">
+                <li>— static / external —</li>
+              </ul>
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 2.5 Mypage Mock ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="num">02b</span>
+      <h2>마이페이지 — 리스트 계층형</h2>
+      <span class="tag">Wireframe Anchor</span>
+    </div>
+    <p class="sec-note">두 번째 첨부 모형 기준. 헤더·푸터를 제외한 본문 영역만 정의. 프로필 이미지 + 닉네임 + 필수 항목만 노출하는 최소 구조.</p>
+
+    <div style="display: grid; grid-template-columns: 300px 1fr; gap: 28px; align-items: start;">
+
+      <!-- mypage mock -->
+      <div style="border: 2px solid var(--ink); border-radius: 18px; padding: 24px 20px; background: white; box-shadow: 6px 6px 0 oklch(0.90 0.01 250);">
+        <!-- profile image -->
+        <div style="position: relative; width: 160px; height: 160px; margin: 8px auto 22px;">
+          <div style="width: 100%; height: 100%; border: 1.5px solid var(--ink); border-radius: 50%; background: var(--paper-2); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 11px; color: var(--ink-soft); line-height: 1.4;">
+            프로필 이미지<br><span style="font-size: 9.5px; color: var(--ink-faint);">(클릭 시 변경)</span>
+          </div>
+          <!-- pencil icon -->
+          <div style="position: absolute; right: 4px; bottom: 4px; width: 32px; height: 32px; border: 1.5px solid var(--ink); border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-size: 13px;">✎</div>
+        </div>
+
+        <!-- nickname display -->
+        <div style="border: 1.5px solid var(--ink); border-radius: 10px; padding: 10px 14px; text-align: center; font-size: 13px; font-weight: 600; margin-bottom: 8px; background: var(--paper-2);">닉네임</div>
+        <!-- edit info -->
+        <div style="border: 1.5px solid var(--ink); border-radius: 10px; padding: 10px 14px; text-align: center; font-size: 12px; margin-bottom: 18px;">내 정보 수정 ›</div>
+
+        <!-- gap divider -->
+        <div style="height: 14px;"></div>
+
+        <!-- logout -->
+        <div style="border: 1.5px solid var(--ink); border-radius: 10px; padding: 10px 14px; text-align: center; font-size: 12px; margin-bottom: 8px;">로그아웃</div>
+        <!-- withdraw -->
+        <div style="border: 1.5px dashed var(--ink); border-radius: 10px; padding: 10px 14px; text-align: center; font-size: 12px; color: var(--ink-faint);">회원탈퇴</div>
+      </div>
+
+      <!-- explanations -->
+      <div>
+        <div style="border: 1.5px solid var(--ink); border-radius: 12px; padding: 18px 20px; background: white; margin-bottom: 14px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-family: 'Caveat', cursive; font-size: 22px; font-weight: 700;">최소 정보 / 필수 항목만</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-faint);">/me</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; color: var(--ink-soft); line-height: 1.6;">
+            모형에 포함된 4개 요소(<b style="color:var(--ink);">프로필 이미지</b> · <b style="color:var(--ink);">닉네임</b> · <b style="color:var(--ink);">내 정보 수정</b> · <b style="color:var(--ink);">로그아웃 / 회원탈퇴</b>)를 본문의 최소 단위로 유지합니다. 
+            다른 항목(알림 · 코인 · 인사이트 · 서비스 소개 · 문의)은 <b style="color:var(--ink);">하단 "내 정보" 탭의 형제 메뉴</b>로 위치하므로 마이페이지 본문은 비교적 가볍게 유지될 수 있습니다.
+          </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div style="border: 1.5px solid var(--ink); border-radius: 12px; padding: 14px;">
+            <div style="font-family: 'Caveat', cursive; font-size: 19px; font-weight: 700; color: var(--accent); margin-bottom: 4px;">✎ 프로필 이미지</div>
+            <div style="font-size: 12px; color: var(--ink-soft); line-height: 1.55;">원형 이미지 우하단의 펜 아이콘 클릭 → 시스템 파일 피커. jpg/png/webp · 10MB 제한.</div>
+            <div style="margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--ink-faint);">POST /users/me/profile-image</div>
+          </div>
+          <div style="border: 1.5px solid var(--ink); border-radius: 12px; padding: 14px;">
+            <div style="font-family: 'Caveat', cursive; font-size: 19px; font-weight: 700; color: var(--accent); margin-bottom: 4px;">› 내 정보 수정</div>
+            <div style="font-size: 12px; color: var(--ink-soft); line-height: 1.55;">/me/profile 진입. 닉네임 · 생년 · 성별만 편집. 통계 반영을 위해 생년/성별 입력 권장.</div>
+            <div style="margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--ink-faint);">PATCH /users/me</div>
+          </div>
+          <div style="border: 1.5px solid var(--ink); border-radius: 12px; padding: 14px; background: oklch(0.97 0.02 220);">
+            <div style="font-family: 'Caveat', cursive; font-size: 19px; font-weight: 700; color: var(--accent); margin-bottom: 4px;">→ 로그아웃</div>
+            <div style="font-size: 12px; color: var(--ink-soft); line-height: 1.55;"><b style="color:var(--ink);">즉시 실행</b> · 확인 다이얼로그 없음. 세션 무효화 후 메인(/)으로 이동.</div>
+            <div style="margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--ink-faint);">POST /auth/logout</div>
+          </div>
+          <div style="border: 1.5px solid var(--ink); border-radius: 12px; padding: 14px; background: oklch(0.97 0.03 30);">
+            <div style="font-family: 'Caveat', cursive; font-size: 19px; font-weight: 700; color: var(--accent); margin-bottom: 4px;">⚠ 회원탈퇴</div>
+            <div style="font-size: 12px; color: var(--ink-soft); line-height: 1.55;"><b style="color:var(--ink);">사유 입력 시트 → 2단 확인 다이얼로그</b> → 처리. 데이터 영구 삭제 안내 명시.</div>
+            <div style="margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--ink-faint);">DELETE /users/me</div>
+          </div>
+        </div>
+
+        <div style="border: 1.5px dashed var(--ink); border-radius: 12px; padding: 12px 16px; background: var(--paper-2); font-size: 12px; color: var(--ink-soft);">
+          <b style="color: var(--ink); font-family: 'Caveat', cursive; font-size: 16px;">UX 메모.</b>
+          마이페이지가 단순할수록 친숙어 4-CTA 메인 화면의 일관성과 잘 맞습니다. 모형 외 항목을 추가할 필요가 있다면 "내 정보" 탭의 형제 메뉴(알림 / 코인 / 인사이트 / 서비스 소개 / 문의)로 분리합니다.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. Flows ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="num">03</span>
+      <h2>주요 동선</h2>
+      <span class="tag">User Journeys</span>
+    </div>
+    <p class="sec-note">유즈케이스 문서의 UC-01 / UC-02 / UC-03 + 신규 보강 동선 1개. 각 단계의 <b>볼드된 키워드</b>는 위의 화면 카탈로그와 1:1 대응.</p>
+
+    <div class="flows">
+
+      <div class="flow">
+        <div class="flow-head">
+          <h3>① 비회원 → 검사 → 회원 전환</h3>
+          <span class="uc">UC-01</span>
+        </div>
+        <ol class="flow-steps">
+          <li>
+            메인에서 "나는 누구일까? (심리검사)" CTA 클릭 → 풀스크린 시트 오픈
+            <span class="screen">@ <b>메인</b>  →  /</span>
+          </li>
+          <li>
+            Step 1 — 검사 유형 선택 (DISC / MBTI·Big5는 "준비 중"). 시트 자유 닫기 가능
+            <span class="screen">@ <b>검사 시트</b>  · Step 1</span>
+          </li>
+          <li>
+            Step 2 — 24문항 강제선택 응시 (Most/Least). <b>닫기 시 확인 다이얼로그</b>
+            <span class="screen">@ <b>검사 시트</b>  · Step 2</span>
+          </li>
+          <li>
+            Step 3 — 보고서 표시. 비회원은 sessionStorage에 원점수 임시 보관 + "카카오로 결과 저장" CTA 강조
+            <span class="screen">@ <b>검사 시트</b>  · Step 3</span>
+          </li>
+          <li>
+            카카오 OAuth 콜백 → sessionStorage 원점수를 POST /results → 결과 상세로 이동
+            <span class="screen">@ /auth/kakao  →  <b>결과 상세</b>  →  /results/[id]</span>
+          </li>
+        </ol>
+      </div>
+
+      <div class="flow">
+        <div class="flow-head">
+          <h3>② "남이 보는 내 모습" → 카카오 공유</h3>
+          <span class="uc">UC-02</span>
+        </div>
+        <ol class="flow-steps">
+          <li>
+            메인 CTA ② 클릭 → <b>검사 모달과 동일 컴포넌트</b>(시트) 오픈, Step만 분기
+            <span class="screen">@ <b>메인</b>  →  /</span>
+          </li>
+          <li>
+            Step 1 — 검사 유형 선택 (응시 모달과 동일 UI)
+            <span class="screen">@ <b>공유 시트</b>  · Step 1</span>
+          </li>
+          <li>
+            Step 2 — 라벨 입력 ("여자친구" 등). 일회용 토큰 발급
+            <span class="screen">@ <b>공유 시트</b>  · Step 2  →  POST /assessments</span>
+          </li>
+          <li>
+            Step 3 — 링크 발급 화면. <b>카카오톡 공유</b> 버튼 활성화 / URL 복사
+            <span class="screen">@ <b>공유 시트</b>  · Step 3  ·  Kakao Share SDK</span>
+          </li>
+          <li>
+            대상자(비회원 가능) 링크 접속 → 응시 → rater=OTHER로 A 계정에 귀속 → "친구가 본 내 모습" 탭에서 조회
+            <span class="screen">@ <b>타인 평정 응시</b>  →  /assessments/[token]</span>
+          </li>
+        </ol>
+      </div>
+
+      <div class="flow">
+        <div class="flow-head">
+          <h3>③ 케미 발행 → 토스트 → SSE 완료</h3>
+          <span class="uc">UC-03</span>
+        </div>
+        <ol class="flow-steps">
+          <li>
+            동료 프로필에서 "케미 발행" → 코인 차감 확인 모달 → 확인
+            <span class="screen">@ <b>동료 프로필</b>  →  /colleagues/[id]</span>
+          </li>
+          <li>
+            POST /chemistry-reports → 202 즉시 반환 → 즉시 <b>"케미 보고서 발행 중입니다…" 토스트 1회 노출</b> 후 자동 사라짐
+            <span class="screen">@ <b>SSE 토스트 영역</b>  ·  ~3s auto-dismiss</span>
+          </li>
+          <li>
+            사용자는 자유롭게 다른 화면 이동 가능 (메인·결과·동료 등). 발행 중 상태는 /chemistry 이력에 카드로 표시
+            <span class="screen">@ <b>케미 이력</b>  →  /chemistry  ·  "발행 중" 카드</span>
+          </li>
+          <li>
+            <b>SSE 완료 이벤트 수신</b> → 화면 위치 무관하게 토스트 ("케미 보고서가 도착했어요") + 헤더 알림 종 뱃지 동시 표시
+            <span class="screen">@ <b>SSE</b>  /notifications/stream  ·  type=chemistry.completed</span>
+          </li>
+          <li>
+            토스트의 "보기" 또는 알림 종 드롭다운 클릭 → 케미 보고서 상세 → 알림 자동 삭제
+            <span class="screen">@ <b>케미 보고서 상세</b>  →  /chemistry/[id]</span>
+          </li>
+        </ol>
+      </div>
+
+      <div class="flow">
+        <div class="flow-head">
+          <h3>④ 비회원 잠긴 CTA → 로그인 유도</h3>
+          <span class="uc">신규</span>
+        </div>
+        <ol class="flow-steps">
+          <li>
+            비회원 상태로 메인 진입. 헤더 우측은 "카카오로 시작" 버튼
+            <span class="screen">@ <b>메인</b>  →  /  (guest)</span>
+          </li>
+          <li>
+            CTA ② 또는 ③, 또는 하단 탭(검사결과 / 동료 &amp; 케미 / 내 정보)을 탭 — 항목은 <b>opacity 0.5 + 자물쇠 아이콘</b>으로 표시
+            <span class="screen">@ <b>locked button / tab</b></span>
+          </li>
+          <li>
+            클릭 시 하단에서 토스트 슬라이드 업: <b>"🔒 로그인이 필요해요"</b> + "카카오로 시작" 액션
+            <span class="screen">@ <b>토스트</b>  ·  ~4s + tap to dismiss</span>
+          </li>
+          <li>
+            토스트 액션 또는 헤더 버튼 탭 → 카카오 OAuth → 콜백 후 직전 의도 화면으로 라우팅 (returnTo)
+            <span class="screen">@ /auth/kakao  ·  returnTo=…</span>
+          </li>
+          <li>
+            로그인 완료 후 자물쇠 해제. 동일 화면에서 정상 동선 진입
+            <span class="screen">@ 직전 의도 화면</span>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. Next steps ============ -->
+  <section>
+    <div class="next">
+      <div>
+        <h2>다음 단계 — 와이어프레임 우선순위</h2>
+        <p>확정된 IA(v0.3)를 기준으로 모바일 우선으로 아래 순서에 따라 3~5안씩 발산하기를 제안합니다.</p>
+        <ol class="priority-list">
+          <li><span class="p">P1</span><div><span class="nm">메인 (4-CTA + 하단 탭바)</span><span class="why">친숙어 4-CTA의 시각적 리듬, 잠김 표현, 탭바의 단령 표현. 메인에서 모든 동선이 시작.</span></div></li>
+          <li><span class="p">P1</span><div><span class="nm">검사 풀스크린 시트 (3 Step)</span><span class="why">서비스의 본체. Step 1 자유 닫기 / Step 2 확인 다이얼로그 / Step 3의 분기 처리.</span></div></li>
+          <li><span class="p">P1</span><div><span class="nm">공유 시트 (검사 모달 재활용)</span><span class="why">결과적으로 같은 컴포넌트가 다른 Step 세트를 렌더하는 구조. 재사용 패턴 확정.</span></div></li>
+          <li><span class="p">P2</span><div><span class="nm">마이페이지 (리스트 계층형)</span><span class="why">첨부 모형 그대로 — 4개 항목만 노출. 최소한의 구조.</span></div></li>
+          <li><span class="p">P2</span><div><span class="nm">동료 목록 + 발행 토스트 + SSE 완료 알림</span><span class="why">단계별 토스트 정책 검증. 발행 중 / 완료 시각적 차별화.</span></div></li>
+          <li><span class="p">P3</span><div><span class="nm">결과 이력 / 인사이트</span><span class="why">친숙어 탭 명칭 적용 ("내 검사 결과" / "친구가 본 내 모습").</span></div></li>
+        </ol>
+      </div>
+      <div>
+        <h2 style="font-size: 28px;">v0.3 확정 사항</h2>
+        <ul class="q-list" style="list-style:none;">
+          <li style="--col: var(--accent);">메인 = 4-CTA(친숙어) + 하단 탭바 4개 (홈 / 검사 결과 / 동료 &amp; 케미 / 내 정보)</li>
+          <li>하단 탭은 모두에게 노출, 비회원은 잠김으로 표시 → 탭 시 토스트</li>
+          <li>마이페이지 진입 = 헤더 칩 + "내 정보" 탭 첫 항목 공존</li>
+          <li>공유 모달은 검사 모달과 동일 컴포넌트, Step만 분기</li>
+          <li>로그아웃 즉시 / 탈퇴 사유 + 2단 확인</li>
+          <li>인사이트는 "내 정보" 하위 항목으로 이동</li>
+          <li>결과 이력 탭은 "내 검사 결과" / "친구가 본 내 모습" 친숙어</li>
+          <li>케미 발행 = 즉시 토스트 1회 → SSE 완료 토스트 + 알림 뱃지</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>MyCPT · IA Draft v0.3</span>
+    <span>screens 14 · modals 6 · tabs 4 · journeys 4</span>
+    <span>next → wireframes (P1 3개 화면, 3안씩)</span>
+  </footer>
+
+</div>
+</body>
+</html>

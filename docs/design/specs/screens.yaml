@@ -1,0 +1,574 @@
+# MyCPT — 화면 명세 (Screen Spec)
+# 머신 리더블: 각 화면의 id / 경로 / 인증 / 컴포넌트 / API / 상태 / 와이어프레임 위치를 매핑.
+# 코드 생성 시 첫 번째로 조회하는 SSOT (Single Source of Truth).
+#
+# 필드 정의:
+#   id            — kebab-case 고유 ID. 컴포넌트 이름의 PascalCase 변환 기준 (예: peers-list → PeersList)
+#   label         — 한국어 화면 명칭
+#   route         — Next.js 라우트 (overlay/dialog는 별도 표기)
+#   auth          — public | member | guest-or-member (외부 평정자처럼 인증 무관)
+#   tab           — 4개 하단 탭 중 어디 속하는지 (home/results/peers/account/none)
+#   parent        — 모달·다이얼로그가 어느 화면 위에 띄워지는지
+#   wireframe     — 파일#artboard-id 형태로 와이어프레임 위치
+#   components    — 사용하는 재사용 컴포넌트 목록 (specs/components.yaml과 매핑)
+#   api           — 호출/구독 API 엔드포인트
+#   states        — 화면 내 상태 분기 (loading/empty/error/특수상태)
+#   notes         — 구현 시 주의사항
+
+version: 0.1
+generated_from: 와이어프레임 P1~P6 + IA v0.3 + docs/api-design.md
+last_updated: 2026-05-27
+
+# ═══════════════════════════════════════════════════════════════════
+# § 홈 탭 (Home)
+# ═══════════════════════════════════════════════════════════════════
+
+- id: main
+  label: 메인
+  route: /
+  auth: public
+  tab: home
+  wireframe: 와이어프레임 P1.html#main-a
+  components: [WfFrame, PillCTA, LockedToast, HeaderMember, HeaderGuest, TabBar]
+  api:
+    - { method: GET, path: /auth/me, optional: true, note: "로그인 상태 판별" }
+    - { method: GET, path: /results, params: { limit: 1 }, when: member, note: "최근 결과 요약" }
+  states:
+    member: 4개 CTA 모두 활성화
+    guest: ②③ CTA에 자물쇠 배지 + opacity 0.55. 탭 시 LockedToast 노출
+  cta_targets:
+    - { label: "나는 누구일까?", action: open_sheet, target: test-sheet-step1 }
+    - { label: "남이 보는 내 모습", action: open_sheet, target: share-sheet-step1, lock_for_guest: true }
+    - { label: "우리 잘 맞을까?", action: navigate, target: /colleagues, lock_for_guest: true }
+    - { label: "이 서비스는 무엇인가요?", action: open_sheet, target: about-sheet }
+  notes: |
+    P1 확정안 = A 알약 스택. 비회원 잠금 토스트는 specs/components.yaml#LockedToast 참조.
+
+- id: test-sheet-step1
+  label: 검사 시트 — Step 1 유형 선택
+  route: overlay on /
+  auth: public
+  tab: home
+  parent: main
+  wireframe: 와이어프레임 P1.html#test-step1
+  components: [SheetFrame, TestTypeCard]
+  api: []  # static — 유형 카드는 클라이언트 상수
+  states:
+    default: DISC 카드 1개 선택된 상태로 노출 (MVP는 DISC만)
+  notes: |
+    Step 1에서는 자유롭게 닫기 가능. Step 2부터 닫기 시 test-close-dialog 노출.
+
+- id: test-sheet-step2
+  label: 검사 시트 — Step 2 응시 중
+  route: overlay on /
+  auth: public
+  tab: home
+  parent: main
+  wireframe: 와이어프레임 P1.html#test-b
+  components: [SheetFrame, DotProgressBar, QuestionCard, OptionPickRow]
+  api:
+    - { method: GET, path: /questions }
+    - { method: POST, path: /results/score, note: "최종 제출 시" }
+  states:
+    answering: 진행도 N/24 표시. 가장 가까운 선택 시 "가장 먼"에서 동일 옵션 비활성화 (워터마크)
+    submitting: 마지막 문항 답변 후 로딩
+  notes: |
+    P1 확정안 = B 카드 + dot indicator. ✕ 탭 시 test-close-dialog 띄움.
+
+- id: test-sheet-step3-guest
+  label: 검사 시트 — Step 3 결과 (비회원)
+  route: overlay on /
+  auth: guest
+  tab: home
+  parent: main
+  wireframe: 와이어프레임 P1.html#test-step3-guest
+  components: [SheetFrame, TypePill, DiscBarsLarge, KakaoSaveCTA]
+  api:
+    - { method: POST, path: /results/score, response_only: true, note: "Step 2에서 받은 응답을 이어서 표시" }
+  states:
+    default: 한눈 요약만 + 카카오 저장 CTA 강조
+  notes: |
+    회원 전환의 1차 깔때기. "저장 없이 닫기" 보조 링크 제공.
+
+- id: test-sheet-step3-member
+  label: 검사 시트 — Step 3 결과 (회원)
+  route: overlay on /
+  auth: member
+  tab: home
+  parent: main
+  wireframe: 와이어프레임 P1.html#test-step3-member
+  components: [SheetFrame, TypePill, DiscBarsLarge]
+  api:
+    - { method: POST, path: /results, note: "자동 저장" }
+  states:
+    saving: 저장 중 (스피너)
+    saved: ✓ 자동 저장됨 칩 노출
+  cta:
+    - { label: "결과 상세로 가기", action: navigate, target: /results/[id] }
+    - { label: "친구에게 평정 요청", action: open_sheet, target: share-sheet-step1 }
+    - { label: "동료와의 케미", action: navigate, target: /colleagues }
+  notes: |
+    저장 후 변화 알림(이전 결과 대비 차이)을 한 줄로 노출.
+
+- id: test-close-dialog
+  label: 응시 중단 확인 다이얼로그
+  route: dialog on test-sheet-step2
+  auth: public
+  tab: home
+  parent: test-sheet-step2
+  wireframe: 와이어프레임 P1.html#test-close
+  components: [DialogCard, Scrim]
+  api: []
+  states:
+    default: 답한 문항 수 / 전체 문항 수 표시
+  buttons:
+    - { label: "중단하고 닫기", style: danger, action: dismiss_sheet }
+    - { label: "계속 응시하기", style: secondary, action: close_dialog }
+
+- id: share-sheet-step1
+  label: 공유 시트 — Step 1 유형 선택
+  route: overlay on /
+  auth: member
+  tab: home
+  parent: main
+  wireframe: 와이어프레임 P1.html#share-c
+  components: [SheetFrame, HeaderToggle, TestTypeCard]
+  api: []
+  states:
+    default: DISC 카드 1개 선택. 헤더에 "나는 누구일까? ↔ 남이 보는 내 모습" 토글 활성
+  notes: |
+    P1 확정안 = C 헤더 모드 토글. Step 2 이후 헤더 토글 잠김(🔒).
+
+- id: share-sheet-step2
+  label: 공유 시트 — Step 2 상대방 호칭
+  route: overlay on /
+  auth: member
+  tab: home
+  parent: main
+  wireframe: 와이어프레임 P1.html#share-c-2
+  components: [SheetFrame, HeaderToggleLocked, LabeledTextInput]
+  api: []
+  states:
+    typing: 글자수 카운터 (최대 20자)
+  validation:
+    label: { min: 1, max: 20, required: true }
+
+- id: share-sheet-step3
+  label: 공유 시트 — Step 3 링크 공유
+  route: overlay on /
+  auth: member
+  tab: home
+  parent: main
+  wireframe: 와이어프레임 P1.html#share-c-3
+  components: [SheetFrame, HeaderToggleLocked, QRCode, CopyableUrl, KakaoShareButton]
+  api:
+    - { method: POST, path: /assessments, body: { test_type, label } }
+  states:
+    creating: 링크 생성 중
+    ready: QR + URL 노출
+    error: 재시도 가능
+  notes: |
+    링크는 일회용. Kakao SDK share 호출.
+
+- id: about-sheet
+  label: 서비스 소개 시트
+  route: overlay on /
+  auth: public
+  tab: home
+  parent: main
+  wireframe: 와이어프레임 P5 - 진입 화면.html#about-1
+  components: [SheetFrame, Carousel, DotIndicator]
+  api: []
+  states:
+    slide_1: 검사 소개
+    slide_2: 친구 평정 요청
+    slide_3: 동료 케미
+    slide_4: 통계/추이 (마지막, ›가 "마침"으로)
+
+- id: assessment-intro
+  label: 타인 평정 외부 진입
+  route: /assessments/[token]
+  auth: guest-or-member
+  tab: none
+  wireframe: 와이어프레임 P5 - 진입 화면.html#assessment-intro
+  components: [Avatar, IntroCard, BenefitItem]
+  api:
+    - { method: GET, path: /assessments/{token} }
+  states:
+    valid: 평정자 인사 + 시작 CTA
+    expired: 만료 안내
+    consumed: 이미 응시 완료 안내
+  notes: |
+    탭바 미노출. 외부 진입 컨텍스트. 시작 시 test-sheet-step2와 같은 응시 화면으로 진입 (rater=OTHER).
+
+- id: kakao-callback
+  label: 카카오 콜백 인터스티셜
+  route: /auth/kakao/callback
+  auth: public
+  tab: none
+  wireframe: 와이어프레임 P5 - 진입 화면.html#kakao-callback
+  components: [Loader]
+  api:
+    - { method: GET, path: /auth/kakao/callback, params: { code, state } }
+  states:
+    processing: 토큰 교환 중 (1~2초)
+    error: "처음으로 돌아가기" 보조 버튼 활성화
+  notes: |
+    헤더·탭바 모두 미노출. 처리 후 이전 화면 또는 / 로 리다이렉트.
+
+# ═══════════════════════════════════════════════════════════════════
+# § 검사 결과 탭 (Results)
+# ═══════════════════════════════════════════════════════════════════
+
+- id: results-list
+  label: 검사 결과 이력
+  route: /results
+  auth: member
+  tab: results
+  wireframe: 와이어프레임 P2 - 검사 결과.html#a-self
+  components: [WfFrame, PageTabs, TestTypeFilter, ResultCard, TypePill, MiniDiscBars]
+  api:
+    - { method: GET, path: /results, params: { rater: "SELF|OTHER", cursor } }
+  sub_tabs:
+    - { label: "내 검사 결과", param: { rater: SELF }, default: true }
+    - { label: "친구가 본 내 모습", param: { rater: OTHER } }
+  states:
+    loading: 스켈레톤 카드 3개
+    empty_self: "아직 검사 기록이 없어요 — 검사 시작 CTA"
+    empty_other: "아직 친구에게 평정 요청한 적이 없어요 — 공유 CTA"
+    has_data: 카드 리스트 + 커서 페이지네이션
+  notes: |
+    P2 확정안 = A 카드 리스트. 검사 종류 필터는 DISC만 (MVP).
+
+- id: result-detail
+  label: 결과 상세
+  route: /results/[id]
+  auth: member
+  tab: results
+  parent: results-list
+  wireframe: 와이어프레임 P2 - 결과 상세.html#self
+  components: [BackBar, RaterPill, TypePill, DiscBarsLarge, MarkdownReport]
+  api:
+    - { method: GET, path: /results/{id} }
+  states:
+    loading: 스켈레톤 + 헤더
+    has_data: hero(DISC 4축) + 마크다운 본문
+    not_found: 결과 없음
+  notes: |
+    rater=OTHER일 때 hero에 평정자 라벨 칩, 본문 인칭이 3인칭으로.
+
+# ═══════════════════════════════════════════════════════════════════
+# § 동료 & 케미 탭 (Peers)
+# ═══════════════════════════════════════════════════════════════════
+
+- id: peers-list
+  label: 동료 목록
+  route: /colleagues
+  auth: member
+  tab: peers
+  wireframe: 와이어프레임 P2 - 동료 & 케미.html#list
+  components: [WfFrame, PageTabs, PeerCodeCard, PeerCard, Avatar, TypePill]
+  api:
+    - { method: GET, path: /peer-code }
+    - { method: GET, path: /colleagues }
+  sub_tabs:
+    - { label: "동료 목록", default: true }
+    - { label: "보고서 목록", target: chemistry-list }
+  states:
+    loading: 스켈레톤
+    empty: "아직 등록된 동료가 없어요" + "친구 코드 입력" CTA
+    has_data: 카드 그리드
+  notes: |
+    "동료 & 케미" 메뉴는 두 탭(동료/보고서)이 같은 페이지를 공유.
+
+- id: chemistry-list
+  label: 케미 보고서 목록
+  route: /chemistry  (또는 /colleagues?tab=reports)
+  auth: member
+  tab: peers
+  wireframe: 와이어프레임 P3 - 케미 보고서.html#list
+  components: [WfFrame, PageTabs, ChemistryReportCard, GeneratingCard, Avatar]
+  api:
+    - { method: GET, path: /chemistry-reports }
+    - { method: SSE, path: /notifications/stream, event: "chemistry.ready" }
+  sub_tabs:
+    - { label: "동료 목록", target: peers-list }
+    - { label: "보고서 목록", default: true }
+  states:
+    loading: 스켈레톤
+    empty: "아직 발행한 보고서가 없어요"
+    has_data: 카드 리스트. generating 상태 카드가 inline으로 표시되며 SSE 도착 시 같은 자리에서 본 카드로 교체
+  notes: |
+    별도 "발행 중" 탭 없음. inline 표시 + SSE 갱신.
+
+- id: peer-detail
+  label: 동료 프로필
+  route: /colleagues/[id]
+  auth: member
+  tab: peers
+  parent: peers-list
+  wireframe: 와이어프레임 P2 - 동료 & 케미.html#detail
+  components: [BackBar, Avatar, TypePill, ChemistryCTA, PastReportRow]
+  api:
+    - { method: GET, path: /colleagues/{id} }
+    - { method: GET, path: /coins, note: "발행 CTA에 잔량 표시" }
+  states:
+    loading: 스켈레톤
+    has_data: 프로필 hero + 케미 발행 카드 + 이전 보고서 리스트
+    deleted_peer: "이 동료가 탈퇴했어요" — 이전 보고서만 노출, 발행 비활성
+  cta:
+    - { label: "케미 발행 (코인 1)", action: open_modal, target: chemistry-confirm-modal, disabled_when: "coins == 0" }
+
+- id: peer-register-modal
+  label: 동료 등록 모달
+  route: bottom-sheet on peers-list
+  auth: member
+  tab: peers
+  parent: peers-list
+  wireframe: 와이어프레임 P2 - 동료 & 케미.html#register
+  components: [BottomSheet, CodeInput, KakaoShareButton]
+  api:
+    - { method: POST, path: /colleagues, body: { code } }
+  states:
+    default: 코드 입력 영역 + "또는" + 내 코드 공유 영역
+    invalid_code: "올바르지 않은 코드예요"
+    self_code: "본인의 코드는 등록할 수 없어요"
+  validation:
+    code: { pattern: "^MYCPT-[A-Z0-9]{4}-[A-Z0-9]{3}$" }
+
+- id: chemistry-confirm-modal
+  label: 케미 발행 확인 모달 (M4)
+  route: dialog on peer-detail
+  auth: member
+  tab: peers
+  parent: peer-detail
+  wireframe: 와이어프레임 P2 - 동료 & 케미.html#chem-confirm
+  components: [DialogCard, Scrim, CoinBreakdown]
+  api:
+    - { method: POST, path: /chemistry-reports, body: { colleague_id }, response: 202 }
+  states:
+    default: 사용/잔량/충전까지 3행 표
+    insufficient_coins: 잔량 부족 → 발행 버튼 비활성 + 충전 시간 안내
+  notes: |
+    확인 → chemistry-list에 "발행 중…" 카드로 즉시 표시. SSE 완료 이벤트 도착 시 교체.
+
+- id: chemistry-detail
+  label: 케미 보고서 상세
+  route: /chemistry/[id]
+  auth: member
+  tab: peers
+  parent: chemistry-list
+  wireframe: 와이어프레임 P3 - 케미 보고서.html#detail-ready
+  components: [BackBar, Avatar, TypePill, MarkdownReport, GeneratingPlaceholder]
+  api:
+    - { method: GET, path: /chemistry-reports/{id} }
+    - { method: SSE, path: /notifications/stream, event: "chemistry.ready" }
+  states:
+    generating: hero(두 아바타) + 스피너·스켈레톤 본문. SSE 도착 시 자동 전환
+    ready: hero + 마크다운 본문 (6 섹션)
+    error: "발행에 실패했어요. 코인이 환불되었어요." + 재시도
+    not_found: 보고서 없음
+  notes: |
+    generating 상태에서도 두 아바타는 즉시 표시 (즉시 알 수 있는 정보).
+
+- id: invite-accept
+  label: 동료 초대 수락
+  route: /invite/[code]
+  auth: guest-or-member
+  tab: none
+  wireframe: 와이어프레임 P3 - 케미 보고서.html#invite
+  components: [Avatar, TypePill, BenefitItem, KakaoLoginButton]
+  api:
+    - { method: GET, path: /colleagues/invite/{code} }
+    - { method: POST, path: /colleagues, body: { code }, after_login: true }
+  states:
+    valid_guest: 초대자 정보 + 카카오 로그인 + 자동 등록 CTA
+    valid_member: 초대자 정보 + "동료로 등록" CTA
+    expired: "초대장이 만료됐어요" (24시간 유효)
+    self_invite: "본인의 초대장이에요"
+    already_peer: "이미 동료로 등록된 사람이에요"
+
+# ═══════════════════════════════════════════════════════════════════
+# § 내 정보 탭 (Account)
+# ═══════════════════════════════════════════════════════════════════
+
+- id: me-hub
+  label: 마이페이지 허브
+  route: /me
+  auth: member
+  tab: account
+  wireframe: 와이어프레임 P4 - 내 정보.html#hub
+  components: [WfFrame, ProfileImage, MenuRow, TypePill]
+  api:
+    - { method: GET, path: /auth/me }
+    - { method: GET, path: /coins }
+    - { method: GET, path: /notifications, params: { unread_only: true }, note: "뱃지 카운트" }
+  states:
+    has_data: 프로필 + 메뉴 리스트 3개 섹션 (내 정보 / 기타 / 계정)
+  menu_items:
+    - { id: me-profile, label: "내 정보 수정" }
+    - { id: me-notifications, label: "알림 센터", badge: "unread_count" }
+    - { id: me-coins, label: "코인 / 사용 이력" }
+    - { id: me-insights, label: "통계 비교 · 변화 추이" }
+    - { id: me-about, label: "서비스 소개 & 약관" }
+    - { id: me-help, label: "고객 문의 / FAQ" }
+    - { id: logout, label: "로그아웃", style: muted, action: POST /auth/logout }
+    - { id: me-leave-step1, label: "회원탈퇴", style: danger }
+
+- id: me-profile
+  label: 내 정보 수정
+  route: /me/profile
+  auth: member
+  tab: account
+  parent: me-hub
+  wireframe: 와이어프레임 P4 - 내 정보.html#profile
+  components: [BackBar, ProfileImageUpload, TextInput, YearSelect, GenderSegment]
+  api:
+    - { method: GET, path: /auth/me }
+    - { method: PATCH, path: /users/me }
+    - { method: POST, path: /users/me/profile-image }
+  validation:
+    nickname: { min: 3, max: 20, required: true }
+    birth_year: { min: 1940, max: 2026, required: true }
+    gender: { values: [M, F, NONE], required: true }
+    profile_image: { max_mb: 10, formats: [jpg, png, webp] }
+
+- id: me-notifications
+  label: 알림 센터
+  route: /me/notifications
+  auth: member
+  tab: account
+  parent: me-hub
+  wireframe: 와이어프레임 P4 - 내 정보.html#notifs
+  components: [BackBar, NotifRow]
+  api:
+    - { method: GET, path: /notifications }
+    - { method: DELETE, path: /notifications/{id} }
+    - { method: SSE, path: /notifications/stream }
+  states:
+    loading: 스켈레톤
+    empty: "아직 알림이 없어요"
+    has_data: 리스트. 읽지 않은 알림은 옅은 배경 + 우측 빨간 점
+  actions:
+    - { trigger: tap_row, action: navigate_to_target_then_delete }
+    - { trigger: tap_mark_all_read, action: bulk_delete_or_mark_read }
+
+- id: notif-dropdown
+  label: 헤더 알림 드롭다운 (M6)
+  route: dropdown on header
+  auth: member
+  tab: any
+  wireframe: 와이어프레임 P6 - 모달 & 서브상태.html#notif-dropdown
+  components: [HeaderDropdown, NotifRow]
+  api:
+    - { method: GET, path: /notifications, params: { limit: 4 } }
+  states:
+    empty: "아직 알림이 없어요"
+    has_data: 최근 4건 미리보기
+  notes: |
+    me-notifications와 동일 데이터 공유. 하단 "전체 알림 보기 ›"로 풀페이지 진입.
+
+- id: me-coins
+  label: 코인 / 사용 이력
+  route: /me/coins
+  auth: member
+  tab: account
+  parent: me-hub
+  wireframe: 와이어프레임 P4 - 내 정보.html#coins
+  components: [BackBar, CoinBalanceHero, CoinSlots, CoinHistoryRow]
+  api:
+    - { method: GET, path: /coins }
+  states:
+    has_data: 잔량 + 3슬롯 시각화 + 카운트다운 + 사용 이력
+  notes: |
+    매일 자정 1개 충전, 최대 3개 보관. 케미 1회 = 1 코인.
+
+- id: me-insights-compare
+  label: 통계 비교 · 비교 탭
+  route: /me/insights
+  auth: member
+  tab: account
+  parent: me-hub
+  wireframe: 와이어프레임 P4 - 내 정보.html#insights
+  components: [BackBar, TestTypeSegment, PageTabs, FilterChips, CompareChart]
+  api:
+    - { method: GET, path: /statistics/comparison, params: { age_band, gender } }
+  sub_tabs:
+    - { label: "비교", default: true }
+    - { label: "추이", target: me-insights-trend }
+  states:
+    incomplete_profile: 생년·성별 미입력 시 "프로필 보완하기" 유도
+    has_data: 4축 비교 막대 + 평균선 마커 + 자연어 인사이트
+  filter_options:
+    age_band: [전체, 20대, 30대, 40대, 50대+]
+    gender: [전체, 남성, 여성]
+
+- id: me-insights-trend
+  label: 통계 추이 · 추이 탭
+  route: /me/insights?tab=trend
+  auth: member
+  tab: account
+  parent: me-hub
+  wireframe: 와이어프레임 P4 - 내 정보.html#insights-trend
+  components: [BackBar, TestTypeSegment, PageTabs, RangeChips, TrendChart, MilestoneRow]
+  api:
+    - { method: GET, path: /statistics/trend, params: { range } }
+  states:
+    empty: 검사 1회만 — "한 번 더 검사하면 변화 추이를 볼 수 있어요"
+    has_data: 4축 라인 차트 + 응시 기록 + 자연어 인사이트
+  filter_options:
+    range: [최근 3개월, 최근 6개월, 최근 1년, 전체]
+
+- id: me-about
+  label: 서비스 소개 & 약관
+  route: /me/about
+  auth: public
+  tab: account
+  parent: me-hub
+  wireframe: 와이어프레임 P4 - 내 정보.html#about
+  components: [BackBar, FeatureRow, LegalRow]
+  api: []
+  states:
+    default: static
+  notes: |
+    비회원도 접근 가능. 메인 ④ CTA와 동일 콘텐츠를 풀페이지로.
+
+- id: me-help
+  label: 고객 문의 / FAQ
+  route: /me/help
+  auth: public
+  tab: account
+  parent: me-hub
+  wireframe: 와이어프레임 P4 - 내 정보.html#help
+  components: [BackBar, ContactCard, FAQAccordion]
+  api: []
+  states:
+    default: 응대 정보 카드 + FAQ 아코디언
+
+- id: me-leave-step1
+  label: 회원탈퇴 Step 1 — 사유
+  route: /me/leave  (또는 modal)
+  auth: member
+  tab: account
+  parent: me-hub
+  wireframe: 와이어프레임 P4 - 내 정보.html#leave-1
+  components: [BackBar, CheckRow, TextArea, DangerWarningBox]
+  api:
+    - { method: GET, path: /auth/me, note: "삭제 항목 카운트 표시용" }
+  states:
+    default: 사유 체크리스트 + 자유 입력 + 삭제 항목 정량 노출
+
+- id: me-leave-step2
+  label: 회원탈퇴 Step 2 — 최종 확인
+  route: dialog on me-leave-step1
+  auth: member
+  tab: account
+  parent: me-leave-step1
+  wireframe: 와이어프레임 P4 - 내 정보.html#leave-2
+  components: [DialogCard, Scrim, TypeToConfirmInput]
+  api:
+    - { method: DELETE, path: /users/me, body: { reasons, comment } }
+  states:
+    default: "탈퇴할게요" 정확 입력 시에만 진행 버튼 활성
+  validation:
+    confirm_text: { exact: "탈퇴할게요", required: true }

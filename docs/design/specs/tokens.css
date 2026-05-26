@@ -1,0 +1,159 @@
+/* ═══════════════════════════════════════════════════════════════════
+   MyCPT — 디자인 토큰 (Design Tokens)
+   
+   와이어프레임의 :root 변수를 통합. 모든 컴포넌트가 참조하는 SSOT.
+   Tailwind 사용 시 tailwind.config.ts에 매핑하거나, 그대로 :root에 로드.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── 잉크 (Ink — 텍스트·테두리) ───
+     냉온 중간의 거의 검정. lightness만 단계적으로 낮춰 위계 표현. */
+  --ink: oklch(0.22 0.012 250); /* 본문·강조 */
+  --ink-soft: oklch(0.42 0.01 250); /* 보조 텍스트 */
+  --ink-faint: oklch(0.62 0.008 250); /* 메타·placeholder */
+
+  /* ─── 페이퍼 (Paper — 배경) ───
+     따뜻한 톤의 거의 흰색. 와이어프레임의 종이 질감 표현. */
+  --paper: oklch(0.985 0.005 85); /* 페이지 배경 */
+  --paper-2: oklch(0.965 0.008 80); /* 카드 보조 배경 */
+  --paper-3: oklch(0.94 0.01 80); /* 비활성 / 스켈레톤 */
+
+  /* ─── 라인 (Lines — 테두리·구분선) ─── */
+  --line: oklch(0.78 0.01 250); /* 카드 테두리 */
+  --line-soft: oklch(0.88 0.008 250); /* 약한 구분선 */
+
+  /* ─── 액센트 (Accent — 주황) ───
+     CTA·강조·하이라이트. 따뜻한 주황으로 친근감. */
+  --accent: oklch(0.62 0.13 40); /* 메인 액센트 */
+  --accent-2: oklch(0.92 0.04 40); /* 액센트 배경 */
+  --highlight: oklch(0.92 0.1 95); /* 노란 하이라이트 (CTA 배경 등) */
+
+  /* ─── 멤버 (Member — 녹) ───
+     회원 전용 표시 / 성공 / 완료. */
+  --member: oklch(0.5 0.11 150);
+  --member-bg: oklch(0.94 0.04 150);
+
+  /* ─── 게스트 (Guest — 파랑) ───
+     비회원 가능 / 정보. */
+  --guest: oklch(0.55 0.09 220);
+  --guest-bg: oklch(0.95 0.03 220);
+
+  /* ─── 위험 (Danger — 빨강) ───
+     탈퇴 · 삭제 · 에러. */
+  --danger: oklch(0.55 0.18 28);
+  --danger-bg: oklch(0.97 0.04 28);
+
+  /* ─── DISC 4축 ───
+     검사 결과 시각화. 각 축마다 고유 hue. */
+  --disc-d: oklch(0.6 0.17 30); /* 주도 — 주황 */
+  --disc-i: oklch(0.7 0.14 80); /* 사교 — 노랑 */
+  --disc-s: oklch(0.55 0.13 150); /* 안정 — 녹 */
+  --disc-c: oklch(0.55 0.13 240); /* 신중 — 파랑 */
+
+  /* ─── 카카오 ─── */
+  --kakao: #fee500;
+  --kakao-ink: #191919;
+
+  /* ─── 타이포그래피 ───
+     영문: Inter (UI), JetBrains Mono (코드/메타)
+     한글: Pretendard (Inter 대체) 권장. 와이어프레임은 Caveat을 손글씨 캡션용으로 사용. */
+  --font-sans: "Inter", "Pretendard", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "D2Coding", monospace;
+  --font-caveat: "Caveat", cursive; /* 와이어프레임 전용. 프로덕션엔 미사용 */
+
+  /* ─── 폰트 크기 ───
+     모바일 우선. min-width 16px (자동 zoom 방지). */
+  --text-xs: 10.5px; /* 메타·캡션 */
+  --text-sm: 11.5px; /* 보조 */
+  --text-base: 13px; /* 본문 */
+  --text-md: 14px; /* 강조 본문 */
+  --text-lg: 16px; /* 카드 제목 */
+  --text-xl: 18px; /* 화면 제목 */
+  --text-2xl: 22px; /* hero */
+  --text-3xl: 28px; /* hero 강조 */
+
+  /* ─── 간격 ───
+     8의 배수를 기본으로. 4·6은 좁은 간격. */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 14px;
+  --space-6: 16px;
+  --space-7: 20px;
+  --space-8: 24px;
+
+  /* ─── 반경 (Radius) ─── */
+  --radius-sm: 6px; /* 작은 칩 */
+  --radius: 10px; /* 카드 기본 */
+  --radius-lg: 14px; /* 큰 카드 */
+  --radius-xl: 18px; /* 모달 / 시트 상단 */
+  --radius-2xl: 24px; /* 프레임 */
+  --radius-pill: 999px;
+
+  /* ─── 그림자 ───
+     플랫 + 강한 단일 그림자(와이어프레임 스타일). 프로덕션은 미세 그림자 권장. */
+  --shadow-card: 0 1px 2px oklch(0.2 0.01 250 / 0.06);
+  --shadow-pop: 0 4px 14px oklch(0.2 0.01 250 / 0.18);
+  --shadow-dialog: 0 10px 40px oklch(0.2 0.01 250 / 0.25);
+
+  /* ─── 모달 / 시트 ─── */
+  --scrim: oklch(0.2 0.01 250 / 0.45);
+  --sheet-bg: white;
+  --sheet-handle: var(--line);
+
+  /* ─── 헤더 / 탭바 / 프레임 ─── */
+  --header-height: 48px;
+  --tab-height: 60px;
+  --status-height: 22px;
+  --safe-bottom: 80px; /* 토스트가 위치하는 안전 영역 */
+
+  /* ─── 애니메이션 ─── */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --duration-fast: 150ms;
+  --duration: 220ms;
+  --duration-slow: 320ms;
+}
+
+/* ─── 다크 모드 (TBD) ─── */
+/* MVP 단계에서는 미지원. 필요시 :root.dark { ... } 로 오버라이드. */
+
+/* ═══════════════════════════════════════════════════════════════════
+   유틸리티 — 토큰 사용 예시
+   ═══════════════════════════════════════════════════════════════════ */
+
+.text-ink {
+  color: var(--ink);
+}
+.text-soft {
+  color: var(--ink-soft);
+}
+.text-faint {
+  color: var(--ink-faint);
+}
+
+.bg-paper {
+  background: var(--paper);
+}
+.bg-paper-2 {
+  background: var(--paper-2);
+}
+
+.border-line {
+  border: 1px solid var(--line);
+}
+.border-ink {
+  border: 1.5px solid var(--ink);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+.shadow-card {
+  box-shadow: var(--shadow-card);
+}
+.shadow-dialog {
+  box-shadow: var(--shadow-dialog);
+}

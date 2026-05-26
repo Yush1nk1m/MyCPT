@@ -1,0 +1,340 @@
+# MyCPT — 컴포넌트 명세 (Component Spec)
+
+> 와이어프레임에서 추출한 재사용 컴포넌트의 인터페이스. screens.yaml의 `components` 필드와 매핑.
+
+**version**: 0.1
+
+---
+
+## 분류
+
+- **Layout**: 화면의 골격 (Frame, Tabs, Header)
+- **Atoms**: 단일 시각 요소 (Pill, Avatar, Button)
+- **Cells**: 리스트의 한 행 또는 카드
+- **Patterns**: 자주 쓰이는 컴포지션 (Sheet, Dialog, Toast)
+- **Domain**: 비즈니스 로직 강하게 결합 (DiscBars, ChemistryReportCard)
+
+---
+
+## Layout
+
+### `WfFrame` / `AppShell`
+모바일 프레임 + 상태바 + 헤더 + 탭바.
+```ts
+props: {
+  children: ReactNode
+  authState?: 'anonymous' | 'authenticated'  // 헤더 분기
+  activeTab?: 'home' | 'results' | 'peers' | 'account'
+  hideTabs?: boolean      // 검사 시트, 외부 평정 진입 등
+  hideHeader?: boolean    // 카카오 콜백 등
+}
+```
+**used in**: 거의 모든 페이지
+
+### `HeaderMember` / `HeaderGuest`
+헤더 상단. 회원/비회원 분기.
+- HeaderMember: 로고 · CoinPill · Bell · 프로필 칩
+- HeaderGuest: 로고 · "카카오로 시작" 버튼
+
+### `TabBar`
+하단 4탭 (홈/검사 결과/동료 & 케미/내 정보).
+```ts
+props: { active?: number, lockedExcept?: number | null }
+```
+비회원일 때 `lockedExcept={0}` → 홈 외 탭에 🔒 표시.
+
+### `PageTabs`
+페이지 내부 상단 sub-tab (2개 균등 분할).
+```ts
+props: { tabs: { label: string, active?: boolean }[] }
+```
+
+### `BackBar`
+서브 페이지 상단의 뒤로가기 + 제목 + 액션 바.
+```ts
+props: { title: string, sub?: string, right?: ReactNode, onBack?: () => void }
+```
+
+---
+
+## Atoms
+
+### `TypePill`
+DISC 유형 칩. 4축 색상 자동 적용.
+```ts
+props: { type: 'D' | 'I' | 'S' | 'C', mini?: boolean }
+```
+**token refs**: --disc-d, --disc-i, --disc-s, --disc-c
+
+### `Avatar`
+원형 이니셜 아바타.
+```ts
+props: { name: string, size?: number, type?: 'D'|'I'|'S'|'C' }
+```
+사진 업로드 후엔 `src` prop 추가 예정 (TBD).
+
+### `CoinPill`
+좌측 타이머 + 우측 잔량의 분할 알약.
+```ts
+props: { count: number, refillIn?: string }
+```
+
+### `LockedToast`
+비회원 잠금 토스트 (검정 + 카카오 액션).
+```ts
+props: { onKakao: () => void, onDismiss?: () => void }
+```
+
+### `Toast`
+일반 토스트. variant로 종류 구분.
+```ts
+props: {
+  variant: 'default' | 'success' | 'danger',
+  icon?: ReactNode,
+  message: string,
+  action?: { label: string, onClick: () => void },
+  duration?: number  // ms, default 3000 (액션 있으면 5000)
+}
+```
+
+### `Button`
+```ts
+variants: ['primary', 'secondary', 'danger', 'kakao', 'ghost']
+props: { variant, children, onClick, disabled, loading }
+```
+
+---
+
+## Cells
+
+### `PeerCard`
+동료 목록의 한 행.
+```ts
+props: {
+  peer: {
+    id: string, name: string,
+    type?: 'D'|'I'|'S'|'C',  // null이면 "검사 전"
+    reportsCount: number,
+    lastReportDate?: string,
+  },
+  onClick: () => void
+}
+```
+
+### `ResultCard`
+검사 결과 이력의 한 행.
+```ts
+props: {
+  result: {
+    id: string, testType: 'DISC',
+    rater: 'SELF'|'OTHER',
+    raterLabel?: string,  // OTHER일 때
+    topType: 'D'|'I'|'S'|'C',
+    scores: { D, I, S, C },
+    date: string,
+  },
+  showRater?: boolean
+}
+```
+
+### `ChemistryReportCard`
+케미 보고서 카드 (3가지 상태).
+```ts
+props: {
+  report: {
+    id: string,
+    peer: { name, type },
+    me: { type },
+    status: 'generating' | 'ready' | 'error',
+    summary?: string,  // ready만
+    date: string,
+    unread: boolean,
+  }
+}
+```
+**status가 generating일 때**: 점선 테두리 + 스켈레톤 + "발행 중…" 칩
+
+### `NotifRow`
+알림 행.
+```ts
+props: {
+  notif: {
+    id, icon, text: ReactNode | string, when: string,
+    unread: boolean, targetUrl: string,
+  },
+  onTap: () => void
+}
+```
+
+### `MenuRow`
+마이페이지 리스트 행.
+```ts
+props: {
+  icon: ReactNode, label: string, meta?: string,
+  badge?: number, danger?: boolean,
+  onClick: () => void
+}
+```
+
+---
+
+## Patterns
+
+### `SheetFrame`
+풀스크린 시트 (메인 위 오버레이).
+```ts
+props: {
+  title: string, step?: number, totalSteps?: number,
+  closeable?: boolean,  // false면 ← 표시
+  onClose?: () => void,
+  children: ReactNode
+}
+```
+**used in**: test-sheet-*, share-sheet-*, about-sheet
+
+### `BottomSheet`
+하단에서 올라오는 시트.
+```ts
+props: { title, onClose, children, maxHeight?: '60%' | '92%' }
+```
+**used in**: peer-register-modal
+
+### `DialogCard` + `Scrim`
+중앙 다이얼로그.
+```ts
+props: {
+  icon?: ReactNode, title: string, body: ReactNode,
+  primary: { label, style?: 'danger' | 'primary', onClick },
+  secondary?: { label, onClick },
+  width?: number
+}
+```
+**used in**: test-close-dialog, chemistry-confirm-modal, me-leave-step2
+
+### `HeaderDropdown`
+헤더 앵커 + 꼬리 달린 드롭다운.
+```ts
+props: {
+  anchor: 'bell' | 'profile',
+  open: boolean, onClose: () => void,
+  children: ReactNode
+}
+```
+**used in**: notif-dropdown
+
+### `Carousel` + `DotIndicator`
+가로 스와이프 캐러셀.
+```ts
+props: { slides: ReactNode[], onComplete?: () => void }
+```
+**used in**: about-sheet
+
+---
+
+## Domain
+
+### `DiscBarsLarge`
+DISC 4축 막대 그래프 (큰 hero용).
+```ts
+props: { scores: { D: 0-100, I: 0-100, S: 0-100, C: 0-100 } }
+```
+**used in**: result-detail, test-sheet-step3-*
+
+### `MiniDiscBars`
+같은 컴포넌트의 작은 variant (리스트 카드용).
+```ts
+props: { scores, height?: number }
+```
+**used in**: ResultCard
+
+### `TrendChart`
+4축 시계열 라인 차트 (SVG).
+```ts
+props: { data: { D, I, S, C, date }[], height?: number }
+```
+**used in**: me-insights-trend, results-list (B 안의 mini)
+
+### `CompareChart`
+4축 비교 막대 (평균선 마커 포함).
+```ts
+props: {
+  me: { D, I, S, C },
+  avg: { D, I, S, C },
+  populationLabel: string,
+  populationSize: number
+}
+```
+**used in**: me-insights-compare
+
+### `MarkdownReport`
+서버에서 받은 마크다운을 6 섹션 스타일로 렌더.
+```ts
+props: { markdown: string, variant?: 'self' | 'other' | 'chemistry' }
+```
+**used in**: result-detail, chemistry-detail
+
+### `CoinBalanceHero`
+큰 숫자 + 3슬롯 시각화 + 카운트다운.
+```ts
+props: { count: 0|1|2|3, refillCountdown: string }
+```
+
+### `CoinBreakdown`
+사용/잔량/충전까지 3행 표 (다이얼로그 내).
+```ts
+props: { use: number, remainingAfter: number, refillIn: string }
+```
+
+### `ChemistryHero`
+두 사람 ↔ 두 사람 대칭 hero.
+```ts
+props: { me: { name, type }, peer: { name, type } }
+```
+
+### `KakaoSaveCTA`
+비회원 결과 화면의 저장 CTA 영역.
+```ts
+props: { onKakaoSave: () => void, onDismiss: () => void }
+```
+
+### `KakaoShareButton` / `KakaoLoginButton`
+카카오 SDK 래퍼.
+```ts
+KakaoShareButton: { url: string, title: string, description?: string }
+KakaoLoginButton: { returnTo?: string }
+```
+
+### `ProfileImageUpload`
+프로필 이미지 변경 영역.
+```ts
+props: {
+  currentImageUrl?: string,
+  onUpload: (file: File) => Promise<void>
+}
+```
+
+### `PeerCodeCard`
+내 동료 코드 카드 (복사 / 카톡 공유 / 갱신).
+```ts
+props: { code: string, onRegenerate: () => void, onShare: () => void }
+```
+
+### `CodeInput`
+동료 코드 입력 (MYCPT-XXXX-XXX 마스킹).
+```ts
+props: { value, onChange, error?: string }
+```
+
+### `FAQAccordion`
+FAQ 아코디언.
+```ts
+props: { items: { q: string, a: string, defaultOpen?: boolean }[] }
+```
+
+---
+
+## 명명 컨벤션
+
+- PascalCase
+- 도메인 접두사 X (Coin*, Disc*, Chemistry* 등 도메인 표현은 OK)
+- 와이어프레임의 이름이 코드 이름의 시작점 (예: WfFrame → AppShell로 리네임 권장)
