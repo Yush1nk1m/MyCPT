@@ -1,5 +1,6 @@
 package com.mycpt.backend.config;
 
+import com.mycpt.backend.domain.auth.service.CustomOAuth2UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -33,15 +34,20 @@ public class SecurityConfig {
 
         // 3. 엔드포인트별 인증 규칙 설정
         http.authorizeHttpRequests(auth -> auth
-                // 3-1. 비회원도 검사 문항 조회 가능(GET /api/v1/questions)
+                // 3-1. Swagger UI 접근 허용. 인증 없이 API 문서 확인 및 수동 테스트 가능
+                .requestMatchers(
+                        "/swagger-ui/**",   // 3-5-1. Swagger UI 정적 리소스
+                        "/v3/api-docs/**"   // 3-5-2. OpenAPI 스펙 JSON 엔드포인트
+                ).permitAll()
+                // 3-2. 비회원도 검사 문항 조회 가능(GET /api/v1/questions)
                 .requestMatchers(HttpMethod.GET, "/api/v1/questions").permitAll()
-                // 3-2. 비회원도 채점 요청 가능 (POST /api/v1/results/score)
+                // 3-3. 비회원도 채점 요청 가능 (POST /api/v1/results/score)
                 .requestMatchers(HttpMethod.POST, "/api/v1/results/score").permitAll()
-                // 3-3. 비회원도 타인 평정 링크 조회 가능 (GET /api/v1/assessments/{token})
+                // 3-4. 비회원도 타인 평정 링크 조회 가능 (GET /api/v1/assessments/{token})
                 .requestMatchers(HttpMethod.GET, "/api/v1/assessments/*").permitAll()
-                // 3-4. 비회원도 타인 평정 결과 제출 가능
+                // 3-5. 비회원도 타인 평정 결과 제출 가능
                 .requestMatchers(HttpMethod.POST, "/api/v1/assessments/*/submit").permitAll()
-                // 3-5. 위 규칙에 해당하지 않는 모든 요청은 로그인 필요. 미인증 시 authenticationEntryPoint에서 401 상태 반환
+                // 3-6. 위 규칙에 해당하지 않는 모든 요청은 로그인 필요. 미인증 시 authenticationEntryPoint에서 401 상태 반환
                 .anyRequest().authenticated());
 
         // 4. OAuth2 로그인 설정

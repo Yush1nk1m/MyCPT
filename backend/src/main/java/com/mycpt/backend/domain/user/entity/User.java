@@ -29,10 +29,10 @@ public class User {
 
     // 스토리지 오브젝트 키 또는 외부 이미지 URL
     // 신규 가입 시 카카오 프로필 이미지 URL을 그대로 저장
-    // 프로필 이미지 업로드 후 S3 오브젝트 키로 교체
+    // 프로필 이미지 업로드 후 S3 오브젝트 키를 조합한 Full URL로 교체
     // null이면 프론트엔드에서 기본 이미지 사용
     @Column(length = 300)
-    private String profileImageKey;
+    private String profileImageUrl;
 
     // 사용자 생년
     // YEAR 타입과 매핑되지만 Java에서는 Integer 타입으로 관리
@@ -45,7 +45,7 @@ public class User {
     private Gender gender;
 
     // 사용자 코인 잔액
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TINYINT")
     private int coins;
 
     // 다음 코인 충전 예정 시각(null일 시 코인 망충)
@@ -61,11 +61,11 @@ public class User {
     // 정적 팩토리 메서드
     // 1. 메서드 이름을 통해 의도 표현
     // 2. 생성 시 반드시 설정해야 하는 필드(coins, createdAt) 누락 방지
-    public static User create(String kakaoId, String nickname, String profileImageKey) {
+    public static User create(String kakaoId, String nickname, String profileImageUrl) {
         User user = new User();
         user.kakaoId = kakaoId;
         user.nickname = nickname;
-        user.profileImageKey = profileImageKey;
+        user.profileImageUrl = profileImageUrl;
         user.coins = 3; // 신규 가입 시 초기 코인은 3으로 설정
         user.createdAt = LocalDateTime.now();
         return user;

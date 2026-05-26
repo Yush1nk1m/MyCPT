@@ -12,7 +12,7 @@ CREATE TABLE users (
     id                BIGINT       NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
     kakao_id          VARCHAR(50)  NOT NULL                  COMMENT '카카오 고유 식별자',
     nickname          VARCHAR(30)  NOT NULL                  COMMENT '서비스 닉네임 (카카오 닉네임 초기값, 수정 가능)',
-    profile_image_key VARCHAR(300) NULL                      COMMENT '스토리지 오브젝트 키. NULL이면 기본 이미지 사용',
+    profile_image_url VARCHAR(300) NULL                      COMMENT '프로필 이미지 Full URL. 카카오 기본 이미지 또는 업로드 후 S3 Full URL. NULL이면 기본 이미지 사용',
     birth_year        YEAR         NULL                      COMMENT '로그인 후 프로필 설정 시 입력. NULL이면 미입력 상태',
     gender            ENUM('M','F','N') NULL                 COMMENT 'M: 남성, F: 여성, N: 선택 안 함',
     coins             TINYINT      NOT NULL DEFAULT 3        COMMENT '현재 코인 잔액 (0~3)',

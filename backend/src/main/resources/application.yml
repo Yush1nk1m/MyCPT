@@ -53,4 +53,14 @@ spring:
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
 
+springdoc:
+  swagger-ui:
+    # Swagger UI 접근 경로를 /swagger-ui/index.html 대신 /swagger-ui로 단축
+    path: /swagger-ui
+  api-docs:
+    # OpenAPI 스펙 JSON 경로
+    path: /v3/api-docs
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+
 kind: Application
