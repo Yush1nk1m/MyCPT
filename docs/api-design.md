@@ -1,9 +1,9 @@
 # MyCPT API 명세서
 
-**문서 버전**: v0.3
+**문서 버전**: v0.4
 **작성일**: '26.05.24.
 **작성자**: 김유신
-**연관 문서**: service-design.md v0.6 / database-design.md v0.4
+**연관 문서**: service-design.md v0.8 / database-design.md v0.6
 
 ---
 
@@ -14,6 +14,7 @@
 | v0.1 | 초안 작성 (28개 엔드포인트)                                                                                                          | '26.05.24. |
 | v0.2 | POST /assessments testType 파라미터 추가. DELETE /users/me 신규 추가. 타인 평정 링크 클라이언트 URL 구조 명시.                       | '26.05.25. |
 | v0.3 | POST /assessments/{token}/submit 신규 추가. POST /results 응답 코드 200 → 201. POST /chemistry-reports INSUFFICIENT_COINS 409 → 422. | '26.05.25. |
+| v0.4 | GET /auth/me 응답에 nextCoinAt 추가. profile_image_url로 컬럼명 통일 반영.                                                           | '26.05.26. |
 
 ---
 
@@ -206,20 +207,22 @@ Spring Security 세션 쿠키 기반. 카카오 로그인 완료 후 `JSESSIONID
   "userId": 1,
   "nickname": "유신",
   "profileImageUrl": "https://...",
-  "coins": 3,
+  "coins": 2,
+  "nextCoinAt": "2026-05-30T14:00:00",
   "birthYear": 1998,
   "gender": "M"
 }
 ```
 
-| 필드              | 타입   | 설명                                  |
-| ----------------- | ------ | ------------------------------------- |
-| `userId`          | number | 내부 식별자                           |
-| `nickname`        | string | 서비스 닉네임                         |
-| `profileImageUrl` | string | 프로필 이미지 URL. 없으면 null        |
-| `coins`           | number | 현재 코인 잔액                        |
-| `birthYear`       | number | 출생연도. 미입력 시 null              |
-| `gender`          | string | `"M"` / `"F"` / `"N"`. 미입력 시 null |
+| 필드              | 타입   | 설명                                    |
+| ----------------- | ------ | --------------------------------------- |
+| `userId`          | number | 내부 식별자                             |
+| `nickname`        | string | 서비스 닉네임                           |
+| `profileImageUrl` | string | 프로필 이미지 URL. 없으면 null          |
+| `coins`           | number | 현재 코인 잔액                          |
+| `nextCoinAt`      | string | 다음 코인 충전 예정 시각. 만충이면 null |
+| `birthYear`       | number | 출생연도. 미입력 시 null                |
+| `gender`          | string | `"M"` / `"F"` / `"N"`. 미입력 시 null   |
 
 | 응답 코드 | 설명               |
 | --------- | ------------------ |

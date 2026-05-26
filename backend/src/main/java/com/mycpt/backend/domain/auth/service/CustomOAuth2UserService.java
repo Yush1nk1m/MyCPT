@@ -37,9 +37,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         // 3. kakao_id로 기존 회원 조회
         //      - 존재: orElseGet() 람다 실행하지 않고 기존 User 엔티티 반환
         //      - 부재: orElseGet() 람다 실행 -> User.create()로 엔티티 생성 -> DB INSERT
-        //
-        // TODO: 신규 가입 시 코인 3개 초기 지급 결과를 coin_transactions 테이블에 INSERT 필요.
-        //       CoinService 구현 후 save() 블록 안에 추가
         User user = findOrCreateUser(kakaoUserInfo);
 
         // 4. UserPrincipal 객체로 래핑하여 반환
@@ -48,7 +45,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         return new UserPrincipal(user, oAuth2User.getAttributes());
     }
 
+    @Transactional
     User findOrCreateUser(KakaoUserInfo kakaoUserInfo) {
+        // TODO: 신규 가입 시 코인 3개 초기 지급 결과를 coin_transactions 테이블에 INSERT 필요.
+        //       CoinService 구현 후 save() 블록 안에 추가
         return userRepository.findByKakaoId(kakaoUserInfo.getId())
                 .orElseGet(() -> userRepository.save(
                         User.create(

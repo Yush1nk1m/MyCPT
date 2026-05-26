@@ -39,15 +39,21 @@ public class SecurityConfig {
                         "/swagger-ui/**",   // 3-5-1. Swagger UI 정적 리소스
                         "/v3/api-docs/**"   // 3-5-2. OpenAPI 스펙 JSON 엔드포인트
                 ).permitAll()
-                // 3-2. 비회원도 검사 문항 조회 가능(GET /api/v1/questions)
+                // 3-2. 카카오 로그인 버튼 클릭 시 진입점 허용
+                .requestMatchers("/api/v1/auth/kakao").permitAll()
+                // 3-3. Spring Security OAuth2 내부 진입점 허용
+                .requestMatchers("/oauth2/authorization/**").permitAll()
+                // 3-4. 카카오 콜백 수신 경로 허용
+                .requestMatchers("/login/oauth2/code/**").permitAll()
+                // 3-5. 비회원도 검사 문항 조회 가능(GET /api/v1/questions)
                 .requestMatchers(HttpMethod.GET, "/api/v1/questions").permitAll()
-                // 3-3. 비회원도 채점 요청 가능 (POST /api/v1/results/score)
+                // 3-6. 비회원도 채점 요청 가능 (POST /api/v1/results/score)
                 .requestMatchers(HttpMethod.POST, "/api/v1/results/score").permitAll()
-                // 3-4. 비회원도 타인 평정 링크 조회 가능 (GET /api/v1/assessments/{token})
+                // 3-7. 비회원도 타인 평정 링크 조회 가능 (GET /api/v1/assessments/{token})
                 .requestMatchers(HttpMethod.GET, "/api/v1/assessments/*").permitAll()
-                // 3-5. 비회원도 타인 평정 결과 제출 가능
+                // 3-8. 비회원도 타인 평정 결과 제출 가능
                 .requestMatchers(HttpMethod.POST, "/api/v1/assessments/*/submit").permitAll()
-                // 3-6. 위 규칙에 해당하지 않는 모든 요청은 로그인 필요. 미인증 시 authenticationEntryPoint에서 401 상태 반환
+                // 3-9. 위 규칙에 해당하지 않는 모든 요청은 로그인 필요. 미인증 시 authenticationEntryPoint에서 401 상태 반환
                 .anyRequest().authenticated());
 
         // 4. OAuth2 로그인 설정

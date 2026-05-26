@@ -1,9 +1,9 @@
 # MyCPT 데이터베이스 설계 문서
 
-**문서 버전**: v0.5
+**문서 버전**: v0.6
 **작성일**: '26.05.25.
 **작성자**: 김유신
-**연관 문서**: service-design.md v0.6
+**연관 문서**: service-design.md v0.8
 
 ---
 
@@ -16,6 +16,7 @@
 | v0.3 | `chemistry_reports` DISC 버킷 스냅샷 컬럼 제거. `test_type VARCHAR(20)` 컬럼 추가로 다중 검사 유형 확장성 확보.                                             | '26.05.24. |
 | v0.4 | `disc_cache` 섹션별 TEXT 6개 → `report TEXT` 단일화 (Markdown). `chemistry_reports` 동일 적용. `statistics` 테이블 제거 (MVP에서 직접 집계 쿼리로 대체).    | '26.05.24. |
 | v0.5 | `test_results` → `tests` (헤더) + `disc_results` (DISC 전용) 로 분리. Class Table Inheritance 패턴 적용으로 검사 유형 확장성 확보. 테이블 수 9 → 10.        | '26.05.25. |
+| v0.6 | users.profile_image_key → profile_image_url 변경. Full URL 저장 방식으로 통일.                                                                              | '26.05.26. |
 
 ---
 
@@ -232,7 +233,7 @@ Table users [note: '회원 정보. 카카오 OAuth 기반 가입'] {
   id                BIGINT       [pk, increment,    note: '내부 식별자']
   kakao_id          VARCHAR(50)  [unique, not null,  note: '카카오 고유 식별자']
   nickname          VARCHAR(30)  [not null,          note: '서비스 닉네임 (카카오 닉네임 초기값, 수정 가능)']
-  profile_image_key VARCHAR(300) [null,              note: '스토리지 오브젝트 키. NULL이면 기본 이미지 사용']
+  profile_image_url VARCHAR(300) [null,              note: '스토리지 오브젝트 키' → '프로필 이미지 Full URL. 카카오 기본 이미지 또는 S3 Full URL. NULL이면 기본 이미지 사용']
   birth_year        YEAR         [null,              note: '로그인 후 프로필 설정 시 입력. NULL이면 미입력']
   gender            gender_enum  [null,              note: 'M: 남성, F: 여성, N: 선택 안 함']
   coins             TINYINT      [not null, default: 3, note: '현재 코인 잔액 (0~3)']

@@ -1,9 +1,17 @@
 # MyCPT 시스템 아키텍처 설계
 
-**문서 버전**: v0.1  
+**문서 버전**: v0.2
 **작성일**: '26.05.25.  
 **작성자**: 김유신  
-**연관 문서**: service-design.md v0.6 / api-design.md v0.1
+**연관 문서**: service-design.md v0.8 / api-design.md v0.4
+
+---
+
+## 변경 이력
+
+| 버전 | 변경 내용                                                                                      | 날짜       |
+| ---- | ---------------------------------------------------------------------------------------------- | ---------- |
+| v0.2 | 패키지 루트 com.mycpt.backend로 수정. 컨트롤러 Interface+V1 네이밍 구조 반영. Swagger UI 추가. | '26.05.26. |
 
 ---
 
@@ -54,6 +62,7 @@
 | Anthropic Claude API | DISC 분석 보고서 생성, 케미 보고서 생성                |
 | AWS S3               | 프로필 이미지 저장 (운영 환경. 개발은 로컬 파일시스템) |
 | Kakao OAuth          | 소셜 로그인                                            |
+| Swagger UI           | API 문서화 및 수동 테스트 (`/swagger-ui`)              |
 
 ---
 
@@ -76,8 +85,8 @@
 ## 4. Spring 패키지 구조
 
 ```
-com.mycpt
-├── MyCptApplication.java
+com.mycpt.backend
+├── BackendApplication.java
 │
 ├── config/                          # 설정 클래스
 │   ├── SecurityConfig.java          # Spring Security + Kakao OAuth
@@ -116,7 +125,8 @@ com.mycpt
 │   │
 │   ├── auth/                        # 인증 (Kakao OAuth)
 │   │   ├── controller/
-│   │   │   └── AuthController.java          # GET /auth/kakao, GET /auth/kakao/callback, POST /auth/logout, GET /auth/me
+│   │   ├── AuthApi.java                    # 인터페이스 (Swagger 문서 + API 계약)
+│   │   │   └── AuthV1Controller.java       # GET /auth/kakao, GET /auth/kakao/callback, POST /auth/logout, GET /auth/me
 │   │   ├── service/
 │   │   │   └── AuthService.java
 │   │   └── dto/
@@ -222,6 +232,9 @@ com.mycpt
 | 트랜잭션 경계    | Service 레이어에서만 `@Transactional` 선언                                                                 |
 | 비동기 격리      | `@Async` 메서드는 별도 Service 클래스(`ChemistryLlmService`, `SseService`)로 분리하여 트랜잭션 경계 명확화 |
 | 환경별 전환      | `StorageService` 인터페이스로 로컬/S3 구현체를 분리. `@Profile`로 환경별 Bean 등록                         |
+| 컨트롤러 버저닝  | 인터페이스({도메인}Api)와 구현체({도메인}V1Controller)로 분리.                                             |
+|                  | Swagger 애노테이션은 인터페이스에 집중. 구현체는 로직만 담당.                                              |
+|                  | V2 추가 시 {도메인}V2Controller implements {도메인}Api.                                                    |
 
 ---
 

@@ -46,15 +46,22 @@ skinparam note {
 
 skinparam linetype ortho
 
+' ── 변경: Developer Tools 패키지 추가 ──────────────────────────────────────
+package "Developer Tools" #FFF9ED {
+  [Swagger UI\n(/swagger-ui)] as Swagger
+}
+
 package "Client" #EEF6FF {
   [Next.js\n(SSR/SSG)] as NextJS
   [sessionStorage\n(비회원 원점수 임시 보관)] as Session
 }
 
-package "Spring Boot 3.x" #EEEDFE {
+package "Spring Boot 3.x (com.mycpt.backend)" #EEEDFE {
+' ── 변경: 패키지 루트 명시 ──────────────────────────────────────────────────
 
   package "Presentation" #F5F3FF {
-    [REST Controllers\n(30개 엔드포인트)] as Controllers
+    [REST Controllers\n({도메인}Api + {도메인}V1Controller)] as Controllers
+' ── 변경: Interface + V1Controller 구조 명시 ──────────────────────────────
     [Spring Security\n+ Kakao OAuth 2.0] as Security
   }
 
@@ -77,7 +84,8 @@ package "Spring Boot 3.x" #EEEDFE {
 
 database "MySQL" as MySQL {
   [disc_cache\n(버킷 캐시)] as DiscCache
-  [test_results\ncolleagues\nnotifications\n기타 6개 테이블] as OtherTables
+  [tests + disc_results\ncolleagues\nnotifications\n기타 5개 테이블] as OtherTables
+' ── 변경: test_results → tests + disc_results (v0.5 DDL 반영) ─────────────
 }
 
 database "Redis" as Redis {
@@ -87,8 +95,12 @@ database "Redis" as Redis {
 cloud "외부 서비스" #FFF7ED {
   [Anthropic\nClaude API\n(claude-sonnet-4-6)] as ClaudeAPI
   [Kakao OAuth] as Kakao
-  [AWS S3\n프로필 이미지\n(운영)] as S3
+  [AWS S3\n프로필 이미지 Full URL\n(운영)] as S3
+' ── 변경: Full URL 저장 방식 명시 ────────────────────────────────────────
 }
+
+' ── 변경: Swagger → Controllers 연결 추가 ──────────────────────────────────
+Swagger  -down-> Controllers : API 수동 테스트\n(개발 환경 전용)
 
 ' Client ↔ Spring Boot
 NextJS   -down-> Controllers : HTTPS / REST
@@ -125,9 +137,10 @@ Cache         -right-> Redis : @Cacheable\n(disc_cache)
 Security      -right-> Redis : 세션 저장
 
 ' 외부 연동
-Llm       -right-> ClaudeAPI
-Security  -down->  Kakao
-OtherServices -right-> S3   : 이미지 업로드
+Llm           -right-> ClaudeAPI
+Security      -down->  Kakao
+OtherServices -right-> S3    : 이미지 업로드\n(Full URL 저장)
+' ── 변경: Full URL 저장 명시 ─────────────────────────────────────────────
 
 ' Batch
 Batch -down-> Repos : 만료 peer_codes\n만료 assessment_tokens
@@ -148,6 +161,13 @@ note bottom of Redis
   개발: 서버 메모리 세션
   운영: Redis 세션 저장소
   + disc_cache @Cacheable
+end note
+
+' ── 변경: Swagger 관련 note 추가 ────────────────────────────────────────────
+note right of Swagger
+  개발 환경 전용.
+  운영 배포 시 비활성화 검토.
+  /swagger-ui, /v3/api-docs
 end note
 
 @enduml
