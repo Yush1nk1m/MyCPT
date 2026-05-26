@@ -30,7 +30,7 @@
 - [x] **시스템 아키텍처 다이어그램** — architecture-design.md 완성 (컴포넌트 다이어그램 + 주요 데이터 흐름 3종)
 - [x] **시퀀스 다이어그램** — 3종 완성 (검사 채점/캐시 흐름, 케미 발행 @Async+SSE 흐름, 비회원→회원 결과 저장 연계)
 - [x] **Spring 패키지 구조 설계** — architecture-design.md에 포함. 레이어드 아키텍처 기준 패키지 트리
-- [ ] **화면 설계 (와이어프레임)** — 19개 화면 중 7개 완성. 나머지 12개는 Claude Design 토큰 충전 후 완성
+- [x] **화면 설계 (와이어프레임)** — 19개 화면 완성
 - [x] **테스트 설계 문서** — test-design.md v0.1 완성 (레이어별 전략, 도메인별 테스트 케이스 ID 체계)
 - [x] **유지보수 가이드** — maintenance-guide.md v0.1 완성 (API 버저닝, 컨트롤러 네이밍 규칙, 프로필 이미지 저장 방식)
 
@@ -52,7 +52,7 @@
 |            | 시스템 아키텍처 + Spring 패키지 구조 설계 (05.26 선행 완료)                                                                                    | architecture-design.md                                                                                  | [x]  |
 |            | 시퀀스 다이어그램 3종 작성 (05.27 선행 완료)                                                                                                   | sequence\_\*.puml 3종                                                                                   | [x]  |
 |            | 와이어프레임 대조 후 API 명세 개정 (v0.2), database-design.md v0.5 / schema.sql v0.5 개정                                                      | api-design.md, database-design.md, schema.sql                                                           | [x]  |
-| 05.26 (화) | 와이어프레임 나머지 12개 화면 완성 → API 명세 최종 대조                                                                                        | 와이어프레임 완성, api-design.md 보완                                                                   | [ ]  |
+| 05.26 (화) | 와이어프레임 나머지 12개 화면 완성 → API 명세 최종 대조                                                                                        | 와이어프레임 완성, api-design.md 보완                                                                   | [x]  |
 |            | 카카오 OAuth 앱 등록 및 Spring Security 기본 설정 (05.29 선행 완료)                                                                            | SecurityConfig, CustomOAuth2UserService, AuthApi, AuthV1Controller, SwaggerConfig, 단위/슬라이스 테스트 | [x]  |
 | 05.27 (수) | (선행 완료 — 05.25에 진행)                                                                                                                     | —                                                                                                       | [x]  |
 | 05.28 (목) | Spring Boot 프로젝트 초기화 (Java 25, Spring Boot 3.5.14), 의존성 설정, Docker Compose 개발 환경 구성 (MySQL + Redis), DDL 기반 DB 스키마 적용 | 프로젝트 레포지토리, infra/docker/dev/                                                                  | [x]  |
@@ -71,7 +71,7 @@
 - [x] Spring 패키지 구조 설계 완성 (architecture-design.md 내 포함)
 - [x] Spring Boot 프로젝트 실행 확인 (Java 25.0.3 + Spring Boot 3.5.14)
 - [x] DB 테이블 생성 확인 (10개 테이블, Docker Compose MySQL)
-- [ ] 와이어프레임 전체 완성 (19개 화면. 현재 7개 완성)
+- [x] 와이어프레임 전체 완성 (19개 화면 완성)
 - [ ] API 명세 와이어프레임 최종 대조 및 보완
 - [x] 카카오 개발자 앱 등록 완료
 - [x] 카카오 OAuth 로그인 → 세션 발급 → /auth/me 200 응답 확인
