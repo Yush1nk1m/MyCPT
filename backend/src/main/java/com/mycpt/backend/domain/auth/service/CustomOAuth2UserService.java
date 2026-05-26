@@ -40,16 +40,20 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         //
         // TODO: 신규 가입 시 코인 3개 초기 지급 결과를 coin_transactions 테이블에 INSERT 필요.
         //       CoinService 구현 후 save() 블록 안에 추가
-        User user = userRepository.findByKakaoId(kakaoUserInfo.getId())
-                .orElseGet(() -> userRepository.save(
-                        User.create(
-                                kakaoUserInfo.getId(),
-                                kakaoUserInfo.getNickname(),
-                                kakaoUserInfo.getProfileImageUrl())));
+        User user = findOrCreateUser(kakaoUserInfo);
 
         // 4. UserPrincipal 객체로 래핑하여 반환
         //    Spring Security는 이 반환 값을 Authentication 객체에 담아 SecurityContext -> 세션(Redis)에 저장
         //    이후 사용자 요청마다 세션에서 복원되어 @AuthenticationPrincipal로 주입
         return new UserPrincipal(user, oAuth2User.getAttributes());
+    }
+
+    User findOrCreateUser(KakaoUserInfo kakaoUserInfo) {
+        return userRepository.findByKakaoId(kakaoUserInfo.getId())
+                .orElseGet(() -> userRepository.save(
+                        User.create(
+                                kakaoUserInfo.getId(),
+                                kakaoUserInfo.getNickname(),
+                                kakaoUserInfo.getProfileImageUrl())));
     }
 }
