@@ -1,6 +1,9 @@
 package com.mycpt.backend.config;
 
+import com.mycpt.backend.domain.auth.dto.UserPrincipal;
 import com.mycpt.backend.domain.auth.service.CustomOAuth2UserService;
+import com.mycpt.backend.domain.user.repository.UserRepository;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -8,7 +11,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -23,64 +28,87 @@ public class SecurityConfig {
     // 카카오 OAuth2 로그인 완료 후 사용자 정보를 처리하기 위한 서비스
     // loadUser() 메서드를 사용해 신규 회원 가입 또는 기존 회원 조회 수행
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final JwtProvider jwtProvider;
+    private final UserRepository userRepository;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        // 1. CSRF 토큰을 비활성화. CORS 정책을 통해 동일한 보안 효과 제공 가능
+        // CSRF 토큰을 비활성화. CORS 정책을 통해 동일한 보안 효과 제공 가능
         http.csrf(csrf -> csrf.disable());
 
-        // 2. CORS 설정
+        // 세션 정책 설정(미사용)
+        http.sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        // JWT 필터 등록 - UsernamePasswordAuthenticationFilter 앞에 실행
+        http.addFilterBefore(
+                new JwtAuthenticationFilter(jwtProvider, userRepository),
+                UsernamePasswordAuthenticationFilter.class);
+
+        // CORS 설정
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
-        // 3. 엔드포인트별 인증 규칙 설정
+        // 엔드포인트별 인증 규칙 설정
         http.authorizeHttpRequests(auth -> auth
-                // 3-1. Swagger UI 접근 허용. 인증 없이 API 문서 확인 및 수동 테스트 가능
+                // Swagger UI 접근 허용. 인증 없이 API 문서 확인 및 수동 테스트 가능
                 .requestMatchers(
                         "/swagger-ui/**",   // 3-5-1. Swagger UI 정적 리소스
                         "/v3/api-docs/**"   // 3-5-2. OpenAPI 스펙 JSON 엔드포인트
                 ).permitAll()
-                // 3-2. 카카오 로그인 버튼 클릭 시 진입점 허용
+                // 카카오 로그인 버튼 클릭 시 진입점 허용
                 .requestMatchers("/api/v1/auth/kakao").permitAll()
-                // 3-3. Spring Security OAuth2 내부 진입점 허용
+                // Spring Security OAuth2 내부 진입점 허용
                 .requestMatchers("/oauth2/authorization/**").permitAll()
-                // 3-4. 카카오 콜백 수신 경로 허용
+                // 카카오 콜백 수신 경로 허용
                 .requestMatchers("/login/oauth2/code/**").permitAll()
-                // 3-5. 비회원도 검사 문항 조회 가능(GET /api/v1/questions)
+                // 비회원도 검사 문항 조회 가능(GET /api/v1/questions)
                 .requestMatchers(HttpMethod.GET, "/api/v1/questions").permitAll()
-                // 3-6. 비회원도 채점 요청 가능 (POST /api/v1/results/score)
+                // 비회원도 채점 요청 가능 (POST /api/v1/results/score)
                 .requestMatchers(HttpMethod.POST, "/api/v1/results/score").permitAll()
-                // 3-7. 비회원도 타인 평정 링크 조회 가능 (GET /api/v1/assessments/{token})
+                // 비회원도 타인 평정 링크 조회 가능 (GET /api/v1/assessments/{token})
                 .requestMatchers(HttpMethod.GET, "/api/v1/assessments/*").permitAll()
-                // 3-8. 비회원도 타인 평정 결과 제출 가능
+                // 비회원도 타인 평정 결과 제출 가능
                 .requestMatchers(HttpMethod.POST, "/api/v1/assessments/*/submit").permitAll()
-                // 3-9. 위 규칙에 해당하지 않는 모든 요청은 로그인 필요. 미인증 시 authenticationEntryPoint에서 401 상태 반환
+                // 위 규칙에 해당하지 않는 모든 요청은 로그인 필요. 미인증 시 authenticationEntryPoint에서 401 상태 반환
                 .anyRequest().authenticated());
 
-        // 4. OAuth2 로그인 설정
+        // OAuth2 로그인 설정
         http.oauth2Login(oauth2 -> oauth2
-                // 4-1. 카카오에서 사용자 정보를 받아온 뒤 호출할 서비스 지정
+                // 카카오에서 사용자 정보를 받아온 뒤 호출할 서비스 지정
                 .userInfoEndpoint(userInfo -> userInfo
                         .userService(customOAuth2UserService))
-                // 4-2. 로그인 성공 시 리다이렉트할 URL. true = 이전에 접근하려던 URL이 있더라도 무조건 이 URL로 이동
-                .defaultSuccessUrl("http://localhost:3000", true)
-                // 4-3. 로그인 실패 시 리다이렉트할 URL
+                // 로그인 성공 시 핸들러 등록
+                .successHandler((request, response, authentication) -> {
+                    UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+                    String token = jwtProvider.generateToken(principal.getUser().getId());
+
+                    Cookie cookie = new Cookie("accessToken", token);
+                    cookie.setHttpOnly(true);
+                    cookie.setPath("/");
+                    cookie.setMaxAge((int) jwtProvider.getExpirationMs() / 1000);
+                    response.addCookie(cookie);
+
+                    response.sendRedirect("http://localhost:3000");
+                })
+                // 로그인 실패 시 리다이렉트
                 .failureUrl("http://localhost:3000/login?error"));
 
-        // 5. 로그아웃 설정
+        // 로그아웃 설정
         http.logout(logout -> logout
-                // 5-1. 기본 로그아웃 URL은 /logout이지만 API 명세에 맞게 재정의. POST /api/v1/auth/logout 요청 시 Spring Security가 자동 처리
+                // 기본 로그아웃 URL은 /logout이지만 API 명세에 맞게 재정의. POST /api/v1/auth/logout 요청 시 Spring Security가 자동 처리
                 .logoutUrl("/api/v1/auth/logout")
-                // 5-2. 로그아웃 성공 핸들러. REST API 클라이언트는 리다이렉트가 아닌 200 응답 필요
-                .logoutSuccessHandler((request, response, authentication) ->
-                        response.setStatus(HttpServletResponse.SC_OK))
-                // 5-3. 서버 측 세션 데이터 삭제
-                .invalidateHttpSession(true)
-                // 5-4. 브라우저의 JSESSIONID 쿠키 만료 처리
-                .deleteCookies("JSESSIONID"));
-
-        // 6. 미인증 요청 처리
+                // 로그아웃 성공 핸들러. REST API 클라이언트는 리다이렉트가 아닌 200 응답 필요
+                .logoutSuccessHandler((request, response, authentication) -> {
+                    Cookie cookie = new Cookie("accessToken", null);
+                    cookie.setHttpOnly(true);
+                    cookie.setPath("/");
+                    cookie.setMaxAge(0);
+                    response.addCookie(cookie);
+                    response.setStatus(HttpServletResponse.SC_OK);
+                }));
+        // 미인증 요청 처리
         http.exceptionHandling(ex -> ex
-                // 6-1. 인증이 필요한 엔드포인트에 미인증 상태로 접근 시 호출. 기본 동작은 302이지만 REST API이므로 401 응답 필요
+                // 인증이 필요한 엔드포인트에 미인증 상태로 접근 시 호출. 기본 동작은 302이지만 REST API이므로 401 응답 필요
                 .authenticationEntryPoint((request, response, authException) -> {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json;charset=UTF-8");

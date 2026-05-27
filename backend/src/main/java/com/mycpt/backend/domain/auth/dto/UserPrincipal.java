@@ -55,4 +55,9 @@ public class UserPrincipal implements OAuth2User {
     // OAuth2User 인터페이스 구현 메서드 (3/3)
     // 카카오 userinfo 응답 원본 Map 반환
     // @Getter 애너테이션에 의해 getAttributes() 메서드 생성. Lombok이 구현 메서드로 인식
+
+    // 정적 팩토리 메서드
+    public static UserPrincipal from(User user) {
+        return new UserPrincipal(user, Collections.emptyMap());
+    }
 }

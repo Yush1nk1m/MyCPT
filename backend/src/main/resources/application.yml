@@ -53,6 +53,10 @@ spring:
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
 
+jwt:
+  secret: ${JWT_SECRET}
+  expiration-ms: 3600000  # 1시간
+
 springdoc:
   swagger-ui:
     # Swagger UI 접근 경로를 /swagger-ui/index.html 대신 /swagger-ui로 단축

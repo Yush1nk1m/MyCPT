@@ -1,5 +1,6 @@
 package com.mycpt.backend.domain.auth.controller;
 
+import com.mycpt.backend.config.JwtProvider;
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
 import com.mycpt.backend.domain.user.entity.User;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,6 +22,8 @@ import java.util.Map;
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthV1Controller implements AuthApi {
+
+    private final JwtProvider jwtProvider;
 
     // GET /api/v1/auth/kakao
     @GetMapping("/kakao")
