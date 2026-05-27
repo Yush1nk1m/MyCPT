@@ -51,9 +51,7 @@ public class SwaggerConfig {
                                 // 인증 값을 쿠키에서 읽어옴. 세션 쿠키 방식임을 명시
                                 .in(SecurityScheme.In.COOKIE)
                                 // 브라우저가 전송하는 세션 쿠키 이름. SecurityConfig의 .deleteCookies("JSESSIONID")와 일치 필요
-                                .name("JSESSIONID")
-                                .description(
-                                        "카카오 로그인 후 발급되는 세션 쿠키이다. " +
-                                                "브라우저에서 자동 전송되므로 Swagger UI에서 직접 입력할 필요 없이 로그인 후 바로 사용 가능하다."));
+                                .name("accessToken")
+                                .description("카카오 로그인 후 발급되는 JWT 액세스 토큰 쿠키"));
     }
 }
