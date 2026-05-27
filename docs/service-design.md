@@ -3,7 +3,7 @@
 > **My ComPeTency**
 > DISC 이론 기반 직무 역량 성향 분석 서비스
 
-**문서 버전**: v0.8
+**문서 버전**: v0.9
 **작성일**: '26.05.24.
 **작성자**: 김유신
 
@@ -21,6 +21,7 @@
 | v0.6 | 요구사항 섹션 → requirements-design.md 분리. 기술 스택 확정 (Next.js, Redis, AWS S3, SSE). 스토리지 전략 추가. | '26.05.24. |
 | v0.7 | 기술 스택 Java 25, Spring 3.5.14 버전 확정                                                                     |
 | v0.8 | 기술 스택에 SpringDoc OpenAPI (Swagger UI) 추가.                                                               | '26.05.26. |
+| v0.9 | JWT 인증 방식 사용에 따른 Redis 사용 목적 수정                                                                 | '26.05.27. |
 
 ---
 
@@ -247,10 +248,10 @@ amount     = Math.min(chargeable, 3 - current_coins)
 | ----------- | --------------------------------------------------- |
 | 백엔드      | Java 25, Spring Boot 3.5.14                         |
 | API 문서    | SpringDoc OpenAPI (Swagger UI)                      |
-| 인증        | Spring Security, Kakao OAuth 2.0                    |
+| 인증        | Spring Security, Kakao OAuth 2.0, JWT(액세스 토큰)  |
 | DB          | MySQL                                               |
 | 캐시 (DB)   | disc_cache 테이블 (온디맨드 만료, Lazy Caching)     |
-| 캐시 (앱)   | Redis (`@Cacheable`, 세션 저장소 겸용)              |
+| 캐시 (앱)   | Redis (`@Cacheable`, DB 결과 캐싱 전용)             |
 | LLM         | Anthropic Claude API (claude-sonnet-4-6)            |
 | 비동기 처리 | Spring `@Async`                                     |
 | 실시간 알림 | SSE (`SseEmitter`)                                  |

@@ -28,7 +28,7 @@ public class RedisConfig {
                 objectMapper.getPolymorphicTypeValidator(),
                 ObjectMapper.DefaultTyping.NON_FINAL,
                 JsonTypeInfo.As.PROPERTY);
-        return new GenericJackson2JsonRedisSerializer();
+        return new GenericJackson2JsonRedisSerializer(objectMapper);
     }
 
     @JsonDeserialize

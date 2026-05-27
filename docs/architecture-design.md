@@ -1,9 +1,8 @@
 # MyCPT 시스템 아키텍처 설계
 
-**문서 버전**: v0.2
+**문서 버전**: v0.3
 **작성일**: '26.05.25.  
-**작성자**: 김유신  
-**연관 문서**: service-design.md v0.8 / api-design.md v0.4
+**작성자**: 김유신
 
 ---
 
@@ -12,6 +11,7 @@
 | 버전 | 변경 내용                                                                                      | 날짜       |
 | ---- | ---------------------------------------------------------------------------------------------- | ---------- |
 | v0.2 | 패키지 루트 com.mycpt.backend로 수정. 컨트롤러 Interface+V1 네이밍 구조 반영. Swagger UI 추가. | '26.05.26. |
+| v0.3 | JWT 인증 방식으로 변경에 따른 아키텍처 및 Redis 명세 수정                                      | '26.05.27. |
 
 ---
 
@@ -43,22 +43,22 @@
 
 ### 2.2 Spring Boot — 백엔드
 
-| 레이어     | 구성 요소                         | 역할                                        |
-| ---------- | --------------------------------- | ------------------------------------------- |
-| Security   | Spring Security + Kakao OAuth 2.0 | 인증/인가. 세션 쿠키(JSESSIONID) 발급       |
-| Controller | REST Controllers                  | HTTP 요청 수신, DTO 변환, 응답 반환         |
-| Service    | Business Services                 | 비즈니스 로직, 트랜잭션 경계                |
-| Repository | JPA Repositories                  | DB CRUD                                     |
-| Async      | @Async + ThreadPoolTaskExecutor   | 케미 보고서 LLM 비동기 호출                 |
-| SSE        | SseEmitter                        | 케미 보고서 완료 푸시, Last-Event-ID 재전송 |
-| Batch      | Spring Batch                      | 만료 동료 코드 + 만료 평정 토큰 주기 삭제   |
+| 레이어     | 구성 요소                         | 역할                                                |
+| ---------- | --------------------------------- | --------------------------------------------------- |
+| Security   | Spring Security + Kakao OAuth 2.0 | 인증/인가. JWT 액세스 토큰 발급(Authorization 헤더) |
+| Controller | REST Controllers                  | HTTP 요청 수신, DTO 변환, 응답 반환                 |
+| Service    | Business Services                 | 비즈니스 로직, 트랜잭션 경계                        |
+| Repository | JPA Repositories                  | DB CRUD                                             |
+| Async      | @Async + ThreadPoolTaskExecutor   | 케미 보고서 LLM 비동기 호출                         |
+| SSE        | SseEmitter                        | 케미 보고서 완료 푸시, Last-Event-ID 재전송         |
+| Batch      | Spring Batch                      | 만료 동료 코드 + 만료 평정 토큰 주기 삭제           |
 
 ### 2.3 외부 시스템
 
 | 시스템               | 용도                                                   |
 | -------------------- | ------------------------------------------------------ |
 | MySQL                | 메인 데이터 저장소 (9개 테이블)                        |
-| Redis                | 세션 저장소 겸 disc_cache @Cacheable (운영 환경)       |
+| Redis                | disc_cache @Cacheable (운영 환경)                      |
 | Anthropic Claude API | DISC 분석 보고서 생성, 케미 보고서 생성                |
 | AWS S3               | 프로필 이미지 저장 (운영 환경. 개발은 로컬 파일시스템) |
 | Kakao OAuth          | 소셜 로그인                                            |

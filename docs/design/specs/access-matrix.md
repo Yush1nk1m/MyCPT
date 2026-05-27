@@ -9,11 +9,11 @@
 
 ## 인증 상태 정의
 
-| 상태            | 식별                              | 비고                                |
-| --------------- | --------------------------------- | ----------------------------------- |
-| `anonymous`     | 세션 쿠키 없음                    | 비로그인 일반 사용자                |
-| `authenticated` | 세션 쿠키 + `/auth/me` 200        | 카카오 로그인 완료한 회원           |
-| `assessor`      | URL 토큰 (`/assessments/[token]`) | 외부 평정자. 인증 무관, 토큰만 검증 |
+| 상태            | 식별                                 | 비고                                |
+| --------------- | ------------------------------------ | ----------------------------------- |
+| `anonymous`     | accessToken 쿠키 없음 또는 토큰 만료 | 비로그인 일반 사용자                |
+| `authenticated` | 유효한 JWT + `/auth/me` 200          | 카카오 로그인 완료한 회원           |
+| `assessor`      | URL 토큰 (`/assessments/[token]`)    | 외부 평정자. 인증 무관, 토큰만 검증 |
 
 ---
 
@@ -129,14 +129,14 @@
 ```ts
 // middleware.ts 의사 코드
 export function middleware(req) {
-  const session = req.cookies.get("JSESSIONID");
+  const token = req.cookies.get("accessToken")?.value;
   const path = req.nextUrl.pathname;
 
   // 공용 경로
   if (PUBLIC_ROUTES.includes(path)) return;
 
   // 회원 전용 경로 + 비로그인
-  if (MEMBER_ROUTES.some((p) => path.startsWith(p)) && !session) {
+  if (MEMBER_ROUTES.some((p) => path.startsWith(p)) && !token) {
     return NextResponse.redirect(`/auth/kakao?returnTo=${path}`);
   }
 }

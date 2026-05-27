@@ -89,7 +89,7 @@ database "MySQL" as MySQL {
 }
 
 database "Redis" as Redis {
-  [세션 저장소\n+ @Cacheable] as RedisData
+  [@Cacheable] as RedisData
 }
 
 cloud "외부 서비스" #FFF7ED {
@@ -134,7 +134,6 @@ Repos -down-> MySQL
 
 ' Redis
 Cache         -right-> Redis : @Cacheable\n(disc_cache)
-Security      -right-> Redis : 세션 저장
 
 ' 외부 연동
 Llm           -right-> ClaudeAPI
@@ -158,9 +157,7 @@ note right of Chemistry
 end note
 
 note bottom of Redis
-  개발: 서버 메모리 세션
-  운영: Redis 세션 저장소
-  + disc_cache @Cacheable
+  disc_cache @Cacheable 전용
 end note
 
 ' ── 변경: Swagger 관련 note 추가 ────────────────────────────────────────────

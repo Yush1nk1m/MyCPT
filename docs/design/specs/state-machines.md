@@ -99,7 +99,7 @@ stateDiagram-v2
 
 ---
 
-## 4. 인증 세션 (Session)
+## 4. 인증 상태 (Auth)
 
 ```mermaid
 stateDiagram-v2
