@@ -147,11 +147,11 @@
 
 1. 사용자가 메인 페이지에서 '검사 시작' 클릭
 2. 24문항 강제선택 방식으로 검사 진행 (선택지 셔플은 클라이언트 처리)
-3. DISC 원점수 산출 → 버킷 분류 → 캐시 조회
+3. 클라이언트에서 DISC 원점수 산출 → 서버로 전송 → 버킷 분류 → 캐시 조회
    - 캐시 히트 + 유효: DB에서 분석 결과 즉시 반환
    - 캐시 히트 + 만료: LLM API 호출 → 결과 UPDATE 후 반환
    - 캐시 미스: LLM API 호출 → 결과 INSERT 후 반환
-4. 클라이언트 sessionStorage에 DISC 원점수 임시 보관
+4. 클라이언트 sessionStorage에 { testType, scores: { d, i, s, c } } 형태로 임시 보관
 5. 결과 화면에서 "사용자님의 강점/약점" 분석 확인
 6. '로그인하고 결과 저장' 버튼 클릭 → 카카오 로그인 → sessionStorage의 원점수를 `POST /results`로 전송 → `test_results`에 INSERT
 

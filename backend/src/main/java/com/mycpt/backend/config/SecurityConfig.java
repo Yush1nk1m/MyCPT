@@ -61,8 +61,6 @@ public class SecurityConfig {
                 .requestMatchers("/oauth2/authorization/**").permitAll()
                 // 카카오 콜백 수신 경로 허용
                 .requestMatchers("/login/oauth2/code/**").permitAll()
-                // 비회원도 검사 문항 조회 가능(GET /api/v1/questions)
-                .requestMatchers(HttpMethod.GET, "/api/v1/questions").permitAll()
                 // 비회원도 채점 요청 가능 (POST /api/v1/results/score)
                 .requestMatchers(HttpMethod.POST, "/api/v1/results/score").permitAll()
                 // 비회원도 타인 평정 링크 조회 가능 (GET /api/v1/assessments/{token})

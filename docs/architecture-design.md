@@ -40,6 +40,7 @@
 | sessionStorage | 비회원 DISC 원점수 임시 보관                                    |
 | SSE 수신       | `/notifications/stream` 연결 유지, 재연결 시 Last-Event-ID 전송 |
 | 선택지 셔플    | DISC 태그 미노출 상태에서 클라이언트 셔플 처리                  |
+| 원점수 산출    | 24문항 응답 기반 DISC 원점수 계산 (프론트엔드 처리)             |
 
 ### 2.2 Spring Boot — 백엔드
 
@@ -96,23 +97,11 @@ com.mycpt.backend
 │   └── StorageConfig.java           # 로컬/S3 스토리지 전환 설정
 │
 ├── domain/                          # 도메인별 레이어드 구조
-│   │
-│   ├── question/                    # 검사 문항
-│   │   ├── controller/
-│   │   │   └── QuestionController.java      # GET /questions
-│   │   ├── service/
-│   │   │   └── QuestionService.java
-│   │   ├── repository/
-│   │   │   └── QuestionRepository.java
-│   │   └── entity/
-│   │       ├── Question.java
-│   │       └── QuestionOption.java
-│   │
 │   ├── result/                      # 검사 결과 (채점, 저장, 이력)
 │   │   ├── controller/
 │   │   │   └── ResultController.java        # POST /results/score, POST /results, GET /results, GET /results/{id}
 │   │   ├── service/
-│   │   │   ├── ScoringService.java          # DISC 채점 + 버킷 정규화
+│   │   │   ├── ScoringService.java          # 원점수 검증 + 버킷 정규화
 │   │   │   ├── CacheService.java            # disc_cache Lazy Caching
 │   │   │   ├── LlmService.java              # Claude API 호출 + 응답 파싱
 │   │   │   └── ResultService.java           # 결과 저장 및 이력 조회

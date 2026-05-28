@@ -57,18 +57,18 @@ database "disc_cache\n(MySQL)" as DB
 
 User -> Client : 24문항 응답 완료
 
-Client -> Controller : POST /results/score\n{ answers: [...] }
+Client -> Controller : POST /results/score\n{ testType, scores: { d, i, s, c } }
 activate Controller
 
-Controller -> Scoring : score(answers)
+Controller -> Scoring : normalize(d, i, s, c)
 activate Scoring
 
 note right of Scoring
   D + I + S + C = 24 검증
+  원점수 범위 검증 (-24~+48)
   원점수 → 버킷값 (1~9) 정규화
 end note
 
-Scoring -> Scoring : DISC 원점수 산출
 Scoring -> Scoring : 버킷값 정규화\n(원점수 -24~+48 → 9단계)
 Scoring --> Controller : { d, i, s, c 원점수 + 버킷값 }
 deactivate Scoring

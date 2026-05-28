@@ -8,13 +8,14 @@
 
 ## 변경 이력
 
-| 버전 | 변경 내용                                                                                                                            | 날짜       |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| v0.1 | 초안 작성 (28개 엔드포인트)                                                                                                          | '26.05.24. |
-| v0.2 | POST /assessments testType 파라미터 추가. DELETE /users/me 신규 추가. 타인 평정 링크 클라이언트 URL 구조 명시.                       | '26.05.25. |
-| v0.3 | POST /assessments/{token}/submit 신규 추가. POST /results 응답 코드 200 → 201. POST /chemistry-reports INSUFFICIENT_COINS 409 → 422. | '26.05.25. |
-| v0.4 | GET /auth/me 응답에 nextCoinAt 추가. profile_image_url로 컬럼명 통일 반영.                                                           | '26.05.26. |
-| v0.5 | JWT 인증 방식으로의 변경에 따른 인증 API 명세 수정                                                                                   | '26.05.27. |
+| 버전 | 변경 내용                                                                                                                                  | 날짜       |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| v0.1 | 초안 작성 (28개 엔드포인트)                                                                                                                | '26.05.24. |
+| v0.2 | POST /assessments testType 파라미터 추가. DELETE /users/me 신규 추가. 타인 평정 링크 클라이언트 URL 구조 명시.                             | '26.05.25. |
+| v0.3 | POST /assessments/{token}/submit 신규 추가. POST /results 응답 코드 200 → 201. POST /chemistry-reports INSUFFICIENT_COINS 409 → 422.       | '26.05.25. |
+| v0.4 | GET /auth/me 응답에 nextCoinAt 추가. profile_image_url로 컬럼명 통일 반영.                                                                 | '26.05.26. |
+| v0.5 | JWT 인증 방식으로의 변경에 따른 인증 API 명세 수정                                                                                         | '26.05.27. |
+| v0.6 | GET /questions 제거 (문항 프론트 위임). POST /results/score · POST /assessments/{token}/submit 요청 바디를 원점수 직접 전송 방식으로 변경. | '26.05.30. |
 
 ---
 
@@ -78,60 +79,24 @@ Spring Security JWT 기반.
 
 ## 2. 검사
 
-### `GET /questions` — 문항 조회
-
-- 인증: 비회원 가능
-- 설명: 검사에 사용할 24문항 전체를 고정 순서로 반환한다. 선택지 DISC 태그는 포함하지 않는다. 선택지 셔플은 클라이언트에서 처리한다.
-
-**요청 파라미터**: 없음
-
-**응답 바디 (200)**
-
-```json
-{
-  "questions": [
-    {
-      "questionId": 1,
-      "text": "친구들과 여행 계획을 세울 때, 나는...",
-      "options": [
-        { "optionId": 1, "text": "내가 일정을 짜고 최종 결정을 내린다" },
-        { "optionId": 2, "text": "모두의 의견을 모아 갈등 없이 조율한다" },
-        { "optionId": 3, "text": "신나는 분위기를 만들며 모두를 설레게 한다" },
-        { "optionId": 4, "text": "숙소, 교통, 날씨, 예산을 꼼꼼히 조사한다" }
-      ]
-    }
-  ]
-}
-```
-
-| 응답 코드 | 설명 |
-| --------- | ---- |
-| `200`     | 성공 |
-
----
-
 ### `POST /results/score` — 채점 및 결과 반환
 
 - 인증: 비회원 가능
-- 설명: 24문항 응답을 채점하여 DISC 원점수 및 버킷값을 산출하고, 캐시 조회 결과에 따라 분석 보고서를 반환한다. 비회원은 클라이언트 sessionStorage에 원점수를 보관한다.
+- 설명: 프론트엔드에서 산출한 DISC 원점수를 전달받아 버킷값을 산출하고, 캐시 조회 결과에 따라 분석 보고서를 반환한다. 비회원은 클라이언트 sessionStorage에 원점수를 보관한다.
 
 **요청 바디**
 
 ```json
 {
-  "answers": [
-    { "questionId": 1, "most": 1, "least": 4 },
-    { "questionId": 2, "most": 3, "least": 2 }
-  ]
+  "testType": "DISC",
+  "scores": { "d": 32, "i": 10, "s": -4, "c": 18 }
 }
 ```
 
-| 필드                   | 타입   | 필수     | 설명                      |
-| ---------------------- | ------ | -------- | ------------------------- |
-| `answers`              | array  | required | 문항별 응답 (24개)        |
-| `answers[].questionId` | number | required | 문항 번호 (1~24)          |
-| `answers[].most`       | number | required | Most 선택 optionId (1~4)  |
-| `answers[].least`      | number | required | Least 선택 optionId (1~4) |
+| 필드       | 타입   | 필수     | 설명                            |
+| ---------- | ------ | -------- | ------------------------------- |
+| `testType` | string | required | 검사 유형. 현재는 `DISC`만 유효 |
+| `scores`   | object | required | DISC 원점수 객체(-24~+48)       |
 
 **응답 바디 (200)**
 
@@ -149,10 +114,10 @@ Spring Security JWT 기반.
 | `buckets` | object | DISC 버킷값 (1~9)                                                               |
 | `report`  | string | Markdown 형식 분석 보고서 전문. Next.js에서 react-markdown으로 렌더링           |
 
-| 응답 코드 | 설명                                              |
-| --------- | ------------------------------------------------- |
-| `200`     | 성공                                              |
-| `400`     | 문항 수 불일치 / most와 least가 동일 / 범위 밖 값 |
+| 응답 코드 | 설명                                        |
+| --------- | ------------------------------------------- |
+| `200`     | 성공                                        |
+| `400`     | 원점수 범위 오류 / D+I+S+C 합계가 24가 아님 |
 
 ---
 
@@ -341,21 +306,17 @@ Spring Security JWT 기반.
 
 ```json
 {
-  "d": 32,
-  "i": 10,
-  "s": -4,
-  "c": 18
+  "testType": "DISC",
+  "scores": { "d": 32, "i": 10, "s": -4, "c": 18 }
 }
 ```
 
-| 필드 | 타입   | 필수     | 설명               |
-| ---- | ------ | -------- | ------------------ |
-| `d`  | number | required | D 원점수 (-24~+48) |
-| `i`  | number | required | I 원점수 (-24~+48) |
-| `s`  | number | required | S 원점수 (-24~+48) |
-| `c`  | number | required | C 원점수 (-24~+48) |
+| 필드       | 타입   | 필수     | 설명                            |
+| ---------- | ------ | -------- | ------------------------------- |
+| `testType` | string | required | 검사 유형. 현재는 `DISC`만 유효 |
+| `scores`   | object | required | DISC 원점수 객체(-24~+48)       |
 
-**응답 바디 (200)**
+**응답 바디 (201)**
 
 ```json
 {
@@ -543,19 +504,15 @@ Spring Security JWT 기반.
 
 ```json
 {
-  "answers": [
-    { "questionId": 1, "most": 1, "least": 4 },
-    { "questionId": 2, "most": 3, "least": 2 }
-  ]
+  "testType": "DISC",
+  "scores": { "d": 32, "i": 10, "s": -4, "c": 18 }
 }
 ```
 
-| 필드                   | 타입   | 필수     | 설명                      |
-| ---------------------- | ------ | -------- | ------------------------- |
-| `answers`              | array  | required | 문항별 응답 (24개)        |
-| `answers[].questionId` | number | required | 문항 번호 (1~24)          |
-| `answers[].most`       | number | required | Most 선택 optionId (1~4)  |
-| `answers[].least`      | number | required | Least 선택 optionId (1~4) |
+| 필드       | 타입   | 필수     | 설명                          |
+| ---------- | ------ | -------- | ----------------------------- |
+| `testType` | string | required | 검사 유형. 현재는 DISC만 유효 |
+| `scores`   | object | required | DISC 원점수 객체(-24~+48)     |
 
 **응답 바디 (201)**
 

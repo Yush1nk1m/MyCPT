@@ -67,7 +67,6 @@ last_updated: 2026-05-27
   wireframe: 와이어프레임 P1.html#test-b
   components: [SheetFrame, DotProgressBar, QuestionCard, OptionPickRow]
   api:
-    - { method: GET, path: /questions }
     - { method: POST, path: /results/score, note: "최종 제출 시" }
   states:
     answering: 진행도 N/24 표시. 가장 가까운 선택 시 "가장 먼"에서 동일 옵션 비활성화 (워터마크)

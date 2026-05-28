@@ -25,9 +25,9 @@ public class SwaggerConfig {
                         MyCPT REST API 명세서.
                         
                         ## 인증
-                        카카오 OAuth2 세션 기반 인증을 사용한다.
+                        카카오 OAuth2 JWT 토큰 기반 인증을 사용한다.
                         1. `GET /api/v0/auth/kakao` 로 카카오 로그인을 진행한다.
-                        2. 로그인 완료 후 발급된 JSESSIONID 쿠키가 이후 요청에 자동 포함된다.
+                        2. 로그인 완료 후 발급된 JWT 토큰이 이후 요청에 포함된다.
                         3. 인증이 필요한 엔드포인트는 우측 자물쇠 아이콘으로 표시된다.
                         
                         ## 비회원 허용 엔드포인트
@@ -48,9 +48,9 @@ public class SwaggerConfig {
                 .addSecuritySchemes("cookieAuth",
                         new SecurityScheme()
                                 .type(SecurityScheme.Type.APIKEY)
-                                // 인증 값을 쿠키에서 읽어옴. 세션 쿠키 방식임을 명시
+                                // 인증 값을 쿠키에서 읽어옴. 쿠키 방식임을 명시
                                 .in(SecurityScheme.In.COOKIE)
-                                // 브라우저가 전송하는 세션 쿠키 이름. SecurityConfig의 .deleteCookies("JSESSIONID")와 일치 필요
+                                // 브라우저가 전송하는 JWT 토큰 이름
                                 .name("accessToken")
                                 .description("카카오 로그인 후 발급되는 JWT 액세스 토큰 쿠키"));
     }
