@@ -96,7 +96,9 @@
 | 날짜       | 작업                                                                                                      | 산출물            | 완료 |
 | ---------- | --------------------------------------------------------------------------------------------------------- | ----------------- | ---- |
 | 05.30 (토) | ScoringService 구현 — 원점수 범위 검증, D+I+S+C=24 검증, 버킷 정규화 로직 + 단위 테스트 (05.28 선행 완료) | ScoringService    | [x]  |
-| 05.31 (일) | 검사 응시 화면 구현 — 문항 순서 표시, Most/Least 강제선택 UI, 클라이언트 셔플                             | 검사 페이지       | [ ]  |
+| 05.31 (일) | Next.js 프로젝트 초기화 — App Router, Tailwind CSS, Framer Motion,                                        |
+|            | TanStack Query, Zustand 설치, 모노레포 구조 (frontend/) 편입                                              | frontend/         | [ ]  |
+|            | 검사 응시 화면 구현 — 문항 순서 표시, Most/Least 강제선택 UI, 클라이언트 셔플                             | 검사 페이지       | [ ]  |
 | 06.01 (월) | DISC 채점 로직 구현 — 원점수 산출, 9단계 버킷 정규화, sessionStorage 임시 저장                            | ScoringService    | [ ]  |
 | 06.02 (화) | disc_cache Lazy Caching 구현 — HIT/MISS 분기, 온디맨드 만료 처리                                          | CacheService      | [ ]  |
 | 06.03 (수) | Claude API 연동 — 6개 섹션 버킷 기반 프롬프트 설계 및 응답 파싱 후 캐시 저장                              | LlmService        | [ ]  |

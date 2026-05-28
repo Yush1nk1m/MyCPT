@@ -244,21 +244,22 @@ amount     = Math.min(chargeable, 3 - current_coins)
 
 ## 5. 기술 스택
 
-| 영역        | 기술                                                |
-| ----------- | --------------------------------------------------- |
-| 백엔드      | Java 25, Spring Boot 3.5.14                         |
-| API 문서    | SpringDoc OpenAPI (Swagger UI)                      |
-| 인증        | Spring Security, Kakao OAuth 2.0, JWT(액세스 토큰)  |
-| DB          | MySQL                                               |
-| 캐시 (DB)   | disc_cache 테이블 (온디맨드 만료, Lazy Caching)     |
-| 캐시 (앱)   | Redis (`@Cacheable`, DB 결과 캐싱 전용)             |
-| LLM         | Anthropic Claude API (claude-sonnet-4-6)            |
-| 비동기 처리 | Spring `@Async`                                     |
-| 실시간 알림 | SSE (`SseEmitter`)                                  |
-| 스토리지    | 로컬 파일시스템 (개발) / AWS S3 (운영)              |
-| 배치        | Spring Batch (만료 동료 코드 + 만료 평정 토큰 삭제) |
-| 프론트엔드  | Next.js (SSR/SSG + React)                           |
-| 인프라      | 미정                                                |
+| 영역        | 기술                                                  |
+| ----------- | ----------------------------------------------------- |
+| 백엔드      | Java 25, Spring Boot 3.5.14                           |
+| API 문서    | SpringDoc OpenAPI (Swagger UI)                        |
+| 인증        | Spring Security, Kakao OAuth 2.0, JWT(액세스 토큰)    |
+| DB          | MySQL                                                 |
+| 캐시 (DB)   | disc_cache 테이블 (온디맨드 만료, Lazy Caching)       |
+| 캐시 (앱)   | Redis (`@Cacheable`, DB 결과 캐싱 전용)               |
+| LLM         | Anthropic Claude API (claude-sonnet-4-6)              |
+| 비동기 처리 | Spring `@Async`                                       |
+| 실시간 알림 | SSE (`SseEmitter`)                                    |
+| 스토리지    | 로컬 파일시스템 (개발) / AWS S3 (운영)                |
+| 배치        | Spring Batch (만료 동료 코드 + 만료 평정 토큰 삭제)   |
+| 프론트엔드  | Next.js (App Router), Tailwind CSS, Framer Motion     |
+| 상태 관리   | TanStack Query (서버 상태), Zustand (클라이언트 상태) |
+| 인프라      | 미정                                                  |
 
 ---
 
