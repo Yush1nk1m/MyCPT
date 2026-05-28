@@ -4,6 +4,7 @@ import com.mycpt.backend.config.SecurityConfig;
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
 import com.mycpt.backend.domain.auth.service.CustomOAuth2UserService;
 import com.mycpt.backend.domain.user.entity.User;
+import com.mycpt.backend.support.SliceTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,86 +23,58 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// @WebMvcTest: 웹 레이어(Controller + Filter)만 로드
+// @WebMvcTest: 웹 레이어(Controller + Security Filter Chain)만 로드
 // Spring Security 필터 체인이 포함되므로 실제 인증/인가 동작 검증 가능
 // JPA, Service 등 다른 레이어는 로드하지 않으므로 신속한 테스트 가능
 @WebMvcTest(AuthV1Controller.class)
-@Import(SecurityConfig.class)
 @DisplayName("AuthV1Controller 슬라이스 테스트")
-class AuthV1ControllerTest {
-
-    @Autowired
-    private MockMvc mockMvc;
-
-    // @WebMvcTest는 Spring Security 자동 설정 포함
-    // SecurityConfig가 CustomOAuth2UserService를 의존하므로 MockitoBean으로 등록하여 컨텍스트 로드 오류 방지
-    // 실제 카카오 API 호출 없이 Security 설정만 적용
-    @MockitoBean
-    private CustomOAuth2UserService customOAuth2UserService;
-
-    // oauth2Login() 메서드에 주입해 인증된 사용자를 시뮬레이션하기 위한 User 엔티티와 UserPrincipal
-    private User testUser;
-    private UserPrincipal testPrincipal;
-
-    @BeforeEach
-    void setUp() {
-        // 리플렉션으로 id 필드를 설정할 수 없으므로 id가 null인 상태로 테스트
-        // id 필드 검증은 AUC-03에서 null이 아닌 키 존재 여부로 검증
-        testUser = User.create(
-                "1234567890",
-                "테스트유저",
-                "https://k.kakaocdn.net/test.jpg");
-
-        testPrincipal = new UserPrincipal(testUser, Map.of(
-                "id", 1234567890L,
-                "properties", Map.of(
-                        "nickname", "테스트유저",
-                        "profile_image", "https://k.kakaocdn.net/test.jpg")));
-    }
+class AuthV1ControllerTest extends SliceTestSupport {
 
     @Nested
-    @DisplayName("GET /api/v1/auth/me - AUC")
+    @DisplayName("GET /api/v1/auth/me")
     class GetMe {
 
         @Test
-        @DisplayName("[AUC-01] 인증된 사용자 /auth/me 200 응답")
-        void AUC_01() throws Exception {
-            // oauth2Login(): Spring Security Test가 제공하는 OAuth2 인증 주입
-            // @WithMockUser 사용 시 단순 문자열 기반이라 UserPrincipal 타입 주입 불가능
-            // oauth2Login().oauth2User(testPrincipal) 메서드 체인으로 UserPrincipal을 SecurityContext에 주입
+        @DisplayName("[ST-AuthController-사용자인증-성공]")
+        void 사용자인증_성공() throws Exception {
+            // 필터를 실제 실행하여 인증 흐름 자체를 검증
             mockMvc.perform(get("/api/v1/auth/me")
-                            .with(oauth2Login().oauth2User(testPrincipal)))
+                            // authenticated(): JwtAuthenticationFilter 실제 실행 경로를 시뮬레이션
+                            .with(authenticated(testUser())))
                     .andExpect(status().isOk());
         }
 
         @Test
-        @DisplayName("[AUC-02] 미인증 사용자 /auth/me 401 응답")
-        void AUC_02() throws Exception {
-            // 인증 정보 없이 호출
-            // SecurityConfig의 authenticationEntryPoint가 가로채 401 + JSON 응답 바디 반환
+        @DisplayName("[ST-AuthController-사용자인증-미인증접근]")
+        void 사용자인증_미인증접근() throws Exception {
+            // 쿠키 없이 요청 시 JwtAuthenticationFilter가 SecurityContext에 인증 객체를 주입하지 않음
             mockMvc.perform(get("/api/v1/auth/me"))
                     .andExpect(status().isUnauthorized())
+                    // SecurityConfig의 authenticationEntryPoint가 가로채 401 + JSON 바디 반환
                     .andExpect(content().contentType("application/json;charset=UTF-8"))
                     .andExpect(jsonPath("$.code", is("UNAUTHORIZED")))
                     .andExpect(jsonPath("$.message", is("인증이 필요합니다.")));
         }
 
         @Test
-        @DisplayName("[AUC-03] /auth/me 응답 바디 전체 필드 검증")
-        void AUC_03() throws Exception {
-            // 7개 필드가 모두 응답 바디에 존재하는지 검증
-            // hasKey(): 키 존재 여부만 검증. 값 타입은 별도 검증
+        @DisplayName("[ST-AuthController-응답바디형식확인-성공")
+        void 응답바디형식확인_성공() throws Exception {
+            // 응답 바디의 7개 필드 존재 여부 및 초기 값 검증
             mockMvc.perform(get("/api/v1/auth/me")
-                            .with(oauth2Login().oauth2User(testPrincipal)))
+                            .with(authenticated(testUser())))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType("application/json"))
+                    // testUser()는 DB 저장 전 객체라 null이므로 hasKey() 메서드로 키 존재 여부만 검증
                     .andExpect(jsonPath("$", hasKey("userId")))
                     .andExpect(jsonPath("$.nickname", is("테스트유저")))
                     .andExpect(jsonPath("$.profileImageUrl", is("https://k.kakaocdn.net/test.jpg")))
                     .andExpect(jsonPath("$.coins", is(3)))
+                    // nextCoinAt은 신규 가입 시 만충(coins=3) 상태이므로 null
                     .andExpect(jsonPath("$.nextCoinAt", nullValue()))
+                    // birthYear, gender는 로그인 후 프로필 변경 전까지 null
                     .andExpect(jsonPath("$.birthYear", nullValue()))
                     .andExpect(jsonPath("$.gender", nullValue()));
+
         }
     }
 }

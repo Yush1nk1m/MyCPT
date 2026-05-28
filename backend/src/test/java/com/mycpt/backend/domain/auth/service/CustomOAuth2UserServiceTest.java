@@ -20,6 +20,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.*;
 
+// @ExtendWith(MockitoExtension.class): Spring Context 없이 Mockito만 사용
+// loadUser() 메서드가 내부적으로 super.loadUser() 메서드를 호출하므로 비즈니스 로직이 분리된 findOrCreateUser() 직접 테스트
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CustomOAuth2UserService 단위 테스트")
 class CustomOAuth2UserServiceTest {
@@ -47,12 +49,12 @@ class CustomOAuth2UserServiceTest {
     }
 
     @Nested
-    @DisplayName("findOrCreateUser() - AUS")
+    @DisplayName("findOrCreateUser()")
     class FindOrCreateUser {
 
         @Test
-        @DisplayName("[AUS-01] 신규 회원 첫 로그인 시 가입 처리")
-        void AUS_01() {
+        @DisplayName("[UT-OAuth2UserSvc-회원가입-성공]")
+        void 회원가입_성공() {
             // given
             // DB에는 해당 kakao_id가 없음
             given(userRepository.findByKakaoId("1234567890"))
@@ -65,7 +67,7 @@ class CustomOAuth2UserServiceTest {
             User foundUser = customOAuth2UserService.findOrCreateUser(kakaoUserInfo);
 
             // then
-            // 반환된 User의 필드 검증
+            // 카카오 응답 필드가 User 엔티티에 올바르게 매핑되었는지 검증
             assertThat(foundUser.getKakaoId()).isEqualTo("1234567890");
             assertThat(foundUser.getNickname()).isEqualTo("테스트유저");
             assertThat(foundUser.getProfileImageUrl()).isEqualTo("https://k.kakaocdn.net/test.jpg");
@@ -81,8 +83,8 @@ class CustomOAuth2UserServiceTest {
         }
 
         @Test
-        @DisplayName("[AUS-02] 기존 회원 재로그인 시 save() 미호출")
-        void AUS_02() {
+        @DisplayName("[Ut-OAuth2UserSvc-기존회원로그인-성공")
+        void 기존회원로그인_성공() {
             // given
             // DB에 이미 해당 kakao_id가 있음
             User existingUser = User.create(
@@ -98,13 +100,13 @@ class CustomOAuth2UserServiceTest {
             // then
             assertThat(foundUser.getKakaoId()).isEqualTo("1234567890");
 
-            // 기존 회원이므로 save()가 호출되지 않아야 함
+            // 기존 회원이므로 save() 미호출 검증
             verify(userRepository, never()).save(any(User.class));
         }
 
         @Test
-        @DisplayName("[AUS-03] properties null 시 기본값 처리")
-        void AUS_03() {
+        @DisplayName("[Ut-OAuth2UserSvc-properties누락시기본값적용-성공]")
+        void properties누락시기본값적용_성공() {
             // given
             // properties 없이 id만 있는 최소 응답 구조(불완전한 응답)
             KakaoUserInfo minimalUserInfo = new KakaoUserInfo(Map.of("id", 9999L));
