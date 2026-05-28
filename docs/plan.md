@@ -44,20 +44,22 @@
 
 ### 일별 계획
 
-| 날짜       | 작업                                                                                                                                           | 산출물                                                                                                  | 완료 |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ---- |
-| 05.23 (토) | 서비스 기획서 v0.5, 유즈케이스 다이어그램 v0.5, ERD + 테이블 명세 완성                                                                         | service-design.md, database-design.md                                                                   | [x]  |
-| 05.24 (일) | DDL 작성, API 명세 작성, 요구사항 명세서 분리                                                                                                  | schema.sql, api-design.md, requirements-design.md                                                       | [x]  |
-| 05.25 (월) | 와이어프레임 스케치 (P1: 메인/검사/공유, P2: 결과/결과상세/동료&케미 완성. 나머지 12개 화면 미완성 — Claude Design 토큰 소진)                  | 와이어프레임 (진행 중)                                                                                  | [-]  |
-|            | 시스템 아키텍처 + Spring 패키지 구조 설계 (05.26 선행 완료)                                                                                    | architecture-design.md                                                                                  | [x]  |
-|            | 시퀀스 다이어그램 3종 작성 (05.27 선행 완료)                                                                                                   | sequence\_\*.puml 3종                                                                                   | [x]  |
-|            | 와이어프레임 대조 후 API 명세 개정 (v0.2), database-design.md v0.5 / schema.sql v0.5 개정                                                      | api-design.md, database-design.md, schema.sql                                                           | [x]  |
-| 05.26 (화) | 와이어프레임 나머지 12개 화면 완성 → API 명세 최종 대조                                                                                        | 와이어프레임 완성, api-design.md 보완                                                                   | [x]  |
-|            | 카카오 OAuth 앱 등록 및 Spring Security 기본 설정 (05.29 선행 완료)                                                                            | SecurityConfig, CustomOAuth2UserService, AuthApi, AuthV1Controller, SwaggerConfig, 단위/슬라이스 테스트 | [x]  |
-| 05.27 (수) | (선행 완료 — 05.25에 진행)                                                                                                                     | —                                                                                                       | [x]  |
-| 05.28 (목) | Spring Boot 프로젝트 초기화 (Java 25, Spring Boot 3.5.14), 의존성 설정, Docker Compose 개발 환경 구성 (MySQL + Redis), DDL 기반 DB 스키마 적용 | 프로젝트 레포지토리, infra/docker/dev/                                                                  | [x]  |
-|            | ScoringService 구현 — 원점수 범위 검증, D+I+S+C=24 검증, 버킷 정규화 로직 + 단위 테스트 (2주차 05.30 선행)                                     | ScoringService                                                                                          | [x]  |
-| 05.29 (금) | (선행 완료 — 05.26에 진행)                                                                                                                     | —                                                                                                       | [x]  |
+| 날짜       | 작업                                                                                                                                                                                                                                        | 산출물                                                                                                  | 완료 |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ---- |
+| 05.23 (토) | 서비스 기획서 v0.5, 유즈케이스 다이어그램 v0.5, ERD + 테이블 명세 완성                                                                                                                                                                      | service-design.md, database-design.md                                                                   | [x]  |
+| 05.24 (일) | DDL 작성, API 명세 작성, 요구사항 명세서 분리                                                                                                                                                                                               | schema.sql, api-design.md, requirements-design.md                                                       | [x]  |
+| 05.25 (월) | 와이어프레임 스케치 (P1: 메인/검사/공유, P2: 결과/결과상세/동료&케미 완성. 나머지 12개 화면 미완성 — Claude Design 토큰 소진)                                                                                                               | 와이어프레임 (진행 중)                                                                                  | [-]  |
+|            | 시스템 아키텍처 + Spring 패키지 구조 설계 (05.26 선행 완료)                                                                                                                                                                                 | architecture-design.md                                                                                  | [x]  |
+|            | 시퀀스 다이어그램 3종 작성 (05.27 선행 완료)                                                                                                                                                                                                | sequence\_\*.puml 3종                                                                                   | [x]  |
+|            | 와이어프레임 대조 후 API 명세 개정 (v0.2), database-design.md v0.5 / schema.sql v0.5 개정                                                                                                                                                   | api-design.md, database-design.md, schema.sql                                                           | [x]  |
+| 05.26 (화) | 와이어프레임 나머지 12개 화면 완성 → API 명세 최종 대조                                                                                                                                                                                     | 와이어프레임 완성, api-design.md 보완                                                                   | [x]  |
+|            | 카카오 OAuth 앱 등록 및 Spring Security 기본 설정 (05.29 선행 완료)                                                                                                                                                                         | SecurityConfig, CustomOAuth2UserService, AuthApi, AuthV1Controller, SwaggerConfig, 단위/슬라이스 테스트 | [x]  |
+| 05.27 (수) | (선행 완료 — 05.25에 진행)                                                                                                                                                                                                                  | —                                                                                                       | [x]  |
+| 05.28 (목) | Spring Boot 프로젝트 초기화 (Java 25, Spring Boot 3.5.14), 의존성 설정, Docker Compose 개발 환경 구성 (MySQL + Redis), DDL 기반 DB 스키마 적용                                                                                              | 프로젝트 레포지토리, infra/docker/dev/                                                                  | [x]  |
+|            | ScoringService 구현 — 원점수 범위 검증, D+I+S+C=24 검증, 버킷 정규화 로직 + 단위 테스트 (2주차 05.30 선행)                                                                                                                                  | ScoringService                                                                                          | [x]  |
+|            | Next.js 프로젝트 초기화 — App Router, Tailwind CSS v4, Framer Motion, TanStack Query, Zustand 설치, 모노레포 frontend/ 편입, Docker Compose frontend profile 구성, 디자인 토큰 설정 (globals.css @theme), 폰트 설정 (Inter, JetBrains Mono) | frontend/                                                                                               | [x]  |
+
+| 05.29 (금) | (선행 완료 — 05.26에 진행) | — | [x] |
 
 ### 체크리스트
 
@@ -80,6 +82,9 @@
 - [x] Swagger UI (/swagger-ui) 정상 접근 확인
 - [x] 단위 테스트 작성 완료 (AUS-01~03, AUC-01~03)
 - [x] 테스트 설계 문서 작성 완료 (test-design.md v0.1)
+- [x] Next.js 프로젝트 초기화 확인 (App Router, Tailwind v4, Framer Motion, TanStack Query, Zustand)
+- [x] Docker Compose frontend profile 구성 및 컨테이너 기동 확인
+- [x] 디자인 토큰 적용 확인 (globals.css @theme, 폰트)
 
 ---
 
@@ -96,9 +101,7 @@
 | 날짜       | 작업                                                                                                      | 산출물            | 완료 |
 | ---------- | --------------------------------------------------------------------------------------------------------- | ----------------- | ---- |
 | 05.30 (토) | ScoringService 구현 — 원점수 범위 검증, D+I+S+C=24 검증, 버킷 정규화 로직 + 단위 테스트 (05.28 선행 완료) | ScoringService    | [x]  |
-| 05.31 (일) | Next.js 프로젝트 초기화 — App Router, Tailwind CSS, Framer Motion,                                        |
-|            | TanStack Query, Zustand 설치, 모노레포 구조 (frontend/) 편입                                              | frontend/         | [ ]  |
-|            | 검사 응시 화면 구현 — 문항 순서 표시, Most/Least 강제선택 UI, 클라이언트 셔플                             | 검사 페이지       | [ ]  |
+| 05.31 (일) | 검사 응시 화면 구현 — 문항 순서 표시, Most/Least 강제선택 UI, 클라이언트 셔플                             | 검사 페이지       | [ ]  |
 | 06.01 (월) | DISC 채점 로직 구현 — 원점수 산출, 9단계 버킷 정규화, sessionStorage 임시 저장                            | ScoringService    | [ ]  |
 | 06.02 (화) | disc_cache Lazy Caching 구현 — HIT/MISS 분기, 온디맨드 만료 처리                                          | CacheService      | [ ]  |
 | 06.03 (수) | Claude API 연동 — 6개 섹션 버킷 기반 프롬프트 설계 및 응답 파싱 후 캐시 저장                              | LlmService        | [ ]  |

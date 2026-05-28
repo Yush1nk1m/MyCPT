@@ -1,26 +1,217 @@
 @import "tailwindcss";
 
+/* ================================================================
+   @theme 블록 — Tailwind v4 설정
+   - CSS 변수를 Tailwind 유틸리티 클래스로 노출하는 역할
+   - bg-ink, text-accent, rounded-lg 등으로 사용 가능해짐
+   - 값 변경은 아래 :root 블록에서만 하면 됨 (여기선 참조만)
+   ================================================================ */
+
+@theme {
+  /* ── 색상 ────────────────────────────────────────────────── */
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-paper-3: var(--paper-3);
+
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+
+  --color-accent: var(--accent);
+  --color-accent-bg: var(--accent-bg);
+  --color-highlight: var(--highlight);
+
+  --color-member: var(--member);
+  --color-member-bg: var(--member-bg);
+  --color-guest: var(--guest);
+  --color-guest-bg: var(--guest-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+
+  --color-disc-d: var(--disc-d);
+  --color-disc-i: var(--disc-i);
+  --color-disc-s: var(--disc-s);
+  --color-disc-c: var(--disc-c);
+
+  --color-kakao: var(--kakao);
+  --color-kakao-ink: var(--kakao-ink);
+
+  /* ── 폰트 패밀리 ─────────────────────────────────────────── */
+  /* font-sans → Inter/Pretendard, font-mono → JetBrains Mono */
+  --font-family-sans: var(--font-sans);
+  --font-family-mono: var(--font-mono);
+
+  /* ── 폰트 크기 ────────────────────────────────────────────
+     text-xs → 10.5px, text-base → 13px 등
+     Tailwind 기본값을 덮어쓰므로 text-sm이 11.5px임에 주의 */
+  --font-size-xs: var(--text-xs);
+  --font-size-sm: var(--text-sm);
+  --font-size-base: var(--text-base);
+  --font-size-md: var(--text-md);
+  --font-size-lg: var(--text-lg);
+  --font-size-xl: var(--text-xl);
+  --font-size-2xl: var(--text-2xl);
+  --font-size-3xl: var(--text-3xl);
+
+  /* ── 간격 ─────────────────────────────────────────────────
+     p-1 → 4px, p-4 → 12px 등
+     Tailwind 기본 spacing(p-1=4px, p-4=16px)과 다름에 주의 */
+  --spacing-1: var(--space-1);
+  --spacing-2: var(--space-2);
+  --spacing-3: var(--space-3);
+  --spacing-4: var(--space-4);
+  --spacing-5: var(--space-5);
+  --spacing-6: var(--space-6);
+  --spacing-7: var(--space-7);
+  --spacing-8: var(--space-8);
+
+  /* ── 반경 ─────────────────────────────────────────────────
+     rounded → 10px, rounded-xl → 18px, rounded-pill → 999px */
+  --radius-sm: var(--radius-sm);
+  --radius-DEFAULT: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+  --radius-pill: var(--radius-pill);
+
+  /* ── 그림자 ────────────────────────────────────────────────
+     shadow-card, shadow-pop, shadow-dialog */
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+  --shadow-dialog: var(--shadow-dialog);
+
+  /* ── 레이아웃 고정값 ──────────────────────────────────────
+     h-header → 48px, h-tab → 60px */
+  --height-header: var(--header-height);
+  --height-tab: var(--tab-height);
+}
+
+/* ================================================================
+   MyCPT 디자인 토큰 — SSOT
+   - 모든 색상·간격·타이포·반경·그림자의 단일 진실 원천
+   - 값을 바꾸고 싶으면 여기서만 수정
+   - @theme 블록은 이 변수를 참조만 함
+   ================================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ── 잉크 (텍스트·아이콘·테두리) ──────────────────────────
+     lightness만 단계적으로 낮춰 시각적 위계 표현 */
+  --ink: oklch(0.22 0.012 250); /* 본문·강조·버튼 배경 */
+  --ink-soft: oklch(0.42 0.01 250); /* 보조 텍스트 */
+  --ink-faint: oklch(0.62 0.008 250); /* 메타·placeholder */
+
+  /* ── 페이퍼 (배경) ─────────────────────────────────────────
+     따뜻한 톤의 거의 흰색. 종이 질감 */
+  --paper: oklch(0.985 0.005 85); /* 페이지 배경 */
+  --paper-2: oklch(0.965 0.008 80); /* 카드 보조 배경 */
+  --paper-3: oklch(0.94 0.01 80); /* 비활성·스켈레톤 */
+
+  /* ── 라인 (테두리·구분선) ──────────────────────────────── */
+  --line: oklch(0.78 0.01 250); /* 카드 테두리 */
+  --line-soft: oklch(0.88 0.008 250); /* 약한 구분선 */
+
+  /* ── 액센트 (주황 — CTA·강조) ─────────────────────────── */
+  --accent: oklch(0.62 0.13 40); /* 메인 액센트 */
+  --accent-bg: oklch(0.92 0.04 40); /* 액센트 배경 */
+  --highlight: oklch(0.92 0.1 95); /* 노란 하이라이트 */
+
+  /* ── 멤버 (녹 — 회원 전용·성공·완료) ─────────────────── */
+  --member: oklch(0.5 0.11 150);
+  --member-bg: oklch(0.94 0.04 150);
+
+  /* ── 게스트 (파랑 — 비회원 가능·정보) ────────────────── */
+  --guest: oklch(0.55 0.09 220);
+  --guest-bg: oklch(0.95 0.03 220);
+
+  /* ── 위험 (빨강 — 탈퇴·삭제·에러) ────────────────────── */
+  --danger: oklch(0.55 0.18 28);
+  --danger-bg: oklch(0.97 0.04 28);
+
+  /* ── DISC 4축 (검사 결과 시각화) ──────────────────────── */
+  --disc-d: oklch(0.6 0.17 30); /* 주도(D) — 주황 */
+  --disc-i: oklch(0.7 0.14 80); /* 사교(I) — 노랑 */
+  --disc-s: oklch(0.55 0.13 150); /* 안정(S) — 녹   */
+  --disc-c: oklch(0.55 0.13 240); /* 신중(C) — 파랑 */
+
+  /* ── 카카오 ────────────────────────────────────────────── */
+  --kakao: #fee500;
+  --kakao-ink: #191919;
+
+  /* ── 폰트 패밀리 ────────────────────────────────────────
+     한글: Pretendard (Inter 대체). 별도 import 필요 */
+  --font-sans: "Inter", "Pretendard", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "D2Coding", monospace;
+
+  /* ── 폰트 크기 (모바일 우선) ────────────────────────────
+     16px 미만 입력 필드는 iOS에서 자동 zoom 발생 주의 */
+  --text-xs: 10.5px; /* 메타·캡션 */
+  --text-sm: 11.5px; /* 보조 */
+  --text-base: 13px; /* 본문 */
+  --text-md: 14px; /* 강조 본문 */
+  --text-lg: 16px; /* 카드 제목 */
+  --text-xl: 18px; /* 화면 제목 */
+  --text-2xl: 22px; /* hero */
+  --text-3xl: 28px; /* hero 강조 */
+
+  /* ── 간격 (8의 배수 기준) ───────────────────────────────
+     Tailwind spacing 클래스와 매핑됨 (@theme 블록) */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 14px;
+  --space-6: 16px;
+  --space-7: 20px;
+  --space-8: 24px;
+
+  /* ── 반경 ───────────────────────────────────────────────── */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
+  --radius-pill: 999px;
+
+  /* ── 그림자 ─────────────────────────────────────────────── */
+  --shadow-card: 0 1px 2px oklch(0.2 0.01 250 / 0.06);
+  --shadow-pop: 0 4px 14px oklch(0.2 0.01 250 / 0.18);
+  --shadow-dialog: 0 10px 40px oklch(0.2 0.01 250 / 0.25);
+
+  /* ── 모달·시트 ──────────────────────────────────────────── */
+  --scrim: oklch(0.2 0.01 250 / 0.45);
+  --sheet-bg: white;
+  --sheet-handle: var(--line);
+
+  /* ── 레이아웃 고정값 ────────────────────────────────────── */
+  --header-height: 48px;
+  --tab-height: 60px;
+  --safe-bottom: 80px; /* 토스트 안전 영역 */
+
+  /* ── 애니메이션 ─────────────────────────────────────────
+     Framer Motion transition 설정과 맞춰둔 이징 커브 */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --duration-fast: 150ms;
+  --duration: 220ms;
+  --duration-slow: 320ms;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* ================================================================
+   전역 기본 스타일
+   ================================================================ */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  /* 모바일에서 텍스트 크기 자동 조정 방지 */
+  -webkit-text-size-adjust: 100%;
 }
