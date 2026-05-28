@@ -56,6 +56,7 @@
 |            | 카카오 OAuth 앱 등록 및 Spring Security 기본 설정 (05.29 선행 완료)                                                                            | SecurityConfig, CustomOAuth2UserService, AuthApi, AuthV1Controller, SwaggerConfig, 단위/슬라이스 테스트 | [x]  |
 | 05.27 (수) | (선행 완료 — 05.25에 진행)                                                                                                                     | —                                                                                                       | [x]  |
 | 05.28 (목) | Spring Boot 프로젝트 초기화 (Java 25, Spring Boot 3.5.14), 의존성 설정, Docker Compose 개발 환경 구성 (MySQL + Redis), DDL 기반 DB 스키마 적용 | 프로젝트 레포지토리, infra/docker/dev/                                                                  | [x]  |
+|            | ScoringService 구현 — 원점수 범위 검증, D+I+S+C=24 검증, 버킷 정규화 로직 + 단위 테스트 (2주차 05.30 선행)                                     | ScoringService                                                                                          | [x]  |
 | 05.29 (금) | (선행 완료 — 05.26에 진행)                                                                                                                     | —                                                                                                       | [x]  |
 
 ### 체크리스트
@@ -92,21 +93,21 @@
 
 ### 일별 계획
 
-| 날짜       | 작업                                                                                    | 산출물            | 완료 |
-| ---------- | --------------------------------------------------------------------------------------- | ----------------- | ---- |
-| 05.30 (토) | ScoringService 구현 — 원점수 범위 검증, D+I+S+C=24 검증, 버킷 정규화 로직 + 단위 테스트 | ScoringService    | [ ]  |
-| 05.31 (일) | 검사 응시 화면 구현 — 문항 순서 표시, Most/Least 강제선택 UI, 클라이언트 셔플           | 검사 페이지       | [ ]  |
-| 06.01 (월) | DISC 채점 로직 구현 — 원점수 산출, 9단계 버킷 정규화, sessionStorage 임시 저장          | ScoringService    | [ ]  |
-| 06.02 (화) | disc_cache Lazy Caching 구현 — HIT/MISS 분기, 온디맨드 만료 처리                        | CacheService      | [ ]  |
-| 06.03 (수) | Claude API 연동 — 6개 섹션 버킷 기반 프롬프트 설계 및 응답 파싱 후 캐시 저장            | LlmService        | [ ]  |
-| 06.04 (목) | 타인 평정 링크 생성/응시 흐름 구현 — 일회용 토큰, used 처리, 라벨 복사                  | AssessmentService | [ ]  |
-| 06.05 (금) | 결과 확인 화면 구현 — DISC 시각화, 6개 섹션 보고서 표시, 자기/타인 평정 구분            | 결과 페이지       | [ ]  |
+| 날짜       | 작업                                                                                                      | 산출물            | 완료 |
+| ---------- | --------------------------------------------------------------------------------------------------------- | ----------------- | ---- |
+| 05.30 (토) | ScoringService 구현 — 원점수 범위 검증, D+I+S+C=24 검증, 버킷 정규화 로직 + 단위 테스트 (05.28 선행 완료) | ScoringService    | [x]  |
+| 05.31 (일) | 검사 응시 화면 구현 — 문항 순서 표시, Most/Least 강제선택 UI, 클라이언트 셔플                             | 검사 페이지       | [ ]  |
+| 06.01 (월) | DISC 채점 로직 구현 — 원점수 산출, 9단계 버킷 정규화, sessionStorage 임시 저장                            | ScoringService    | [ ]  |
+| 06.02 (화) | disc_cache Lazy Caching 구현 — HIT/MISS 분기, 온디맨드 만료 처리                                          | CacheService      | [ ]  |
+| 06.03 (수) | Claude API 연동 — 6개 섹션 버킷 기반 프롬프트 설계 및 응답 파싱 후 캐시 저장                              | LlmService        | [ ]  |
+| 06.04 (목) | 타인 평정 링크 생성/응시 흐름 구현 — 일회용 토큰, used 처리, 라벨 복사                                    | AssessmentService | [ ]  |
+| 06.05 (금) | 결과 확인 화면 구현 — DISC 시각화, 6개 섹션 보고서 표시, 자기/타인 평정 구분                              | 결과 페이지       | [ ]  |
 
 ### 체크리스트
 
 - [ ] Most/Least 강제선택 UI 정상 동작
 - [ ] 클라이언트 선택지 셔플 정상 동작
-- [ ] ScoringService 단위 테스트 통과 (원점수 범위 검증, D+I+S+C=24, 버킷 정규화 경계값)
+- [x] ScoringService 단위 테스트 통과 (원점수 범위 검증, D+I+S+C=24, 버킷 정규화 경계값)
 - [ ] 캐시 HIT + 유효 시 DB 즉시 반환 확인
 - [ ] 캐시 HIT + 만료 시 LLM 호출 후 UPDATE 확인
 - [ ] 캐시 MISS 시 LLM 호출 후 INSERT 확인

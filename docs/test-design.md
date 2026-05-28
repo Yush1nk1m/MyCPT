@@ -152,7 +152,16 @@ _3주차 구현 시 작성_
 
 ## 6. Result 도메인
 
-_2주차 구현 시 작성_
+### ScoringService (UT)
+
+| Test ID                                       | 행위                            | 상황                                             |
+| --------------------------------------------- | ------------------------------- | ------------------------------------------------ |
+| UT-ScoringService-버킷정규화-성공             | 정상 원점수 입력 시 버킷값 반환 | D=32, I=10, S=-4, C=-14 → 버킷 8,5,3,2 검증      |
+| UT-ScoringService-버킷정규화-최솟값최댓값혼합 | 최솟값/최댓값 경계 혼합 입력    | D=-24(버킷1), C=48(버킷9) 검증                   |
+| UT-ScoringService-합계검증-실패               | D+I+S+C ≠ 24                    | 합계 25 → InvalidScoreException                  |
+| UT-ScoringService-범위초과-상한               | 개별 원점수 48 초과             | D=49 → InvalidScoreException, 메시지에 49 포함   |
+| UT-ScoringService-범위초과-하한               | 개별 원점수 -24 미만            | I=-25 → InvalidScoreException, 메시지에 -25 포함 |
+| UT-ScoringService-toBucket-경계값             | 버킷 전환점 전수 검증           | 9단계 하한/상한 18개 케이스                      |
 
 ---
 
