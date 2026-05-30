@@ -1,27 +1,23 @@
+"use client";
+
+import { TestSheet } from "@/components/test/TestSheet";
+import { useTestSheetStore } from "@/stores/testSheetStore";
+
 export default function Home() {
+  const open = useTestSheetStore((s) => s.open);
+
   return (
-    <div className="min-h-screen bg-paper p-6 flex flex-col gap-4">
-      {/* 색상 토큰 확인 */}
-      <div className="bg-ink text-paper p-4 rounded-lg">
-        bg-ink / text-paper / rounded-lg
-      </div>
-      <div className="bg-accent text-paper p-4 rounded-lg">bg-accent</div>
-      <div className="bg-member text-paper p-4 rounded-lg">bg-member</div>
-      <div className="bg-danger text-paper p-4 rounded-lg">bg-danger</div>
+    <div className="min-h-screen bg-paper flex flex-col items-center justify-center gap-4 p-6">
+      <p className="text-xl font-bold text-ink">MyCPT</p>
+      <button
+        onClick={() => open("self")}
+        className="px-6 py-3 rounded-pill bg-ink text-white font-semibold text-base"
+      >
+        나는 누구일까? (검사 시작)
+      </button>
 
-      {/* 텍스트 크기 확인 */}
-      <div className="text-3xl text-ink">text-3xl (28px)</div>
-      <div className="text-base text-ink">text-base (13px)</div>
-      <div className="text-xs text-ink-faint">text-xs (10.5px)</div>
-
-      {/* 그림자·반경 확인 */}
-      <div className="bg-paper-2 p-4 rounded-xl shadow-pop">
-        rounded-xl / shadow-pop
-      </div>
-
-      <div className="font-mono text-base text-ink p-4 bg-paper-2 rounded">
-        font-mono: JetBrains Mono 확인용 0Oo 1Il
-      </div>
+      {/* 검사 시트 — 전역 상태로 열고 닫음 */}
+      <TestSheet />
     </div>
   );
 }
