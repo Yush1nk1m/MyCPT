@@ -137,7 +137,7 @@
 
 ### 4.1 유즈케이스 다이어그램
 
-![Usecase Diagram](images/MyCPT_UseCase.svg)
+![Usecase Diagram](../images/MyCPT_UseCase.svg)
 
 > PlantUML 원본: `UML/usecase.puml`
 

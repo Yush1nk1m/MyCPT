@@ -27,7 +27,7 @@
 
 ## 1. 시스템 아키텍처 다이어그램
 
-![시스템 아키텍처](images/MyCPT_Architecture.svg)
+![시스템 아키텍처](../images/MyCPT_Architecture.svg)
 
 ---
 
@@ -74,15 +74,15 @@
 
 ### 3.1 검사 응시 → 결과 반환 흐름
 
-![검사 응시 및 결과 반환 흐름](images/MyCPT_Sequence_Scoring.svg)
+![검사 응시 및 결과 반환 흐름](../images/MyCPT_Sequence_Scoring.svg)
 
 ### 3.2 케미 보고서 발행 흐름 (@Async + SSE)
 
-![케미 보고서 발행 흐름](images/MyCPT_Sequence_Chemistry.svg)
+![케미 보고서 발행 흐름](../images/MyCPT_Sequence_Chemistry.svg)
 
 ### 3.3 비회원 → 회원 결과 저장 연계 흐름
 
-![비회원에서 회원 가입 후 결과 저장 흐름](images/MyCPT_Sequence_GuestToMember.svg)
+![비회원에서 회원 가입 후 결과 저장 흐름](../images/MyCPT_Sequence_GuestToMember.svg)
 
 ---
 
