@@ -1,4 +1,10 @@
 import type { NextConfig } from "next";
+import * as dotenv from "dotenv";
+import path from "path";
+
+const envPath =
+  process.env.NODE_ENV === "production" ? ".env.production" : ".env.dev";
+dotenv.config({ path: path.resolve(process.cwd(), envPath) });
 
 const nextConfig: NextConfig = {
   /* config options here */
