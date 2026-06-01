@@ -10,7 +10,7 @@
  *   - 제출 결과 (POST /results/score 응답)
  *
  * 비회원 sessionStorage 저장:
- *   제출 완료 후 scores를 sessionStorage['disc_scores']에 저장.
+ *   제출 완료 후 scores, buckets를 sessionStorage['disc_result']에 저장.
  *   로그인 후 결과 저장 연계 흐름(UC-01)에서 사용.
  */
 
@@ -183,7 +183,13 @@ export const useTestSheetStore = create<TestSheetState>((set, get) => ({
 
       // 비회원 sessionStorage 임시 저장 (UC-01: 로그인 후 결과 저장 연계)
       try {
-        sessionStorage.setItem("disc_scores", JSON.stringify(scores));
+        sessionStorage.setItem(
+          "disc_result",
+          JSON.stringify({
+            scores: data.scores,
+            buckets: data.buckets,
+          }),
+        );
       } catch {
         // sessionStorage 접근 불가 환경 무시 (예: 시크릿 모드 설정)
         console.log("세션 스토리지 접근 불가");

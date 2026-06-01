@@ -105,7 +105,7 @@ describe("submitScores", () => {
     const mockResult = {
       testType: "DISC",
       scores: { d: 48, i: -24, s: 0, c: 0 },
-      buckets: { d: 9, i: 1, s: 4, c: 4 },
+      buckets: { d: 3, i: 1, s: 2, c: 2 },
       report: "## 결과 개요\n테스트 보고서",
     };
     vi.spyOn(global, "fetch").mockResolvedValueOnce({
