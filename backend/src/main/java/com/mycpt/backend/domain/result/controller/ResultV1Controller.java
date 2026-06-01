@@ -1,6 +1,7 @@
 package com.mycpt.backend.domain.result.controller;
 
 import com.mycpt.backend.domain.result.dto.ScoreRequest;
+import com.mycpt.backend.domain.result.service.CacheService;
 import com.mycpt.backend.domain.result.service.ScoringService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,7 @@ import java.util.Map;
 public class ResultV1Controller implements ResultApi {
 
     private final ScoringService scoringService;
+    private final CacheService cacheService;
 
     // POST /api/v1/results/score
     // 비회원 접근 가능 - SecurityConfig에서 접근 경로 permitAll() 메서드 적용
@@ -38,8 +40,10 @@ public class ResultV1Controller implements ResultApi {
     public ResponseEntity<Map<String, Object>> score(@RequestBody ScoreRequest request) {
         // 검증 + 버킷 정규화
         ScoringService.Buckets buckets = scoringService.normalize(request);
-
         ScoreRequest.Scores s = request.scores();
+
+        // CacheService가 HIT/MISS/만료를 판단하고 보고서를 반환
+        String report = cacheService.getReport(buckets);
 
         // scores: 요청받은 원점수를 그대로 응답에 포함 -> 비회원이 sessionStorage에 보관 후 POST /results 로 재전송 가능
         Map<String, Object> scores = Map.of(
@@ -55,7 +59,7 @@ public class ResultV1Controller implements ResultApi {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("scores", scores);
         body.put("buckets", bucketMap);
-        body.put("report", null);   // TODO: 2주차 Day 2~3 CacheService 연동 시 null 값 대체
+        body.put("report", report);
 
         return ResponseEntity.ok(body);
     }

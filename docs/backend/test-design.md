@@ -25,6 +25,8 @@
     - [AuthV1Controller (ST)](#authv1controller-st)
   - [5. User 도메인](#5-user-도메인)
   - [6. Result 도메인](#6-result-도메인)
+    - [ScoringService (UT)](#scoringservice-ut)
+    - [CacheService (UT)](#cacheservice-ut)
   - [7. Assessment 도메인](#7-assessment-도메인)
   - [8. Statistics 도메인](#8-statistics-도메인)
   - [9. Colleague 도메인](#9-colleague-도메인)
@@ -162,6 +164,17 @@ _3주차 구현 시 작성_
 | UT-ScoringService-범위초과-상한               | 개별 원점수 48 초과             | D=49 → InvalidScoreException, 메시지에 49 포함   |
 | UT-ScoringService-범위초과-하한               | 개별 원점수 -24 미만            | I=-25 → InvalidScoreException, 메시지에 -25 포함 |
 | UT-ScoringService-toBucket-경계값             | 버킷 전환점 전수 검증           | 9단계 하한/상한 18개 케이스                      |
+
+---
+
+### CacheService (UT)
+
+| Test ID                                          | 행위                             | 상황                                                                        |
+| ------------------------------------------------ | -------------------------------- | --------------------------------------------------------------------------- |
+| UT-CacheService-보고서생성-캐시MISS              | DB에 행 없음 → LLM 호출 → INSERT | `findById` empty → `generateReport` 1회 → `save` 1회 → 보고서 반환          |
+| UT-CacheService-보고서생성-캐시HIT유효           | DB에 유효한 캐시 존재            | `created_at` 10일 전, ttl=365일 → LLM 미호출, `save` 없음, 기존 보고서 반환 |
+| UT-CacheService-보고서생성-캐시HIT유효경계값분석 | TTL 당일 만료 경계 검증          | `created_at` 364일 전, ttl=365일 → 유효 처리, LLM 미호출                    |
+| UT-CacheService-보고서생성-캐시HIT만료           | DB에 만료된 캐시 존재            | `created_at` 366일 전, ttl=365일 → LLM 1회 호출, `save` 1회, 새 보고서 반환 |
 
 ---
 
