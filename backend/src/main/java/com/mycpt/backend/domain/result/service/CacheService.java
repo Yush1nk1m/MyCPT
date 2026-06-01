@@ -49,7 +49,7 @@ public class CacheService {
      * 버킷 값 조합에 해당하는 보고서를 반환
      * HIT/MISS 분기 및 만료 처리를 담당하는 핵심 메서드
      *
-     * @param buckets ScoringService가 반환한 버킷 값 (d, i, s, c 각 1~9)
+     * @param buckets ScoringService가 반환한 버킷 값 (d, i, s, c 각 1~3)
      * @return Markdown 형식 분석 보고서
      */
     @Transactional

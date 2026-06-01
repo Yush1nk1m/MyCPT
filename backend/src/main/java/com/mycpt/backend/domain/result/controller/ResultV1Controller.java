@@ -50,7 +50,7 @@ public class ResultV1Controller implements ResultApi {
                 "d", s.d(), "i", s.i(), "s", s.s(), "c", s.c()
         );
 
-        // buckets: 정규화된 버킷 값 (1~9). CacheService.getReport() 메서드 호출 키로 사용
+        // buckets: 정규화된 버킷 값 (1~3). CacheService.getReport() 메서드 호출 키로 사용
         Map<String, Object> bucketMap = Map.of(
                 "d", buckets.d(), "i", buckets.i(), "s", buckets.s(), "c", buckets.c()
         );
