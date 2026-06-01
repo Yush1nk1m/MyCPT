@@ -37,6 +37,15 @@ public class ScoringService {
     private static final int EXPECTED_SUM = 24;
 
     /**
+     * 3구간 경계 값
+     * Low  :   -24 ~ -5    (구간 폭 20)
+     * Mid  :   -4 ~ +11    (구간 폭 16, 데이터 밀집 중심부)
+     * High :   +12 ~ +48   (구간 폭 37, 확실한 주성향)
+     */
+    private static final int LOW_MAX = -5;
+    private static final int MID_MAX = 11;
+
+    /**
      * 버킷 정규화 결과를 담는 레코드
      * CacheService.getReport()에 그대로 전달됨
      */
@@ -81,20 +90,19 @@ public class ScoringService {
     }
 
     /**
-     * 원점수 하나를 버킷값(1~9)으로 변환
+     * 원점수 → 3구간 버킷값 변환
      *
-     * package-private: 외부 노출 없이 ScoringServiceTest에서 직접 호출 가능
+     * | 버킷 | 원점수 범위   | 의미                          |
+     * |------|---------------|-------------------------------|
+     * |  1   | -24 ~  -5     | Low  — 해당 성향 기피/거부    |
+     * |  2   |  -4 ~ +11     | Mid  — 상황적 유연 발현       |
+     * |  3   | +12 ~ +48     | High — 확실한 주성향          |
      *
-     * 계산 예시:
-     *   score = -24 → (-24 + 24) / 8 + 1 = 0 + 1 = 1
-     *   score =   0 → (  0 + 24) / 8 + 1 = 3 + 1 = 4
-     *   score =  48 → ( 48 + 24) / 8 + 1 = 9 + 1 = 10 → min(10, 9) = 9
-     *
-     * Math.min으로 상한 9를 적용하는 이유:
-     *   score = 40: (40 + 24) / 8 + 1 = 8 + 1 = 9 (정상)
-     *   score = 48: (48 + 24) / 8 + 1 = 9 + 1 = 10 → 9로 클램핑
+     * package-private: ScoringServiceTest에서 직접 호출
      */
     int toBucket(int score) {
-        return Math.min((score + 24) / 8 + 1, 9);
+        if (score <= LOW_MAX) return 1;
+        if (score <= MID_MAX) return 2;
+        return 3;
     }
 }

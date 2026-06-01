@@ -114,24 +114,29 @@ public class LlmService {
      */
     private String buildPrompt(DiscCacheId id) {
         return """
-                당신은 DISC 성격 유형 전문 분석가입니다.
-                다음 DISC 버킷값을 기반으로 한국어 분석 보고서를 작성하세요.
+            당신은 DISC 성격 유형 전문 분석가입니다.
+            다음 DISC 버킷값을 기반으로 한국어 분석 보고서를 작성하세요.
 
-                DISC 버킷값 (1=최하, 9=최상):
-                - D (주도형 / Dominance):        %d
-                - I (사교형 / Influence):         %d
-                - S (안정형 / Steadiness):        %d
-                - C (신중형 / Conscientiousness): %d
+            DISC 버킷값 (3구간 척도):
+            - 1 (Low)  : 해당 성향을 의도적으로 기피하거나 거부함
+            - 2 (Mid)  : 상황에 따라 유연하게 발현되는 중간 성향
+            - 3 (High) : 가장 확실하게 드러나는 주성향
 
-                다음 6개 섹션을 Markdown 형식으로 작성하세요.
-                각 섹션은 3~5문장으로 구성하고, 특정 이름 없이 "이 유형의 사람은"으로 서술하세요.
+            측정값:
+            - D (주도형 / Dominance):         %d
+            - I (사교형 / Influence):         %d
+            - S (안정형 / Steadiness):        %d
+            - C (신중형 / Conscientiousness): %d
 
-                ## 결과 개요
-                ## 강점
-                ## 약점 및 주의할 점
-                ## 동료와의 협업 스타일
-                ## 스트레스 상황에서의 반응
-                ## 성장을 위한 제안
-                """.formatted(id.getD(), id.getI(), id.getS(), id.getC());
+            다음 6개 섹션을 Markdown 형식으로 작성하세요.
+            각 섹션은 3~5문장으로 구성하고, 특정 이름 없이 "이 유형의 사람은"으로 서술하세요.
+
+            ## 결과 개요
+            ## 강점
+            ## 약점 및 주의할 점
+            ## 동료와의 협업 스타일
+            ## 스트레스 상황에서의 반응
+            ## 성장을 위한 제안
+            """.formatted(id.getD(), id.getI(), id.getS(), id.getC());
     }
 }

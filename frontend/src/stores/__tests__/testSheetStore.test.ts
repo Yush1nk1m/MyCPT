@@ -106,7 +106,7 @@ describe("submitScores", () => {
       testType: "DISC",
       scores: { d: 48, i: -24, s: 0, c: 0 },
       buckets: { d: 9, i: 1, s: 4, c: 4 },
-      report: { topType: "D", sections: {} },
+      report: "## 결과 개요\n테스트 보고서",
     };
     vi.spyOn(global, "fetch").mockResolvedValueOnce({
       ok: true,
@@ -119,7 +119,7 @@ describe("submitScores", () => {
 
     const { submitStatus, result } = useTestSheetStore.getState();
     expect(submitStatus).toBe("done");
-    expect(result?.report.topType).toBe("D");
+    expect(result?.report).toContain("## 결과 개요");
   });
 
   it("fetch 실패 시 submitStatus=error, step이 2로 되돌아간다", async () => {

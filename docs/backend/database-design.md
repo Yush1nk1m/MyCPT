@@ -1,6 +1,6 @@
 # MyCPT 데이터베이스 설계 문서
 
-**문서 버전**: v0.6
+**문서 버전**: v0.7
 **작성일**: '26.05.25.
 **작성자**: 김유신
 
@@ -16,6 +16,7 @@
 | v0.4 | `disc_cache` 섹션별 TEXT 6개 → `report TEXT` 단일화 (Markdown). `chemistry_reports` 동일 적용. `statistics` 테이블 제거 (MVP에서 직접 집계 쿼리로 대체).    | '26.05.24. |
 | v0.5 | `test_results` → `tests` (헤더) + `disc_results` (DISC 전용) 로 분리. Class Table Inheritance 패턴 적용으로 검사 유형 확장성 확보. 테이블 수 9 → 10.        | '26.05.25. |
 | v0.6 | users.profile_image_key → profile_image_url 변경. Full URL 저장 방식으로 통일.                                                                              | '26.05.26. |
+| v0.7 | 검사 결과를 9단계에서 3단계로 수정 (9 → 3)                                                                                                                  | '26.06.01  |
 
 ---
 
@@ -120,10 +121,10 @@ erDiagram
   }
 
   disc_cache {
-    TINYINT  d          PK  "D 버킷값 1~9"
-    TINYINT  i          PK  "I 버킷값 1~9"
-    TINYINT  s          PK  "S 버킷값 1~9"
-    TINYINT  c          PK  "C 버킷값 1~9"
+    TINYINT  d          PK  "D 버킷값 1~3"
+    TINYINT  i          PK  "I 버킷값 1~3"
+    TINYINT  s          PK  "S 버킷값 1~3"
+    TINYINT  c          PK  "C 버킷값 1~3"
     TEXT     report         "Markdown 보고서 전문. 이름 미포함"
     DATETIME created_at     "캐시 생성 시각 (만료 판단 기준)"
   }
@@ -270,21 +271,21 @@ Table disc_results [note: 'DISC 검사 전용 결과. tests 1:1 확장 테이블
   i_score  TINYINT [not null,      note: 'I 원점수']
   s_score  TINYINT [not null,      note: 'S 원점수']
   c_score  TINYINT [not null,      note: 'C 원점수']
-  d_bucket TINYINT [not null,      note: 'D 버킷값 (1~9). disc_cache 복합 FK 구성']
-  i_bucket TINYINT [not null,      note: 'I 버킷값 (1~9)']
-  s_bucket TINYINT [not null,      note: 'S 버킷값 (1~9)']
-  c_bucket TINYINT [not null,      note: 'C 버킷값 (1~9)']
+  d_bucket TINYINT [not null,      note: 'D 버킷값 (1~3). disc_cache 복합 FK 구성']
+  i_bucket TINYINT [not null,      note: 'I 버킷값 (1~3)']
+  s_bucket TINYINT [not null,      note: 'S 버킷값 (1~3)']
+  c_bucket TINYINT [not null,      note: 'C 버킷값 (1~3)']
 
   indexes {
     (d_bucket, i_bucket, s_bucket, c_bucket) [name: 'fk_disc_results_disc_cache']
   }
 }
 
-Table disc_cache [note: 'DISC 버킷 기반 보고서 캐시. 최대 9^4 = 6,561 행. 행 삭제 없이 UPDATE 갱신'] {
-  d          TINYINT  [not null, note: 'D 버킷값 (1~9). 복합 PK 구성']
-  i          TINYINT  [not null, note: 'I 버킷값 (1~9)']
-  s          TINYINT  [not null, note: 'S 버킷값 (1~9)']
-  c          TINYINT  [not null, note: 'C 버킷값 (1~9)']
+Table disc_cache [note: 'DISC 버킷 기반 보고서 캐시. 최대 3^4 = 81 행. 행 삭제 없이 UPDATE 갱신'] {
+  d          TINYINT  [not null, note: 'D 버킷값 (1~3). 복합 PK 구성']
+  i          TINYINT  [not null, note: 'I 버킷값 (1~3)']
+  s          TINYINT  [not null, note: 'S 버킷값 (1~3)']
+  c          TINYINT  [not null, note: 'C 버킷값 (1~3)']
   report     TEXT     [not null, note: 'Markdown 형식 분석 보고서 전문. 이름 미포함. 렌더링 시 이름 삽입']
   created_at DATETIME [not null, note: '캐시 생성 시각. 온디맨드 만료 판단 기준']
 

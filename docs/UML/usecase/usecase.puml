@@ -67,7 +67,7 @@ rectangle "MyCPT 시스템" {
   }
 
   package "시스템 내부" #FFF7ED {
-    usecase "LLM 캐시 조회 / 저장\nD · I · S · C 버킷 기반 (9⁴ = 6,561)\n온디맨드 만료 · 행 UPDATE 갱신" as UC_Cache
+    usecase "LLM 캐시 조회 / 저장\nD · I · S · C 버킷 기반 (3⁴ = 81)\n온디맨드 만료 · 행 UPDATE 갱신" as UC_Cache
     usecase "만료 동료 코드 삭제\n만료 평정 토큰 삭제 통합 실행" as UC_CleanBatch
   }
 }

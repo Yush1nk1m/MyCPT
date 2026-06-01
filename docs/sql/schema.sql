@@ -29,15 +29,15 @@ CREATE TABLE users (
 --    행 DELETE 없이 UPDATE 갱신 → FK 참조 무결성 항상 유지
 -- ============================================================
 CREATE TABLE disc_cache (
-    d           TINYINT  NOT NULL  COMMENT 'D 버킷값 (1~9). 복합 PK 구성',
-    i           TINYINT  NOT NULL  COMMENT 'I 버킷값 (1~9)',
-    s           TINYINT  NOT NULL  COMMENT 'S 버킷값 (1~9)',
-    c           TINYINT  NOT NULL  COMMENT 'C 버킷값 (1~9)',
+    d           TINYINT  NOT NULL  COMMENT 'D 버킷값 (1~3). 복합 PK 구성',
+    i           TINYINT  NOT NULL  COMMENT 'I 버킷값 (1~3)',
+    s           TINYINT  NOT NULL  COMMENT 'S 버킷값 (1~3)',
+    c           TINYINT  NOT NULL  COMMENT 'C 버킷값 (1~3)',
     report      TEXT     NOT NULL  COMMENT 'Markdown 형식 분석 보고서 전문. 이름 미포함. 렌더링 시 이름 삽입',
     created_at  DATETIME NOT NULL  COMMENT '캐시 생성 시각 (온디맨드 만료 판단 기준)',
 
     PRIMARY KEY (d, i, s, c)
-) COMMENT = 'DISC 버킷 기반 보고서 캐시. 최대 9^4 = 6,561 행. 행 삭제 없이 UPDATE 갱신. Markdown 단일 TEXT';
+) COMMENT = 'DISC 버킷 기반 보고서 캐시. 최대 3^4 = 81 행. 행 삭제 없이 UPDATE 갱신. Markdown 단일 TEXT';
 
 -- ============================================================
 -- 3. tests
@@ -74,10 +74,10 @@ CREATE TABLE disc_results (
     i_score  TINYINT NOT NULL  COMMENT 'I 원점수 (-24 ~ +48)',
     s_score  TINYINT NOT NULL  COMMENT 'S 원점수 (-24 ~ +48)',
     c_score  TINYINT NOT NULL  COMMENT 'C 원점수 (-24 ~ +48)',
-    d_bucket TINYINT NOT NULL  COMMENT 'D 버킷값 (1~9). disc_cache 복합 FK 구성',
-    i_bucket TINYINT NOT NULL  COMMENT 'I 버킷값 (1~9)',
-    s_bucket TINYINT NOT NULL  COMMENT 'S 버킷값 (1~9)',
-    c_bucket TINYINT NOT NULL  COMMENT 'C 버킷값 (1~9)',
+    d_bucket TINYINT NOT NULL  COMMENT 'D 버킷값 (1~3). disc_cache 복합 FK 구성',
+    i_bucket TINYINT NOT NULL  COMMENT 'I 버킷값 (1~3)',
+    s_bucket TINYINT NOT NULL  COMMENT 'S 버킷값 (1~3)',
+    c_bucket TINYINT NOT NULL  COMMENT 'C 버킷값 (1~3)',
 
     PRIMARY KEY (test_id),
     KEY idx_disc_results_cache (d_bucket, i_bucket, s_bucket, c_bucket),

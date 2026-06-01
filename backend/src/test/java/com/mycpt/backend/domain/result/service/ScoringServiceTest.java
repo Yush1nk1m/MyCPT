@@ -36,29 +36,22 @@ class ScoringServiceTest {
     class ToBucket {
 
         /**
-         * 9단계 버킷의 하한/상한 경계 값과 버킷 간 전환점을 모두 검증
-         * 서비스 설계 문서(service-design.md) §3.5 버킷 테이블과 1:1 대응
+         * 3구간 경계값 전수 검증
+         *
+         * | 버킷 | 범위        | 경계 케이스          |
+         * |------|-------------|----------------------|
+         * |  1   | -24 ~  -5   | 하한 -24, 상한 -5    |
+         * |  2   |  -4 ~ +11   | 하한  -4, 상한 +11   |
+         * |  3   | +12 ~ +48   | 하한 +12, 상한 +48   |
          */
         @ParameterizedTest(name = "원점수 {0} -> 버킷 {1}")
         @CsvSource({
                 "-24, 1",   // 버킷 1 하한 (전체 최솟값)
-                "-17, 1",   // 버킷 1 상한
-                "-16, 2",   // 버킷 2 하한 (버킷 1→2 전환점)
-                " -9, 2",   // 버킷 2 상한
-                " -8, 3",   // 버킷 3 하한
-                " -1, 3",   // 버킷 3 상한
-                "  0, 4",   // 버킷 4 하한
-                "  7, 4",   // 버킷 4 상한
-                "  8, 5",   // 버킷 5 하한
-                " 15, 5",   // 버킷 5 상한
-                " 16, 6",   // 버킷 6 하한
-                " 23, 6",   // 버킷 6 상한
-                " 24, 7",   // 버킷 7 하한
-                " 31, 7",   // 버킷 7 상한
-                " 32, 8",   // 버킷 8 하한
-                " 39, 8",   // 버킷 8 상한
-                " 40, 9",   // 버킷 9 하한
-                " 48, 9",   // 버킷 9 상한 (전체 최댓값, 클램핑 적용)
+                " -5, 1",   // 버킷 1 상한
+                " -4, 2",   // 버킷 2 하한 (버킷 1→2 전환점)
+                " 11, 2",   // 버킷 2 상한
+                " 12, 3",   // 버킷 3 하한 (버킷 2→3 전환점)
+                " 48, 3",   // 버킷 3 상한 (전체 최댓값)
         })
         void 버킷정규화경계값분석(int score, int expectedBucket) {
             assertThat(scoringService.toBucket(score)).isEqualTo(expectedBucket);
@@ -74,23 +67,23 @@ class ScoringServiceTest {
         @Test
         @DisplayName("[UT-ScoringService-버킷정규화-성공]")
         void 버킷정규화_성공() {
-            // given
+            // given: D=32(High), I=10(Mid), S=-4(Mid), C=-14(Low)
             ScoreRequest request = request(32, 10, -4, -14);
 
             // when
             ScoringService.Buckets buckets = scoringService.normalize(request);
 
             // then
-            assertThat(buckets.d()).isEqualTo(8);
-            assertThat(buckets.i()).isEqualTo(5);
-            assertThat(buckets.s()).isEqualTo(3);
-            assertThat(buckets.c()).isEqualTo(2);
+            assertThat(buckets.d()).isEqualTo(3);
+            assertThat(buckets.i()).isEqualTo(2);
+            assertThat(buckets.s()).isEqualTo(2);
+            assertThat(buckets.c()).isEqualTo(1);
         }
 
         @Test
         @DisplayName("[UT-ScoringService-버킷정규화-최솟값최댓값혼합]")
         void 버킷정규화_최솟값최댓값혼합() {
-            // given
+            // given: D=-24(Low 하한), C=48(High 상한), I+S=0 합계 맞춤
             ScoreRequest request = request(-24, 0, 0, 48);
 
             // when
@@ -98,9 +91,9 @@ class ScoringServiceTest {
 
             // then
             assertThat(buckets.d()).isEqualTo(1);
-            assertThat(buckets.i()).isEqualTo(4);
-            assertThat(buckets.s()).isEqualTo(4);
-            assertThat(buckets.c()).isEqualTo(9);
+            assertThat(buckets.i()).isEqualTo(2);
+            assertThat(buckets.s()).isEqualTo(2);
+            assertThat(buckets.c()).isEqualTo(3);
         }
     }
 

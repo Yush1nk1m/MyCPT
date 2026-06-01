@@ -23,16 +23,16 @@ import java.util.Objects;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DiscCacheId implements Serializable {
 
-    @Column(name = "d", nullable = false)
+    @Column(name = "d", nullable = false, columnDefinition = "TINYINT")
     private int d;
 
-    @Column(name = "i", nullable = false)
+    @Column(name = "i", nullable = false, columnDefinition = "TINYINT")
     private int i;
 
-    @Column(name = "s", nullable = false)
+    @Column(name = "s", nullable = false, columnDefinition = "TINYINT")
     private int s;
 
-    @Column(name = "c", nullable = false)
+    @Column(name = "c", nullable = false, columnDefinition = "TINYINT")
     private int c;
 
     public DiscCacheId(int d, int i, int s, int c) {

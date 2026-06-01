@@ -29,10 +29,7 @@ export interface ScoreResult {
   testType: string;
   scores: { d: number; i: number; s: number; c: number };
   buckets: { d: number; i: number; s: number; c: number };
-  report: {
-    topType: "D" | "I" | "S" | "C";
-    sections: Record<string, string>; // 6개 섹션 마크다운
-  };
+  report: string;
 }
 
 type SubmitStatus = "idle" | "submitting" | "done" | "error";
