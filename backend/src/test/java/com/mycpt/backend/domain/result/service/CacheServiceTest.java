@@ -36,7 +36,7 @@ class CacheServiceTest {
     private static final long TTL = 365L;
     private static final DiscCacheId ID = new DiscCacheId(2, 1, 3, 2);
     private static final ScoringService.Buckets BUCKETS =
-            new ScoringService.Buckets(5, 4, 3, 6);
+            new ScoringService.Buckets(2, 1, 3, 2);
     private static final String REPORT = "## 결과 개요\n테스트 보고서";
     private static final String NEW_REPORT = "## 결과 개요\n새 보고서";
 
