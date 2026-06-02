@@ -34,23 +34,50 @@ class CacheServiceTest {
     // ── 공통 픽스처 ───────────────────────────────────────────────────────────
 
     private static final long TTL = 365L;
-    private static final DiscCacheId ID = new DiscCacheId(5, 4, 3, 6);
+    private static final DiscCacheId ID = new DiscCacheId(2, 1, 3, 2);
     private static final ScoringService.Buckets BUCKETS =
             new ScoringService.Buckets(5, 4, 3, 6);
     private static final String REPORT = "## 결과 개요\n테스트 보고서";
     private static final String NEW_REPORT = "## 결과 개요\n새 보고서";
 
-    // ── MISS ─────────────────────────────────────────────────────────────────
+    // report=NULL로 사전 삽입된 초기 상태 행
+    private DiscCache unseeded() {
+        return new DiscCache(ID, null, null);
+    }
+
+    // ── 행 누락 (데이터 정합성 오류) ─────────────────────────────────────────
 
     @Nested
-    @DisplayName("캐시 MISS")
-    class Miss {
+    @DisplayName("행 누락 - 초기화 스크립트 미실행")
+    class RowMissing {
 
         @Test
-        @DisplayName("[UT-CacheService-보고서생성-캐시MISS]")
-        void 보고서생성_캐시MISS() {
-            // given: DB에 해당 버킷 조합 없음
+        @DisplayName("[UT-CacheService-보고서생성-행누락예외]")
+        void 보고서생성_행누락예외() {
+            // given: 초기화 스크립트가 실행되지 않아 행 자체가 없음
             given(discCacheRepository.findById(ID)).willReturn(Optional.empty());
+
+            // when
+            assertThatThrownBy(() -> sut(TTL).getReport(BUCKETS))
+            // then
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("disc_cache 행 누락");
+
+            verify(llmService, never()).generateReport(any());
+        }
+    }
+
+    // ── 미생성 (report = NULL) ────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("미생성 - report NULL")
+    class Unseeded {
+
+        @Test
+        @DisplayName("[UT-CacheService-보고서생성-미생성]")
+        void 보고서생성_미생성() {
+            // given: 사전 삽입된 행이지만 아직 LLM 보고서가 생성되지 않은 상태
+            given(discCacheRepository.findById(ID)).willReturn(Optional.of(unseeded()));
             given(llmService.generateReport(ID)).willReturn(REPORT);
             given(discCacheRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
@@ -60,7 +87,7 @@ class CacheServiceTest {
             // then
             assertThat(result).isEqualTo(REPORT);
             verify(llmService, times(1)).generateReport(ID);    // LLM 1회 호출
-            verify(discCacheRepository, times(1)).save(any(DiscCache.class));   // INSERT 1회
+            verify(discCacheRepository, times(1)).save(any());  // UPDATE 1회
         }
     }
 

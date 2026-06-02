@@ -13,20 +13,22 @@ import java.util.Optional;
 /**
  * disc_cache Lazy Caching 서비스
  *
- * 흐름 (sequence-scoring.puml 기준):
+ * 사전 조건: 초기화 스크립트(schema.sql)가 81개 행을 report=NULL로 삽입해둠.
+ * → findById()는 항상 행을 반환함. empty는 데이터 정합성 오류.
  *
- *  [MISS]
- *      DB에 행 없음 -> LLM 호출 -> INSERT -> 반환
+ * 분기 (sequence-scoring.puml 기준):
+ *
+ *  [미생성] report == NULL
+ *      LLM 호출 → UPDATE → 반환
  *
  *  [HIT + 유효]
- *      created_at >= (now - ttlDays) -> 즉시 반환
+ *      created_at >= (now - ttlDays) → 즉시 반환
  *
  *  [HIT + 만료]
- *      created_at < (now - ttlDays) -> LLM 호출 -> refresh() -> UPDATE -> 반환
- *      * 행 DELETE 없이 UPDATE만 사용 - disc_results -> disc_cache FK 무결성 유지
+ *      created_at < (now - ttlDays) → LLM 호출 → UPDATE → 반환
  *
  * 설정 값 (application.properties):
- *  cache.disc.ttl-days=365  (기본 값 365일)
+ *  cache.disc.ttl-days=365  (기본값 365일)
  */
 @Service
 public class CacheService {
@@ -51,6 +53,7 @@ public class CacheService {
      *
      * @param buckets ScoringService가 반환한 버킷 값 (d, i, s, c 각 1~3)
      * @return Markdown 형식 분석 보고서
+     * @throws IllegalStateException 초기화 스크립트 미실행 등으로 행이 없는 경우
      */
     @Transactional
     public String getReport(ScoringService.Buckets buckets) {
@@ -58,44 +61,31 @@ public class CacheService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expireLine = now.minusDays(ttlDays);  // 만료 기준선
 
-        Optional<DiscCache> cached = discCacheRepository.findById(id);
+        // 사전 삽입으로 항상 행이 존재함. empty는 데이터 정합성 오류 -> 예외 발생
+        DiscCache cache = discCacheRepository.findById(id)
+                .orElseThrow(() -> new IllegalStateException(
+                        "disc_cache 행 누락: d=%d i=%d s=%d c=%d. 초기화 스크립트를 확인하세요."
+                                .formatted(buckets.d(), buckets.i(), buckets.s(), buckets.c())));
 
-        if (cached.isEmpty()) {
-            // ── MISS: 이 버킷 조합이 DB에 없음 ──────────────────────────────
-            return insertNewCache(id, now);
+        // 미생성(NULL) 또는 만료 -> LLM 호출 후 UPDATE
+        if (cache.getReport() == null || cache.getCreatedAt().isBefore(expireLine)) {
+            return refreshCache(cache, now);
         }
 
-        DiscCache hit = cached.get();
-
-        if (hit.getCreatedAt().isBefore(expireLine)) {
-            // ── HIT + 만료: created_at이 기준선보다 오래됨 ───────────────────
-            return refreshExpiredCache(hit, now);
-        }
-
-        // ── HIT + 유효: 즉시 반환 ────────────────────────────────────────────
-        return hit.getReport();
+        // 유효 -> 즉시 반환
+        return cache.getReport();
     }
 
     // ── private helpers ───────────────────────────────────────────────────────
 
     /**
-     * [MISS] LLM 호출 -> 새 행 INSERT -> 보고서 반환
+     * LLM 호출 → report/created_at UPDATE → 보고서 반환
+     * 미생성(NULL)과 만료 양쪽에서 공통으로 사용
      */
-    private String insertNewCache(DiscCacheId id, LocalDateTime now) {
-        String report = llmService.generateReport(id);
-        discCacheRepository.save(new DiscCache(id, report, now));
-        return report;
-    }
-
-    /**
-     * [HIT + 만료] LLM 호출 -> 기존 행 refresh() -> UPDATE -> 보고서 반환
-     * save()를 명시적으로 호출해 의도를 드러냄
-     * (@Transactional dirty checking으로도 UPDATE되지만 명시가 더 안전한 방식)
-     */
-    private String refreshExpiredCache(DiscCache hit, LocalDateTime now) {
-        String newReport = llmService.generateReport(hit.getId());
-        hit.refresh(newReport, now);
-        discCacheRepository.save(hit);
+    private String refreshCache(DiscCache cache, LocalDateTime now) {
+        String newReport = llmService.generateReport(cache.getId());
+        cache.refresh(newReport, now);
+        discCacheRepository.save(cache);
         return newReport;
     }
 }

@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.Map;
 
@@ -54,5 +55,5 @@ public interface ResultApi {
                     )
             )
     })
-    ResponseEntity<Map<String, Object>> score(ScoreRequest request);
+    ResponseEntity<Map<String, Object>> score(@RequestBody ScoreRequest request);
 }

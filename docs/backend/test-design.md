@@ -169,18 +169,29 @@ _3주차 구현 시 작성_
 
 ### CacheService (UT)
 
-| Test ID                                          | 행위                             | 상황                                                                        |
-| ------------------------------------------------ | -------------------------------- | --------------------------------------------------------------------------- |
-| UT-CacheService-보고서생성-캐시MISS              | DB에 행 없음 → LLM 호출 → INSERT | `findById` empty → `generateReport` 1회 → `save` 1회 → 보고서 반환          |
-| UT-CacheService-보고서생성-캐시HIT유효           | DB에 유효한 캐시 존재            | `created_at` 10일 전, ttl=365일 → LLM 미호출, `save` 없음, 기존 보고서 반환 |
-| UT-CacheService-보고서생성-캐시HIT유효경계값분석 | TTL 당일 만료 경계 검증          | `created_at` 364일 전, ttl=365일 → 유효 처리, LLM 미호출                    |
-| UT-CacheService-보고서생성-캐시HIT만료           | DB에 만료된 캐시 존재            | `created_at` 366일 전, ttl=365일 → LLM 1회 호출, `save` 1회, 새 보고서 반환 |
+| Test ID                                          | 행위                               | 상황                                                                        |
+| ------------------------------------------------ | ---------------------------------- | --------------------------------------------------------------------------- |
+| UT-CacheService-보고서생성-행누락예외            | 초기화 스크립트 미실행으로 행 없음 | `findById` empty → `IllegalStateException`, LLM 미호출                      |
+| UT-CacheService-보고서생성-미생성                | 사전 삽입 행이지만 report=NULL     | LLM 1회 호출 → `save` 1회 → 보고서 반환                                     |
+| UT-CacheService-보고서생성-캐시HIT유효           | DB에 유효한 캐시 존재              | `created_at` 10일 전, ttl=365일 → LLM 미호출, `save` 없음, 기존 보고서 반환 |
+| UT-CacheService-보고서생성-캐시HIT유효경계값분석 | TTL 당일 만료 경계 검증            | `created_at` 364일 전, ttl=365일 → 유효 처리, LLM 미호출                    |
+| UT-CacheService-보고서생성-캐시HIT만료           | DB에 만료된 캐시 존재              | `created_at` 366일 전, ttl=365일 → LLM 1회 호출, `save` 1회, 새 보고서 반환 |
 
 ---
 
 ## 7. Assessment 도메인
 
-_2주차 구현 시 작성_
+### AssessmentService (UT)
+
+| Test ID                                  | 행위                       | 상황                                                    |
+| ---------------------------------------- | -------------------------- | ------------------------------------------------------- |
+| UT-AssessmentSvc-토큰생성-성공           | 회원이 타인 평정 링크 생성 | 32자 토큰 생성, expiresAt = now+7일 이후 검증, save 1회 |
+| UT-AssessmentSvc-링크접속-성공           | 유효한 토큰으로 접속       | subjectNickname 반환 검증                               |
+| UT-AssessmentSvc-링크접속-토큰없음       | 존재하지 않는 토큰         | EntityNotFoundException                                 |
+| UT-AssessmentSvc-링크접속-이미사용된토큰 | used=TRUE 토큰             | TokenAlreadyUsedException                               |
+| UT-AssessmentSvc-링크접속-만료된토큰     | expiresAt < now            | TokenExpiredException                                   |
+| UT-AssessmentSvc-평정제출-성공           | 유효한 토큰으로 제출       | Test + DiscResult save 각 1회, token.isUsed()=true      |
+| UT-AssessmentSvc-평정제출-이미사용된토큰 | used=TRUE 토큰             | TokenAlreadyUsedException, Test/DiscResult save 미호출  |
 
 ---
 

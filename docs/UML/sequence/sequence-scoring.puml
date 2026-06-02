@@ -92,13 +92,13 @@ else Redis 캐시 MISS
   CacheService -> DB : SELECT WHERE d=? AND i=? AND s=? AND c=?
   activate DB
 
-  alt 캐시 HIT + 유효 (created_at >= 만료 기준)
+  alt 캐시 HIT + 유효 (report NOT NULL AND created_at >= 만료 기준)
     DB --> CacheService : 캐시 행 반환
     deactivate DB
     CacheService -> Redis : SET disc_cache:{d}:{i}:{s}:{c}
     CacheService --> Controller : 보고서 반환
 
-  else 캐시 HIT + 만료 (created_at < 만료 기준)
+  else 캐시 HIT + 만료 또는 미생성 (report NULL OR created_at < 만료 기준)
     DB --> CacheService : 만료된 캐시 행 반환
     deactivate DB
     CacheService -> Llm : generateReport(버킷값)
@@ -106,21 +106,15 @@ else Redis 캐시 MISS
     Llm -> Llm : 프롬프트 구성\n(6개 섹션 요청)
     Llm --> CacheService : Markdown 보고서
     deactivate Llm
-    CacheService -> DB : UPDATE SET report=?, created_at=NOW()\nWHERE d=? AND i=? AND s=? AND c=?
+    CacheService -> DB : CacheService -> DB : UPDATE SET report=?, created_at=NOW()\n(미생성 포함 — INSERT 없음)\nWHERE d=? AND i=? AND s=? AND c=?
     note right of DB : 행 DELETE 없이 UPDATE\nFK 참조 무결성 유지
     CacheService -> Redis : SET disc_cache:{d}:{i}:{s}:{c}
     CacheService --> Controller : 보고서 반환
 
-  else 캐시 MISS (행 없음)
-    CacheService -> Llm : generateReport(버킷값)
-    activate Llm
-    Llm -> Llm : 프롬프트 구성\n(6개 섹션 요청)
-    Llm --> CacheService : Markdown 보고서
-    deactivate Llm
-    CacheService -> DB : INSERT (d, i, s, c, report, created_at)
-    CacheService -> Redis : SET disc_cache:{d}:{i}:{s}:{c}
-    CacheService --> Controller : 보고서 반환
-  end
+  note right of DB
+    행 없음 = 초기화 오류 → IllegalStateException
+    81개 행은 schema.sql에서 사전 삽입됨
+  end note
 
 end
 

@@ -33,11 +33,41 @@ CREATE TABLE disc_cache (
     i           TINYINT  NOT NULL  COMMENT 'I 버킷값 (1~3)',
     s           TINYINT  NOT NULL  COMMENT 'S 버킷값 (1~3)',
     c           TINYINT  NOT NULL  COMMENT 'C 버킷값 (1~3)',
-    report      TEXT     NOT NULL  COMMENT 'Markdown 형식 분석 보고서 전문. 이름 미포함. 렌더링 시 이름 삽입',
-    created_at  DATETIME NOT NULL  COMMENT '캐시 생성 시각 (온디맨드 만료 판단 기준)',
+    report      TEXT     NULL      COMMENT 'Markdown 형식 보고서. NULL=미생성. 이름 미포함. 렌더링 시 이름 삽입',
+    created_at  DATETIME NULL      COMMENT '캐시 생성/갱신 시각. NULL=미생성. (온디맨드 만료 판단 기준)',
 
     PRIMARY KEY (d, i, s, c)
 ) COMMENT = 'DISC 버킷 기반 보고서 캐시. 최대 3^4 = 81 행. 행 삭제 없이 UPDATE 갱신. Markdown 단일 TEXT';
+
+-- 81개 사전 삽입 (d, i, s, c 각 1~3 전체 조합)
+INSERT INTO disc_cache (d, i, s, c, report, created_at) VALUES
+(1,1,1,1,NULL,NULL),(1,1,1,2,NULL,NULL),(1,1,1,3,NULL,NULL),
+(1,1,2,1,NULL,NULL),(1,1,2,2,NULL,NULL),(1,1,2,3,NULL,NULL),
+(1,1,3,1,NULL,NULL),(1,1,3,2,NULL,NULL),(1,1,3,3,NULL,NULL),
+(1,2,1,1,NULL,NULL),(1,2,1,2,NULL,NULL),(1,2,1,3,NULL,NULL),
+(1,2,2,1,NULL,NULL),(1,2,2,2,NULL,NULL),(1,2,2,3,NULL,NULL),
+(1,2,3,1,NULL,NULL),(1,2,3,2,NULL,NULL),(1,2,3,3,NULL,NULL),
+(1,3,1,1,NULL,NULL),(1,3,1,2,NULL,NULL),(1,3,1,3,NULL,NULL),
+(1,3,2,1,NULL,NULL),(1,3,2,2,NULL,NULL),(1,3,2,3,NULL,NULL),
+(1,3,3,1,NULL,NULL),(1,3,3,2,NULL,NULL),(1,3,3,3,NULL,NULL),
+(2,1,1,1,NULL,NULL),(2,1,1,2,NULL,NULL),(2,1,1,3,NULL,NULL),
+(2,1,2,1,NULL,NULL),(2,1,2,2,NULL,NULL),(2,1,2,3,NULL,NULL),
+(2,1,3,1,NULL,NULL),(2,1,3,2,NULL,NULL),(2,1,3,3,NULL,NULL),
+(2,2,1,1,NULL,NULL),(2,2,1,2,NULL,NULL),(2,2,1,3,NULL,NULL),
+(2,2,2,1,NULL,NULL),(2,2,2,2,NULL,NULL),(2,2,2,3,NULL,NULL),
+(2,2,3,1,NULL,NULL),(2,2,3,2,NULL,NULL),(2,2,3,3,NULL,NULL),
+(2,3,1,1,NULL,NULL),(2,3,1,2,NULL,NULL),(2,3,1,3,NULL,NULL),
+(2,3,2,1,NULL,NULL),(2,3,2,2,NULL,NULL),(2,3,2,3,NULL,NULL),
+(2,3,3,1,NULL,NULL),(2,3,3,2,NULL,NULL),(2,3,3,3,NULL,NULL),
+(3,1,1,1,NULL,NULL),(3,1,1,2,NULL,NULL),(3,1,1,3,NULL,NULL),
+(3,1,2,1,NULL,NULL),(3,1,2,2,NULL,NULL),(3,1,2,3,NULL,NULL),
+(3,1,3,1,NULL,NULL),(3,1,3,2,NULL,NULL),(3,1,3,3,NULL,NULL),
+(3,2,1,1,NULL,NULL),(3,2,1,2,NULL,NULL),(3,2,1,3,NULL,NULL),
+(3,2,2,1,NULL,NULL),(3,2,2,2,NULL,NULL),(3,2,2,3,NULL,NULL),
+(3,2,3,1,NULL,NULL),(3,2,3,2,NULL,NULL),(3,2,3,3,NULL,NULL),
+(3,3,1,1,NULL,NULL),(3,3,1,2,NULL,NULL),(3,3,1,3,NULL,NULL),
+(3,3,2,1,NULL,NULL),(3,3,2,2,NULL,NULL),(3,3,2,3,NULL,NULL),
+(3,3,3,1,NULL,NULL),(3,3,3,2,NULL,NULL),(3,3,3,3,NULL,NULL);
 
 -- ============================================================
 -- 3. tests

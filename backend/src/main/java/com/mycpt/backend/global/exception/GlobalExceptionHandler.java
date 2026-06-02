@@ -12,7 +12,7 @@ import java.util.Map;
  *
  * @RestControllerAdvice: 모든 @RestController에서 발생하는 예외를 중앙에서 처리
  * 예외 유형별로 @ExceptionHandler 메서드를 추가하여 도메인별 예외를 확장
- *
+ * <p>
  * 응답 형식은 기존 401 응답 바디({ "code": "...", "message": "..." })와 통일
  */
 @RestControllerAdvice
@@ -20,7 +20,7 @@ public class GlobalExceptionHandler {
 
     /**
      * DISC 원점수 검증 실패 -> 400 Bad Request
-     *
+     * <p>
      * 응답 바디:
      * {
      * "code": "INVALID_SCORE",
@@ -32,6 +32,30 @@ public class GlobalExceptionHandler {
         // LinkedHashMap: 삽입 순서 보장 -> 응답 JSON 필드 순서를 code, message로 고정
         Map<String, String> body = new LinkedHashMap<>();
         body.put("code", "INVALID_SCORE");
+        body.put("message", e.getMessage());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    /**
+     * 타인 평정 토큰 만료 -> 400 Bad Request
+     * api-design.md: 400 EXPIRED_CODE
+     */
+    @ExceptionHandler(TokenExpiredException.class)
+    public ResponseEntity<Map<String, String>> handleTokenExpired(TokenExpiredException e) {
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("code", "EXPIRED_CODE");
+        body.put("message", e.getMessage());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    /**
+     * 타인 평정 토큰 중복 사용 -> 400 Bad Request
+     * api-design.md: 400 TOKEN_USED
+     */
+    @ExceptionHandler(TokenAlreadyUsedException.class)
+    public ResponseEntity<Map<String, String>> handleTokenAlreadyUsed(TokenAlreadyUsedException e) {
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("code", "TOKEN_USED");
         body.put("message", e.getMessage());
         return ResponseEntity.badRequest().body(body);
     }
