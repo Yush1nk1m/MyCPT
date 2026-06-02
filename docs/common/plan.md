@@ -104,11 +104,12 @@
 |            | 검사 응시 화면 구현 — 문항 순서 표시, Most/Least 강제선택 UI, 클라이언트 셔플  | 검사 페이지       | [x]  |
 | 05.31 (일) | (05.30 선행 완료)                                                              |                   | [x]  |
 | 06.01 (월) | DISC 채점 로직 구현 — 원점수 산출, 3단계 버킷 정규화, sessionStorage 임시 저장 | ScoringService    | [x]  |
-|            | disc_cache Lazy Caching 구현 — HIT/MISS 분기, 온디맨드 만료 처리               | CacheService      | [ ]  |
-|            | Claude API 연동 — 6개 섹션 버킷 기반 프롬프트 설계 및 응답 파싱 후 캐시 저장   | LlmService        | [ ]  |
+|            | disc_cache Lazy Caching 구현 — HIT/MISS 분기, 온디맨드 만료 처리               | CacheService      | [x]  |
+|            | Claude API 연동 — 6개 섹션 버킷 기반 프롬프트 설계 및 응답 파싱 후 캐시 저장   | LlmService        | [x]  |
 | 06.02 (화) | (선행 완료 — 06.01에 진행)                                                     | -                 | [x]  |
 | 06.03 (수) | (선행 완료 — 06.01에 진행)                                                     | -                 | [x]  |
-| 06.04 (목) | 타인 평정 링크 생성/응시 흐름 구현 — 일회용 토큰, used 처리, 라벨 복사         | AssessmentService | [ ]  |
+|            | 타인 평정 링크 생성/응시 흐름 구현 — 일회용 토큰, used 처리, 라벨 복사         | AssessmentService | [x]  |
+| 06.04 (목) | (선행 완료 — 06.03에 진행)                                                     | -                 | [x]  |
 | 06.05 (금) | 결과 확인 화면 구현 — DISC 시각화, 6개 섹션 보고서 표시, 자기/타인 평정 구분   | 결과 페이지       | [ ]  |
 
 ### 체크리스트
@@ -124,8 +125,8 @@
 - [x] 캐시 HIT + 만료 시 LLM 호출 후 UPDATE 확인
 - [x] 캐시 MISS 시 LLM 호출 후 INSERT 확인
 - [x] 비회원 원점수 sessionStorage 저장 확인
-- [ ] 타인 평정 링크 생성 및 일회용 처리 확인
-- [ ] 타인 평정 응시 완료 시 라벨 포함 tests + disc_results 저장 확인
+- [x] 타인 평정 링크 생성 및 일회용 처리 확인
+- [x] 타인 평정 응시 완료 시 라벨 포함 tests + disc_results 저장 확인
 - [ ] 결과 화면 6개 섹션 보고서 정상 표시 확인
 - [ ] 비회원 이름 "사용자"로 렌더링 확인
 
