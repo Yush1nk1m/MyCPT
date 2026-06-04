@@ -40,7 +40,7 @@ public class AssessmentToken {
     private User subject;
 
     // 일회용 랜덤 토큰 - UUID 하이픈 제거 32자
-    @Column(nullable = false, unique = true, length = 32)
+    @Column(nullable = false, unique = true, columnDefinition = "CHAR(32)")
     private String token;
 
     // 평정자 식별 라벨 (최대 30자, 선택 값)

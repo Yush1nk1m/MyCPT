@@ -3,7 +3,7 @@
 > 프론트엔드 프로젝트각 파일의 단일 책임과 의존 관계를 기록합니다.
 > "이 파일은 무엇을 하는가"에만 답한다.
 
-**last updated**: 2026-05-30
+**last updated**: '26.06.04
 
 ---
 
@@ -53,6 +53,16 @@ API 호출(`submitScores`)은 `fetch` 모킹으로 격리.
 
 ---
 
+## components/disc/
+
+| 파일                | 책임                                                                            | props              |
+| ------------------- | ------------------------------------------------------------------------------- | ------------------ |
+| `TypePill.tsx`      | DISC 유형 칩. 4축 색상 자동 적용. `mini` prop으로 소형 변형 지원.               | `type`, `mini?`    |
+| `BalancedPill.tsx`  | 균형형 칩. 모든 버킷이 2일 때 사용. 보라색 계열.                                | 없음               |
+| `DiscBarsLarge.tsx` | DISC 4축 막대 시각화. 버킷(1~3) 기준 높이 계산. `size` prop으로 `lg`/`md` 분기. | `buckets`, `size?` |
+
+---
+
 ## components/test/
 
 | 파일                  | 책임                                                                                       | props                                               |
@@ -66,11 +76,11 @@ API 호출(`submitScores`)은 `fetch` 모킹으로 격리.
 
 ### steps/
 
-| 파일                  | 책임                                                            |
-| --------------------- | --------------------------------------------------------------- |
-| `Step1TypeSelect.tsx` | 유형 선택 화면. MVP는 DISC 1개 고정.                            |
-| `Step2Answering.tsx`  | 응시 화면. DotProgressBar + QuestionCard + 이전/다음 버튼 조립. |
-| `Step3Result.tsx`     | 결과 화면. submitting/done/error 상태 분기.                     |
+| 파일                  | 책임                                                                                                                                         |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Step1TypeSelect.tsx` | 유형 선택 화면. MVP는 DISC 1개 고정.                                                                                                         |
+| `Step2Answering.tsx`  | 응시 화면. DotProgressBar + QuestionCard + 이전/다음 버튼 조립.                                                                              |
+| `Step3Result.tsx`     | 결과 화면. submitting/done/error 상태 분기. done 상태: TypePill(복수 가능)/BalancedPill + DiscBarsLarge + Markdown 보고서 + 카카오 저장 CTA. |
 
 ---
 

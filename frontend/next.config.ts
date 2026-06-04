@@ -1,10 +1,4 @@
 import type { NextConfig } from "next";
-import * as dotenv from "dotenv";
-import path from "path";
-
-const envPath =
-  process.env.NODE_ENV === "production" ? ".env.production" : ".env.dev";
-dotenv.config({ path: path.resolve(process.cwd(), envPath) });
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -17,6 +11,11 @@ const nextConfig: NextConfig = {
         destination: `${process.env.BACKEND_URL}/api/:path*`,
       },
     ];
+  },
+
+  // 프록시 타임아웃 설정 (ms) - LLM 응답 대기 고려
+  experimental: {
+    proxyTimeout: 60000, // 60초
   },
 };
 

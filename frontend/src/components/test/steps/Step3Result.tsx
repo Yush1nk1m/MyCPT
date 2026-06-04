@@ -1,18 +1,28 @@
 /**
  * Step3Result
  *
- * 검사 시트 Step 3 — 결과 화면 (screens.yaml: test-sheet-step3-guest/member).
+ * 검사 시트 Step 3 — 결과 화면.
+ * screens.yaml: test-sheet-step3-guest / test-sheet-step3-member
  *
- * 세 가지 상태 분기:
+ * 상태 분기:
  *   submitting — 로딩 스피너 (POST /results/score 응답 대기)
  *   error      — 에러 메시지 + 재시도 버튼
- *   done       — 결과 표시 (06.05 결과 상세 화면 구현 전까지 플레이스홀더)
+ *   done       — 결과 표시
  *
- * done 상태의 회원/비회원 분기(자동저장 vs 카카오 CTA)는
- * 06.05 결과 화면 구현 시 authStore 연동과 함께 완성.
+ * 인증 분기 (done 상태):
+ *   비회원 — "사용자"로 이름 표시, 카카오 저장 CTA (test-sheet-step3-guest)
+ *   회원   — authStore 구현 후 3주차에 추가 (test-sheet-step3-member)
+ *            현재는 항상 비회원 분기로 렌더링
+ *
+ * TODO (3주차):
+ *   - useAuthStore() 훅 연동
+ *   - isAuthenticated=true 시 회원 분기: POST /results 자동 저장 + "결과 상세로 가기" CTA
  */
 
+import ReactMarkdown from "react-markdown";
 import type { ScoreResult } from "@/stores/testSheetStore";
+import { TypePill, BalancedPill } from "@/components/disc/TypePill";
+import { DiscBarsLarge } from "@/components/disc/DiscBarsLarge";
 
 interface Step3ResultProps {
   submitStatus: "idle" | "submitting" | "done" | "error";
@@ -44,7 +54,7 @@ export function Step3Result({
   return null;
 }
 
-// ─── 상태별 UI ────────────────────────────────────────────
+// ─── submitting ───────────────────────────────────────────
 
 function SubmittingState() {
   return (
@@ -54,6 +64,8 @@ function SubmittingState() {
     </div>
   );
 }
+
+// ─── error ────────────────────────────────────────────────
 
 function ErrorState({
   message,
@@ -79,6 +91,30 @@ function ErrorState({
   );
 }
 
+// ─── done ─────────────────────────────────────────────────
+
+type DiscProfile =
+  | { kind: "balanced" }
+  | { kind: "typed"; types: ("D" | "I" | "S" | "C")[] };
+
+function getDiscProfile(buckets: ScoreResult["buckets"]): DiscProfile {
+  const entries = [
+    { type: "D" as const, value: buckets.d },
+    { type: "I" as const, value: buckets.i },
+    { type: "S" as const, value: buckets.s },
+    { type: "C" as const, value: buckets.c },
+  ];
+
+  // 전부 2이면 균형형
+  if (entries.every((e) => e.value === 2)) return { kind: "balanced" };
+
+  // 최댓값과 같은 모든 유형 반환
+  const max = Math.max(...entries.map((e) => e.value));
+  const types = entries.filter((e) => e.value === max).map((e) => e.type);
+
+  return { kind: "typed", types };
+}
+
 function DoneState({
   result,
   onClose,
@@ -86,24 +122,140 @@ function DoneState({
   result: ScoreResult;
   onClose: () => void;
 }) {
+  const profile = getDiscProfile(result.buckets);
+
   return (
-    <div className="flex-1 flex flex-col gap-4 pt-4">
-      <p className="text-center text-2xl font-black text-ink">
-        검사가 끝났어요! 🎉
-      </p>
-      {/* TODO: 06.05 결과 상세 화면 구현 시 DiscBarsLarge + 보고서 섹션으로 교체 */}
-      <p className="text-center text-sm text-ink-soft">
-        결과 화면은 06.05 구현 예정입니다.
-      </p>
-      <pre className="bg-paper-2 rounded-lg p-3 text-xs font-mono text-ink-soft overflow-auto">
-        {JSON.stringify(result, null, 2)}
-      </pre>
-      <button
-        onClick={onClose}
-        className="w-full py-3 rounded-pill border border-line text-ink font-semibold"
-      >
-        닫기
-      </button>
+    <div className="flex-1 flex flex-col overflow-y-auto">
+      {/* ── hero 블록 ── */}
+      <div className="flex flex-col gap-3 px-5 pt-5 pb-4 bg-paper">
+        {/* 유형 칩 — 최댓값 공동인 경우 복수 표시 */}
+        <div className="flex gap-2 flex-wrap">
+          {profile.kind === "typed" ? (
+            profile.types.map((type) => <TypePill key={type} type={type} />)
+          ) : (
+            <BalancedPill />
+          )}
+        </div>
+
+        {/* 제목: 보고서 내용과 충돌 방지 — 유형 명시 제거 */}
+        <h1 className="text-2xl font-black text-ink leading-tight">
+          사용자님의 DISC 보고서
+        </h1>
+
+        <p className="text-sm text-ink-soft">
+          24문항 응시 결과를 4축으로 정리했어요.
+        </p>
+
+        <DiscBarsLarge buckets={result.buckets} size="lg" />
+      </div>
+
+      {/* ── 보고서 본문 ── */}
+      <div className="flex-1 px-5 py-5 bg-paper-2">
+        <ReactMarkdown
+          components={{
+            h2: ({ children }) => (
+              <h2
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 15,
+                  fontWeight: 800,
+                  margin: "22px 0 8px",
+                  color: "var(--ink)",
+                }}
+              >
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 8,
+                    height: 8,
+                    background: "var(--accent)",
+                    borderRadius: 2,
+                    flexShrink: 0,
+                  }}
+                />
+                {children}
+              </h2>
+            ),
+            p: ({ children }) => (
+              <p
+                style={{
+                  margin: "0 0 10px",
+                  fontSize: 13,
+                  lineHeight: 1.7,
+                  color: "var(--ink-soft)",
+                }}
+              >
+                {children}
+              </p>
+            ),
+            ul: ({ children }) => (
+              <ul
+                style={{
+                  margin: "0 0 12px",
+                  paddingLeft: 18,
+                  color: "var(--ink-soft)",
+                  fontSize: 13,
+                  lineHeight: 1.7,
+                }}
+              >
+                {children}
+              </ul>
+            ),
+            li: ({ children }) => (
+              <li style={{ margin: "4px 0" }}>{children}</li>
+            ),
+            blockquote: ({ children }) => (
+              <blockquote
+                style={{
+                  margin: "8px 0 14px",
+                  borderLeft: "3px solid var(--accent)",
+                  padding: "4px 12px",
+                  background: "oklch(0.97 0.03 40)",
+                  color: "var(--ink)",
+                  borderRadius: "0 6px 6px 0",
+                  fontSize: 12.5,
+                }}
+              >
+                {children}
+              </blockquote>
+            ),
+            strong: ({ children }) => (
+              <strong style={{ color: "var(--ink)", fontWeight: 700 }}>
+                {children}
+              </strong>
+            ),
+            hr: () => (
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px dashed var(--line)",
+                  margin: "18px 0",
+                }}
+              />
+            ),
+          }}
+        >
+          {result.report}
+        </ReactMarkdown>
+      </div>
+
+      {/* ── CTA 영역 ── */}
+      <div className="flex flex-col gap-3 px-5 py-5 bg-paper border-t border-line-soft">
+        <a
+          href="/api/v1/auth/kakao"
+          className="w-full py-3 rounded-pill flex items-center justify-center gap-2 font-semibold text-sm"
+          style={{ background: "var(--kakao)", color: "var(--kakao-ink)" }}
+        >
+          <span>💬</span>
+          <span>카카오로 결과 저장하기</span>
+        </a>
+        <button onClick={onClose} className="w-full py-3 text-sm text-ink-soft">
+          저장하지 않고 닫기
+        </button>
+      </div>
     </div>
   );
 }
