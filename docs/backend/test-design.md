@@ -24,10 +24,13 @@
     - [CustomOAuth2UserService (UT)](#customoauth2userservice-ut)
     - [AuthV1Controller (ST)](#authv1controller-st)
   - [5. User 도메인](#5-user-도메인)
+    - [UserService (UT)](#userservice-ut)
+    - [UserV1Controller (ST)](#userv1controller-st)
   - [6. Result 도메인](#6-result-도메인)
     - [ScoringService (UT)](#scoringservice-ut)
     - [CacheService (UT)](#cacheservice-ut)
   - [7. Assessment 도메인](#7-assessment-도메인)
+    - [AssessmentService (UT)](#assessmentservice-ut)
   - [8. Statistics 도메인](#8-statistics-도메인)
   - [9. Colleague 도메인](#9-colleague-도메인)
   - [10. Chemistry 도메인](#10-chemistry-도메인)
@@ -148,7 +151,21 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ## 5. User 도메인
 
-_3주차 구현 시 작성_
+### UserService (UT)
+
+| Test ID                          | 행위                       | 상황                              |
+| -------------------------------- | -------------------------- | --------------------------------- |
+| UT-UserSvc-프로필수정-성공       | 닉네임/생년/성별 전체 수정 | 3개 필드 모두 반영 검증           |
+| UT-UserSvc-프로필수정-부분수정   | nickname만 전달            | birthYear/gender 기존값 유지 검증 |
+| UT-UserSvc-이미지업로드-형식오류 | text/plain 파일 전달       | IllegalArgumentException          |
+| UT-UserSvc-이미지업로드-크기초과 | 11MB 파일 전달             | IllegalArgumentException          |
+
+### UserV1Controller (ST)
+
+| Test ID                       | 행위                          | 상황                          |
+| ----------------------------- | ----------------------------- | ----------------------------- |
+| ST-UserCtrl-프로필수정-성공   | 인증된 사용자 PATCH /users/me | 200 + 응답 바디 3개 필드 검증 |
+| ST-UserCtrl-프로필수정-미인증 | 미인증 PATCH /users/me        | 401                           |
 
 ---
 

@@ -59,4 +59,16 @@ public class GlobalExceptionHandler {
         body.put("message", e.getMessage());
         return ResponseEntity.badRequest().body(body);
     }
+
+    /**
+     * 프로필 이미지 검증 실패 (파일 없음 / 형식 오류 / 크기 초과) -> 400
+     * UpdateProfileRequest.genderEnum() 의 잘못된 enum 값도 여기서 처리
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException e) {
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("code", "INVALID_REQUEST");
+        body.put("message", e.getMessage());
+        return ResponseEntity.badRequest().body(body);
+    }
 }

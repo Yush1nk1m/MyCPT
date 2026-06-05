@@ -58,9 +58,12 @@ public class User {
     // 성별을 나타내기 위한 중첩 Enum
     public enum Gender {M, F, N,}
 
-    // 정적 팩토리 메서드
-    // 1. 메서드 이름을 통해 의도 표현
-    // 2. 생성 시 반드시 설정해야 하는 필드(coins, createdAt) 누락 방지
+    /**
+     * 정적 팩토리 메서드
+     *
+     * 1. 메서드 이름을 통해 의도 표현
+     * 2. 생성 시 반드시 설정해야 하는 필드(coins, createdAt) 누락 방지
+     */
     public static User create(String kakaoId, String nickname, String profileImageUrl) {
         User user = new User();
         user.kakaoId = kakaoId;
@@ -69,5 +72,23 @@ public class User {
         user.coins = 3; // 신규 가입 시 초기 코인은 3으로 설정
         user.createdAt = LocalDateTime.now();
         return user;
+    }
+
+    /**
+     * 프로필 정보 수정 (PATCH /users/me)
+     * null 필드는 기존 값 유지 - 요청에 포함된 필드만 업데이트
+     */
+    public void updateProfile(String nickname, Integer birthYear, Gender gender) {
+        if (nickname != null) this.nickname = nickname;
+        if (birthYear != null) this.birthYear = birthYear;
+        if (gender != null) this.gender = gender;
+    }
+
+    /**
+     * 프로필 이미지 URL 교체 (POST /users/me/profile-image)
+     * 스토리지 저장 후 반환된 Full URL을 그대로 저장 (maintenance-guide.md 정책)
+     */
+    public void updateProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 }
