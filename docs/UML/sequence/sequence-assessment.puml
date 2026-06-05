@@ -1,0 +1,158 @@
+@startuml MyCPT_Sequence_Assessment
+
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName "Apple SD Gothic Neo, sans-serif"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #26215C
+skinparam sequenceMessageAlign center
+
+skinparam participant {
+  BackgroundColor #FFFFFF
+  BorderColor #AFA9EC
+  FontColor #26215C
+  FontSize 12
+}
+
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #7F77DD
+  FontColor #3C3489
+  FontSize 12
+  FontStyle bold
+}
+
+skinparam sequence {
+  ArrowColor #7F77DD
+  ArrowFontColor #534AB7
+  ArrowFontSize 10
+  LifeLineBorderColor #AFA9EC
+  LifeLineBackgroundColor #F5F3FF
+  GroupBorderColor #534AB7
+  GroupBackgroundColor #EEEDFE
+  GroupFontColor #3C3489
+  GroupFontSize 11
+  GroupBodyBackgroundColor #F5F3FF
+  DividerBackgroundColor #EEEDFE
+  DividerBorderColor #534AB7
+  DividerFontColor #3C3489
+  ReferenceBackgroundColor #EEF6FF
+  ReferenceBorderColor #534AB7
+}
+
+skinparam note {
+  BackgroundColor #F5F3FF
+  BorderColor #AFA9EC
+  FontColor #534AB7
+  FontSize 10
+}
+
+actor "회원 (피평정자)" as Subject
+actor "평정자\n(비회원 가능)" as Rater
+participant "AssessmentController" as Controller
+participant "AssessmentService" as Service
+participant "ScoringService" as Scoring
+database "MySQL" as DB
+
+== 링크 생성 ==
+
+Subject -> Controller : POST /assessments\n{ testType, label }
+activate Controller
+
+Controller -> Service : createToken(subjectId, label)
+activate Service
+
+Service -> DB : INSERT assessment_tokens\n(subject_id, token=UUID32,\nlabel, used=FALSE,\nexpiresAt=now+7일)
+DB --> Service : saved token
+
+Service --> Controller : { token, expiresAt }
+deactivate Service
+
+Controller --> Subject : 201 Created\n{ token, expiresAt }
+deactivate Controller
+
+note right of Subject
+  URL 조합은 클라이언트 처리
+  /a/{token} 형식으로 공유
+end note
+
+== 링크 접속 ==
+
+Rater -> Controller : GET /assessments/{token}
+activate Controller
+
+Controller -> Service : getSubjectInfo(token)
+activate Service
+
+Service -> DB : SELECT WHERE token=?
+activate DB
+
+alt 토큰 없음
+  DB --> Service : null
+  deactivate DB
+  Service --> Controller : EntityNotFoundException
+  Controller --> Rater : 404 Not Found
+
+else used = TRUE
+  DB --> Service : token (used=TRUE)
+  deactivate DB
+  Service --> Controller : TokenAlreadyUsedException
+  Controller --> Rater : 400 TOKEN_USED
+
+else expiresAt < NOW()
+  DB --> Service : token (만료)
+  deactivate DB
+  Service --> Controller : TokenExpiredException
+  Controller --> Rater : 400 EXPIRED_CODE
+
+else 유효한 토큰
+  DB --> Service : token (유효)
+  deactivate DB
+  Service --> Controller : { subjectNickname,\nsubjectProfileImageUrl }
+  deactivate Service
+  Controller --> Rater : 200 OK\n{ subjectNickname,\nsubjectProfileImageUrl }
+  deactivate Controller
+end
+
+== 평정 제출 ==
+
+Rater -> Controller : POST /assessments/{token}/submit\n{ testType, scores: { d, i, s, c } }
+activate Controller
+
+Controller -> Service : submit(token, request)
+activate Service
+
+note right of Service
+  @Transactional
+  중간 실패 시 전체 롤백
+  부분 저장 없음
+end note
+
+Service -> DB : SELECT WHERE token=?\n(findAndValidate — 재검증)
+DB --> Service : token (유효)
+
+Service -> Scoring : normalize(scores)
+activate Scoring
+Scoring --> Service : buckets { d, i, s, c }
+deactivate Scoring
+
+Service -> DB : INSERT tests\n(user_id=subject_id,\nrater_type=OTHER,\nlabel=token.label)
+DB --> Service : test (saved)
+
+Service -> DB : INSERT disc_results\n(test_id, 원점수, 버킷값)
+DB --> Service : discResult (saved)
+
+Service -> DB : UPDATE assessment_tokens\nSET used=TRUE WHERE token=?
+DB --> Service : updated
+
+Service --> Controller : void
+deactivate Service
+
+Controller --> Rater : 200 OK
+deactivate Controller
+
+note right of Rater
+  응시자에게 결과 미노출
+  결과는 피평정자(Subject) 계정에 귀속
+end note
+
+@enduml

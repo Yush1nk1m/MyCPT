@@ -63,7 +63,7 @@ note right of Client
   (플러딩 방어)
 end note
 
-Client -> Client : sessionStorage.setItem(\n  'disc_raw_scores',\n  { d, i, s, c 원점수 }\n)
+Client -> Client : sessionStorage.setItem(\n  'disc_result',\n  { scores: { d,i,s,c }, buckets: { d,i,s,c } }\n)
 
 Client --> Guest : 결과 화면\n("사용자님의 강점은...")
 
@@ -113,7 +113,7 @@ alt sessionStorage에 원점수 있음
   ResultCtrl --> Client : 201 Created\n{ resultId }
   deactivate ResultCtrl
 
-  Client -> Client : sessionStorage.removeItem(\n  'disc_raw_scores'\n)
+  Client -> Client : sessionStorage.removeItem(\n  'disc_result'\n)
   Client --> Guest : 결과 저장 완료\n(닉네임으로 이름 교체 렌더링)
 
 else sessionStorage에 원점수 없음
