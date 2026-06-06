@@ -427,7 +427,7 @@ last_updated: 2026-05-27
     - { method: PATCH, path: /users/me }
     - { method: POST, path: /users/me/profile-image }
   validation:
-    nickname: { min: 3, max: 20, required: true }
+    nickname: { min: 1, max: 20, required: true }
     birth_year: { min: 1940, max: 2026, required: true }
     gender: { values: [M, F, NONE], required: true }
     profile_image: { max_mb: 10, formats: [jpg, png, webp] }

@@ -17,6 +17,21 @@ const nextConfig: NextConfig = {
   experimental: {
     proxyTimeout: 60000, // 60초
   },
+
+  images: {
+    remotePatterns: [
+      {
+        // 카카오 프로필 이미지 CDN
+        protocol: "http",
+        hostname: "k.kakaocdn.net",
+      },
+      {
+        // 로컬 개발 환경 업로드 이미지 (LocalStorageService 반환 URL)
+        protocol: "http",
+        hostname: "localhost",
+      },
+    ],
+  },
 };
 
 export default nextConfig;
