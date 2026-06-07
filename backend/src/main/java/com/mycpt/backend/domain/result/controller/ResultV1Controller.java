@@ -1,10 +1,14 @@
 package com.mycpt.backend.domain.result.controller;
 
+import com.mycpt.backend.domain.auth.dto.UserPrincipal;
 import com.mycpt.backend.domain.result.dto.ScoreRequest;
 import com.mycpt.backend.domain.result.service.CacheService;
+import com.mycpt.backend.domain.result.service.ResultSaveService;
 import com.mycpt.backend.domain.result.service.ScoringService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +36,7 @@ public class ResultV1Controller implements ResultApi {
 
     private final ScoringService scoringService;
     private final CacheService cacheService;
+    private final ResultSaveService resultSaveService;
 
     // POST /api/v1/results/score
     // 비회원 접근 가능 - SecurityConfig에서 접근 경로 permitAll() 메서드 적용
@@ -62,5 +67,17 @@ public class ResultV1Controller implements ResultApi {
         body.put("report", report);
 
         return ResponseEntity.ok(body);
+    }
+
+    // POST /api/v1/results - 회원 전용
+    @PostMapping("/results")
+    @Override
+    public ResponseEntity<Map<String, Object>> save(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody ScoreRequest request
+    ) {
+        Long resultId = resultSaveService.save(principal.getUser().getId(), request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Map.of("resultId", resultId));
     }
 }

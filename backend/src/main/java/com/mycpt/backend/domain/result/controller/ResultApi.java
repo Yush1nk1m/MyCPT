@@ -1,13 +1,16 @@
 package com.mycpt.backend.domain.result.controller;
 
+import com.mycpt.backend.domain.auth.dto.UserPrincipal;
 import com.mycpt.backend.domain.result.dto.ScoreRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.Map;
@@ -56,4 +59,28 @@ public interface ResultApi {
             )
     })
     ResponseEntity<Map<String, Object>> score(@RequestBody ScoreRequest request);
+
+    @Operation(
+            summary = "결과 저장",
+            description = "sessionStorage에 보관하던 DISC 원점수를 서버에 저장한다. 회원 전용.",
+            security = @SecurityRequirement(name = "cookieAuth")
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "저장 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                                    { "resultId": 42 }
+                                    """)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "원점수 범위 오류 / 합계 불일치"),
+            @ApiResponse(responseCode = "401", description = "미인증")
+    })
+    ResponseEntity<Map<String, Object>> save(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody ScoreRequest request
+    );
 }
