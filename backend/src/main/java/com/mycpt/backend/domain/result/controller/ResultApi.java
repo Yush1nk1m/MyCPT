@@ -37,6 +37,7 @@ public interface ResultApi {
                             mediaType = "application/json",
                             examples = @ExampleObject(value = """
                                     {
+                                        "testType": "DISC",
                                         "scores": { "d": 32, "i": 10, "s": -4, "c": -14 },
                                         "buckets": { "d": 8, "i": 5, "s": 3, "c": 2 },
                                         "report": "## 결과 개요\\\\n..."

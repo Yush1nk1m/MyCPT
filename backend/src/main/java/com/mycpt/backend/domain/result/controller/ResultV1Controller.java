@@ -62,6 +62,7 @@ public class ResultV1Controller implements ResultApi {
 
         // LinkedHashMap: scores -> buckets -> report 순서 고정
         Map<String, Object> body = new LinkedHashMap<>();
+        body.put("testType", request.testType());
         body.put("scores", scores);
         body.put("buckets", bucketMap);
         body.put("report", report);
