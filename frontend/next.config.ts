@@ -22,8 +22,9 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         // 카카오 프로필 이미지 CDN
-        protocol: "http",
+        protocol: "https",
         hostname: "k.kakaocdn.net",
+        pathname: "/**",
       },
       {
         // 로컬 개발 환경 업로드 이미지 (LocalStorageService 반환 URL)

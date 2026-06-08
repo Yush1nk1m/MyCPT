@@ -72,8 +72,13 @@ Client --> Guest : 결과 화면\n("사용자님의 강점은...")
 Guest -> Client : '로그인하고 결과 저장' 클릭
 Client -> Client : sessionStorage에서\n원점수 읽기
 
-Client -> AuthCtrl : GET /auth/kakao\n(카카오 로그인 리다이렉트)
-AuthCtrl --> Client : 302 → Kakao 로그인 페이지
+Client -> AuthCtrl : GET /auth/kakao?redirect=/save-result\n(sessionStorage 존재 시 redirect 파라미터 포함)
+note right of AuthCtrl
+  redirect 파라미터 화이트리스트 검증
+  허용: /, /save-result
+  그 외 → / 로 이동
+end note
+AuthCtrl --> Client : 302 → /save-result\n(accessToken JWT 쿠키 발급)
 
 Guest -> Kakao : 카카오 로그인
 Kakao --> AuthCtrl : GET /auth/kakao/callback\n{ code }

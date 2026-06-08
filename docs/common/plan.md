@@ -145,7 +145,7 @@
 | 날짜       | 작업                                                                                                 | 산출물                                                             | 완료 |
 | ---------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---- |
 | 06.06 (토) | 프로필 설정 API 및 페이지 구현 (닉네임, 생년, 성별, 프로필 이미지)                                   | UserService, UserV1Controller, useMe, /me, /me/profile, middleware | [x]  |
-| 06.07 (일) | '로그인하고 결과 저장' — sessionStorage 원점수를 `POST /results`로 전송, tests + disc_results INSERT | ResultSaveService                                                  | [ ]  |
+| 06.07 (일) | '로그인하고 결과 저장' — sessionStorage 원점수를 `POST /results`로 전송, tests + disc_results INSERT | ResultSaveService                                                  | [x]  |
 | 06.08 (월) | 결과 이력 조회 페이지 구현 (자기/타인 평정 구분, 커서 기반 페이지네이션)                             | 이력 페이지                                                        | [ ]  |
 | 06.09 (화) | 통계 집계 로직 구현 — 나이대/성별 기준 평균 산출 (자기 평정만), tests JOIN disc_results 집계 쿼리    | StatisticsService                                                  | [ ]  |
 | 06.10 (수) | 통계 비교 + 변화 추이 화면 구현 (`GET /statistics/comparison`, `GET /statistics/trend`)              | 통계 페이지                                                        | [ ]  |
@@ -157,7 +157,7 @@
 - [ ] 카카오 로그인 후 JWT 발급/갱신 처리
 - [ ] 프로필 설정 (닉네임, 생년, 성별, 이미지) 정상 동작 확인
 - [ ] 프로필 이미지 업로드 — jpg/png/webp 형식, 10MB 이하 검증 확인
-- [ ] sessionStorage 원점수 전송 후 tests + disc_results 정상 저장 확인
+- [x] sessionStorage 원점수 전송 후 tests + disc_results 정상 저장 확인
 - [ ] 결과 이력 목록 자기/타인 평정 구분 및 라벨 표시 확인
 - [ ] 나이대/성별 통계 비교 수치 정확성 확인 (자기 평정만 집계)
 - [ ] 생년/성별 미입력 시 average: null 반환 확인

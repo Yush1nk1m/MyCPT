@@ -4,6 +4,7 @@ import com.mycpt.backend.domain.auth.dto.UserPrincipal;
 import com.mycpt.backend.domain.auth.service.CustomOAuth2UserService;
 import com.mycpt.backend.domain.user.repository.UserRepository;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -19,6 +20,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import java.util.Set;
 
 @Configuration
 @EnableWebSecurity  // 보안 설정을 위한 Spring Security 활성화
@@ -86,7 +88,16 @@ public class SecurityConfig {
                     cookie.setMaxAge((int) jwtProvider.getExpirationMs() / 1000);
                     response.addCookie(cookie);
 
-                    response.sendRedirect("http://localhost:3000");
+                    String returnTo = getCookieValue(request, "oauth2_redirect");
+                    String target = isSafeRedirect(returnTo) ? returnTo : "/";
+
+                    // 사용한 쿠키 삭제
+                    Cookie clear = new Cookie("oauth2_redirect", "");
+                    clear.setMaxAge(0);
+                    clear.setPath("/");
+                    response.addCookie(clear);
+
+                    response.sendRedirect("http://localhost:3000" + target);
                 })
                 // 로그인 실패 시 리다이렉트
                 .failureUrl("http://localhost:3000/login?error"));
@@ -138,5 +149,21 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    // ── private helpers ───────────────────────────────────────────────────────
+
+    private static String getCookieValue(HttpServletRequest request, String name) {
+        if (request.getCookies() == null) return null;
+        for (Cookie cookie : request.getCookies()) {
+            if (name.equals(cookie.getName())) return cookie.getValue();
+        }
+        return null;
+    }
+
+    private static boolean isSafeRedirect(String path) {
+        if (path == null || path.isBlank()) return false;
+        if (path.startsWith("http") || path.startsWith("//")) return false;
+        return path.startsWith("/");
     }
 }

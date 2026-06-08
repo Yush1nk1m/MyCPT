@@ -2,15 +2,18 @@ package com.mycpt.backend.domain.auth.controller;
 
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
 import java.util.Map;
@@ -32,7 +35,8 @@ public interface AuthApi {
     @Operation(
             summary = "카카오 로그인",
             description = "카카오 OAuth2 인증 페이지로 리다이렉트한다. " +
-                    "Spring Security의 /oauth2/authorization/kakao 진입점으로 위임한다."
+                    "returnTo 파라미터가 있으면 로그인 완료 후 해당 경로로 이동한다. " +
+                    "허용 경로: /, /save-result. 그 외는 /로 이동."
     )
     @ApiResponses({
             @ApiResponse(
@@ -40,7 +44,12 @@ public interface AuthApi {
                     description = "카카오 인증 URL로 리다이렉트"
             )
     })
-    void kakaoLogin(HttpServletResponse response) throws IOException;
+    void kakaoLogin(
+            @Parameter(description = "로그인 완료 후 이동할 경로. 내부 경로만 허용.")
+            @RequestParam(required = false) String returnTo,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) throws IOException;
 
     // GET /api/v1/auth/me
     @Operation(

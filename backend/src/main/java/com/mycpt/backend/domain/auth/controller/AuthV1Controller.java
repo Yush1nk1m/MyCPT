@@ -3,12 +3,15 @@ package com.mycpt.backend.domain.auth.controller;
 import com.mycpt.backend.config.JwtProvider;
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
 import com.mycpt.backend.domain.user.entity.User;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -28,9 +31,20 @@ public class AuthV1Controller implements AuthApi {
     // GET /api/v1/auth/kakao
     @GetMapping("/kakao")
     @Override
-    public void kakaoLogin(HttpServletResponse response) throws IOException {
-        // Spring Security OAuth2 진입점으로 위임
-        // 리다이렉트 이후의 모든 흐름(카카오 인증 페이지 -> 콜백 -> 세션 발급)은 Spring Security, CustomOAuth2UserService가 자동 처리
+    public void kakaoLogin(
+            @RequestParam(required = false) String returnTo,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) throws IOException {
+        // redirect 파라미터가 있으면 쿠키에 저장
+        // OAuth2 흐름은 여러 번의 리다이렉트를 거치므로 쿼리 파라미터가 소실됨
+        // 쿠키에 저장하여 successHandler에서 꺼내 사용
+        if (returnTo != null && !returnTo.isBlank()) {
+            Cookie cookie = new Cookie("oauth2_redirect", returnTo);
+            cookie.setPath("/");
+            cookie.setMaxAge(300);  // 5분 - 로그인 완료 전까지만 유효
+            response.addCookie(cookie);
+        }
         response.sendRedirect("/oauth2/authorization/kakao");
     }
 

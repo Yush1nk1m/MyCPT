@@ -54,6 +54,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                         User.create(
                                 kakaoUserInfo.getId(),
                                 kakaoUserInfo.getNickname(),
-                                kakaoUserInfo.getProfileImageUrl())));
+                                toHttps(kakaoUserInfo.getProfileImageUrl())
+                        )
+                ));
+    }
+
+    // ── private helpers ───────────────────────────────────────────────────────
+
+    private String toHttps(String url) {
+        if (url == null) return null;
+        return url.replace("http://", "https://");
     }
 }

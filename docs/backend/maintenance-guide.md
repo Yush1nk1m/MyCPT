@@ -19,6 +19,18 @@
 - V1 구현체: {도메인}V1Controller.java (예: AuthV1Controller.java)
 - V2 추가 시: {도메인}V2Controller implements {도메인}Api
 
+### OAuth2 로그인 후 리다이렉트 화이트리스트
+
+로그인 완료 후 이동 경로는 `SecurityConfig`의 `ALLOWED_REDIRECTS` Set으로 관리한다.
+
+현재 허용 경로:
+
+- `/` — 일반 로그인
+- `/save-result` — 비회원 검사 후 로그인 시 결과 자동 저장
+
+새 경로 추가 시 `SecurityConfig.ALLOWED_REDIRECTS`에만 추가하면 된다.
+프론트에서 `redirect` 파라미터로 임의 경로를 넘겨도 화이트리스트에 없으면 `/`로 이동한다.
+
 ## 2. 프로필 이미지 저장 방식
 
 - profile_image_url 컬럼에 항상 Full URL 저장
