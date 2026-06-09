@@ -16,31 +16,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ScoreResult } from "@/stores/testSheetStore";
-import { useAuthStore } from "@/stores/autoStore";
+import { useMe } from "@/hooks/useMe";
 import { TypePill, BalancedPill } from "@/components/disc/TypePill";
 import { DiscBarsLarge } from "@/components/disc/DiscBarsLarge";
 import { ReportMarkdown } from "@/components/disc/ReportMarkdown";
 import { GuestCta } from "./GuestCta";
 import { MemberCta } from "./MemberCta";
+import { getDiscProfile } from "@/lib/disc/profile";
 
 type SaveStatus = "idle" | "saving" | "saved" | "failed";
-
-type DiscProfile =
-  | { kind: "balanced" }
-  | { kind: "typed"; types: ("D" | "I" | "S" | "C")[] };
-
-function getDiscProfile(buckets: ScoreResult["buckets"]): DiscProfile {
-  const entries = [
-    { type: "D" as const, value: buckets.d },
-    { type: "I" as const, value: buckets.i },
-    { type: "S" as const, value: buckets.s },
-    { type: "C" as const, value: buckets.c },
-  ];
-  if (entries.every((e) => e.value === 2)) return { kind: "balanced" };
-  const max = Math.max(...entries.map((e) => e.value));
-  const types = entries.filter((e) => e.value === max).map((e) => e.type);
-  return { kind: "typed", types };
-}
 
 interface DoneStateProps {
   result: ScoreResult;
@@ -48,7 +32,10 @@ interface DoneStateProps {
 }
 
 export function DoneState({ result, onClose }: DoneStateProps) {
-  const { isAuthenticated, user } = useAuthStore();
+  const { data: meData, isLoading: meLoading } = useMe();
+  const isAuthenticated = !!meData;
+  const user = meData ?? null;
+
   const profile = getDiscProfile(result.buckets);
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -139,7 +126,7 @@ export function DoneState({ result, onClose }: DoneStateProps) {
       </div>
 
       {/* ── CTA ── */}
-      {isAuthenticated ? (
+      {meLoading ? null : isAuthenticated ? (
         <MemberCta
           saveStatus={saveStatus}
           resultId={resultId}

@@ -6,7 +6,7 @@
  * 와이어프레임(wf-p2-detail.jsx, 결과 상세.html)의 .disc-bars-lg 구현체.
  *
  * 설계 결정:
- *   - buckets(1~9) 기준으로 막대 높이 계산. 백분율 = (bucket / 9) * 100
+ *   - buckets(1~3) 기준으로 막대 높이 계산. 백분율 = (bucket / 3) * 100
  *   - size="lg": Step3Result hero용 (height 140px, 와이어프레임 기준)
  *   - size="md": 결과 이력 카드용 (3주차 ResultCard에서 재사용 예정, height 50px)
  *
@@ -19,7 +19,7 @@
 type DiscType = "D" | "I" | "S" | "C";
 
 interface Buckets {
-  d: number; // 1~9
+  d: number; // 1~3
   i: number;
   s: number;
   c: number;
@@ -58,10 +58,10 @@ export function DiscBarsLarge({ buckets, size = "lg" }: DiscBarsLargeProps) {
       }}
     >
       {DISC_KEYS.map(({ key, label, name, color }) => {
-        const bucket = buckets[key]; // 1~9
-        // 막대 높이: 버킷 9 = 100%, 버킷 1 = 11%
+        const bucket = buckets[key]; // 1~3
+        // 막대 높이: 버킷 3 = 100%, 버킷 1 = 33%
         // 최솟값 11%를 보장해 버킷 1도 막대가 보임
-        const heightPct = Math.round((bucket / 9) * 100);
+        const heightPct = Math.round((bucket / 3) * 100);
 
         return (
           <div
