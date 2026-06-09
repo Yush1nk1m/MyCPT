@@ -1,5 +1,6 @@
 package com.mycpt.backend.domain.result.entity;
 
+import com.mycpt.backend.domain.result.enums.RaterType;
 import com.mycpt.backend.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -32,6 +33,11 @@ public class Test {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    // DiscResult 역방향 참조 - Fetch Join 용도
+    // cascade/orphanRemoval 없음: Test 삭제 시 disc_results는 FK CASCADE로 DB가 처리
+    @OneToOne(mappedBy = "test", fetch = FetchType.LAZY)
+    private DiscResult discResult;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "ENUM('SELF', 'OTHER')")
     private RaterType raterType;
@@ -45,8 +51,6 @@ public class Test {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    public enum RaterType { SELF, OTHER, }
 
     /**
      * 자기 평정 생성 팩토리 (POST /results)

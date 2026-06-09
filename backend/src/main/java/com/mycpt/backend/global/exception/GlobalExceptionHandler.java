@@ -1,5 +1,7 @@
 package com.mycpt.backend.global.exception;
 
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -70,5 +72,27 @@ public class GlobalExceptionHandler {
         body.put("code", "INVALID_REQUEST");
         body.put("message", e.getMessage());
         return ResponseEntity.badRequest().body(body);
+    }
+
+    /**
+     * 본인 소유가 아닌 리소스 접근 -> 403 Forbidden
+     */
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<Map<String, String>> handleForbidden(ForbiddenException e) {
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("code", "FORBIDDEN");
+        body.put("message", e.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    /**
+     * 리소스 없음 -> 404 Not Found
+     */
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleNotFound(EntityNotFoundException e) {
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("code", "NOT_FOUND");
+        body.put("message", e.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 }

@@ -4,7 +4,6 @@ import com.mycpt.backend.domain.assessment.dto.CreateTokenRequest;
 import com.mycpt.backend.domain.assessment.service.AssessmentService;
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
 import com.mycpt.backend.domain.result.dto.ScoreRequest;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -61,14 +60,5 @@ public class AssessmentV1Controller implements AssessmentApi {
         assessmentService.submit(token, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of("message", "응시가 완료되었습니다."));
-    }
-
-    // EntityNotFoundException (토큰 없음) -> 404
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleNotFound(EntityNotFoundException e) {
-        Map<String, String> body = new LinkedHashMap<>();
-        body.put("code", "NOT_FOUND");
-        body.put("message", e.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 }

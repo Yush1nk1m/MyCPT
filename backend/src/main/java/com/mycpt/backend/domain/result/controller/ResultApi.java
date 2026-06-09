@@ -1,7 +1,8 @@
 package com.mycpt.backend.domain.result.controller;
 
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
-import com.mycpt.backend.domain.result.dto.ScoreRequest;
+import com.mycpt.backend.domain.result.dto.*;
+import com.mycpt.backend.domain.result.enums.RaterType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -11,7 +12,9 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Map;
 
@@ -26,7 +29,7 @@ public interface ResultApi {
 
     @Operation(
             summary = "채점 및 결과 반환",
-            description = "프론트엔드에서 산출한 DISC 원점수를 전달받아 버킷 값을 산출하고 분석 보고서를 반환한다." +
+            description = "프론트엔드에서 산출한 DISC 원점수를 전달받아 버킷 값을 산출하고 분석 보고서를 반환한다. " +
                     "비회원은 응답의 scores 객체를 sessionStorage에 보관 후 로그인 시 POST /results 로 전송한다."
     )
     @ApiResponses({
@@ -59,7 +62,7 @@ public interface ResultApi {
                     )
             )
     })
-    ResponseEntity<Map<String, Object>> score(@RequestBody ScoreRequest request);
+    ResponseEntity<ScoreResponse> score(@RequestBody ScoreRequest request);
 
     @Operation(
             summary = "결과 저장",
@@ -80,8 +83,40 @@ public interface ResultApi {
             @ApiResponse(responseCode = "400", description = "원점수 범위 오류 / 합계 불일치"),
             @ApiResponse(responseCode = "401", description = "미인증")
     })
-    ResponseEntity<Map<String, Object>> save(
+    ResponseEntity<SaveResponse> save(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody ScoreRequest request
+    );
+
+    @Operation(
+            summary = "결과 이력 목록 조회",
+            description = "로그인한 회원의 검사 결과 목록을 최신순으로 반환한다. 커서 기반 페이지네이션.",
+            security = @SecurityRequirement(name = "cookieAuth")
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "성공"),
+            @ApiResponse(responseCode = "401", description = "미인증")
+    })
+    ResponseEntity<ResultListResponse> list(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(required = false) RaterType raterType,
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "5") int size
+    );
+
+    @Operation(
+            summary = "결과 상세 조회",
+            description = "특정 검사 결과의 상세 정보와 분석 보고서를 반환한다. 본인 결과만 조회 가능.",
+            security = @SecurityRequirement(name = "cookieAuth")
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "성공"),
+            @ApiResponse(responseCode = "401", description = "미인증"),
+            @ApiResponse(responseCode = "403", description = "본인 결과가 아닌 경우"),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 결과 ID")
+    })
+    ResponseEntity<ResultDetailResponse> detail(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id
     );
 }

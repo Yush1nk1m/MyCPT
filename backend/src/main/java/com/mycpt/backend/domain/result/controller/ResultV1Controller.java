@@ -1,21 +1,16 @@
 package com.mycpt.backend.domain.result.controller;
 
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
-import com.mycpt.backend.domain.result.dto.ScoreRequest;
+import com.mycpt.backend.domain.result.dto.*;
+import com.mycpt.backend.domain.result.enums.RaterType;
 import com.mycpt.backend.domain.result.service.CacheService;
-import com.mycpt.backend.domain.result.service.ResultSaveService;
+import com.mycpt.backend.domain.result.service.ResultService;
 import com.mycpt.backend.domain.result.service.ScoringService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * ResultApi 인터페이스의 V1 구현체.
@@ -23,11 +18,6 @@ import java.util.Map;
  * 현재 구현 범위(2주차 Day 1):
  *   - POST /results/score: 원점수 검증 + 버킷 정규화 → 응답 반환
  *   - report 필드는 CacheService + LlmService 연동(Day 2~3) 전까지 null
- *
- * TODO:
- *   - POST /results: 회원 결과 저장 (ResultService, 2주차 Day 2~3)
- *   - GET /results: 결과 이력 조회 (ResultService, 3주차)
- *   - GET /results/{id}: 결과 상세 조회 (ResultService, 3주차)
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -36,13 +26,13 @@ public class ResultV1Controller implements ResultApi {
 
     private final ScoringService scoringService;
     private final CacheService cacheService;
-    private final ResultSaveService resultSaveService;
+    private final ResultService resultService;
 
     // POST /api/v1/results/score
     // 비회원 접근 가능 - SecurityConfig에서 접근 경로 permitAll() 메서드 적용
     @PostMapping("/results/score")
     @Override
-    public ResponseEntity<Map<String, Object>> score(@RequestBody ScoreRequest request) {
+    public ResponseEntity<ScoreResponse> score(@RequestBody ScoreRequest request) {
         // 검증 + 버킷 정규화
         ScoringService.Buckets buckets = scoringService.normalize(request);
         ScoreRequest.Scores s = request.scores();
@@ -50,35 +40,44 @@ public class ResultV1Controller implements ResultApi {
         // CacheService가 HIT/MISS/만료를 판단하고 보고서를 반환
         String report = cacheService.getReport(buckets);
 
-        // scores: 요청받은 원점수를 그대로 응답에 포함 -> 비회원이 sessionStorage에 보관 후 POST /results 로 재전송 가능
-        Map<String, Object> scores = Map.of(
-                "d", s.d(), "i", s.i(), "s", s.s(), "c", s.c()
-        );
-
-        // buckets: 정규화된 버킷 값 (1~3). CacheService.getReport() 메서드 호출 키로 사용
-        Map<String, Object> bucketMap = Map.of(
-                "d", buckets.d(), "i", buckets.i(), "s", buckets.s(), "c", buckets.c()
-        );
-
-        // LinkedHashMap: scores -> buckets -> report 순서 고정
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("testType", request.testType());
-        body.put("scores", scores);
-        body.put("buckets", bucketMap);
-        body.put("report", report);
-
-        return ResponseEntity.ok(body);
+        return ResponseEntity.ok(new ScoreResponse(
+                request.testType(),
+                new DiscScores(s.d(), s.i(), s.s(), s.c()),
+                new DiscBuckets(buckets.d(), buckets.i(), buckets.s(), buckets.c()),
+                report
+        ));
     }
 
     // POST /api/v1/results - 회원 전용
     @PostMapping("/results")
     @Override
-    public ResponseEntity<Map<String, Object>> save(
+    public ResponseEntity<SaveResponse> save(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody ScoreRequest request
     ) {
-        Long resultId = resultSaveService.save(principal.getUser().getId(), request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Map.of("resultId", resultId));
+        Long resultId = resultService.save(principal.getUser().getId(), request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new SaveResponse(resultId));
+    }
+
+    // GET /api/v1/results - 회원 전용
+    @GetMapping("/results")
+    @Override
+    public ResponseEntity<ResultListResponse> list(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(required = false) RaterType raterType,
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "5") int size
+    ) {
+        return ResponseEntity.ok(resultService.list(principal.getUser().getId(), raterType, cursor, size));
+    }
+
+    // GET /api/v1/results/{id} - 회원 전용
+    @GetMapping("/results/{id}")
+    @Override
+    public ResponseEntity<ResultDetailResponse> detail(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(resultService.detail(principal.getUser().getId(), id));
     }
 }

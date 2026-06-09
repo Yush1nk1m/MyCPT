@@ -1,6 +1,6 @@
 package com.mycpt.backend.domain.user.dto;
 
-import com.mycpt.backend.domain.user.entity.User;
+import com.mycpt.backend.domain.user.enums.Gender;
 
 /**
  * PATCH /users/me 요청 바디
@@ -18,8 +18,8 @@ public record UpdateProfileRequest(
      * 편의 메서드: gender 문자열 -> User.Gender enum 변환
      * null이면 null 반환 (updateProfile에서 null은 "변경 없음"으로 처리)
      */
-    public User.Gender genderEnum() {
+    public Gender genderEnum() {
         if (gender == null) return null;
-        return User.Gender.valueOf(gender); // 잘못된 값 -> IllegalArgumentException
+        return Gender.valueOf(gender); // 잘못된 값 -> IllegalArgumentException
     }
 }

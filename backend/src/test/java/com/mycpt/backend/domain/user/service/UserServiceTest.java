@@ -3,6 +3,7 @@ package com.mycpt.backend.domain.user.service;
 import com.mycpt.backend.common.storage.StorageService;
 import com.mycpt.backend.domain.user.dto.UpdateProfileRequest;
 import com.mycpt.backend.domain.user.entity.User;
+import com.mycpt.backend.domain.user.enums.Gender;
 import com.mycpt.backend.domain.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -59,7 +60,7 @@ class UserServiceTest {
             // then
             assertThat(result.getNickname()).isEqualTo("새닉네임");
             assertThat(result.getBirthYear()).isEqualTo(1998);
-            assertThat(result.getGender()).isEqualTo(User.Gender.M);
+            assertThat(result.getGender()).isEqualTo(Gender.M);
         }
 
         @Test

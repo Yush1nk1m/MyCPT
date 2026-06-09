@@ -19,16 +19,16 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ResultSaveService 단위 테스트")
-class ResultSaveServiceTest {
+@DisplayName("ResultService 단위 테스트")
+class ResultServiceTest {
 
     @Mock private ScoringService scoringService;
     @Mock private TestRepository testRepository;
     @Mock private DiscResultRepository discResultRepository;
     @Mock private UserRepository userRepository;
 
-    private ResultSaveService sut() {
-        return new ResultSaveService(scoringService, testRepository, discResultRepository, userRepository);
+    private ResultService sut() {
+        return new ResultService(scoringService, testRepository, discResultRepository, userRepository);
     }
 
     // ── 공통 픽스처 ───────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ class ResultSaveServiceTest {
     class Save {
 
         @Test
-        @DisplayName("[UT-ResultSaveSvc-저장-성공]")
+        @DisplayName("[UT-ResultSvc-저장-성공]")
         void 저장_성공() {
             // given
             given(userRepository.getReferenceById(1L)).willReturn(stubUser());
@@ -67,7 +67,7 @@ class ResultSaveServiceTest {
         }
 
         @Test
-        @DisplayName("[UT-ResultSaveSvc-저장-원점수오류]")
+        @DisplayName("[UT-ResultSvc-저장-원점수오류]")
         void 저장_원점수오류() {
             // given
             given(scoringService.normalize(any()))

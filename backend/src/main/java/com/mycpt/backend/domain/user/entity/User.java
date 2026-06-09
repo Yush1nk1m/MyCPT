@@ -1,5 +1,6 @@
 package com.mycpt.backend.domain.user.entity;
 
+import com.mycpt.backend.domain.user.enums.Gender;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -54,9 +55,6 @@ public class User {
     // 사용자 가입 시각
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    // 성별을 나타내기 위한 중첩 Enum
-    public enum Gender {M, F, N,}
 
     /**
      * 정적 팩토리 메서드

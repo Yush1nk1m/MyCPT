@@ -3,6 +3,7 @@ package com.mycpt.backend.domain.user.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mycpt.backend.domain.user.dto.UpdateProfileRequest;
 import com.mycpt.backend.domain.user.entity.User;
+import com.mycpt.backend.domain.user.enums.Gender;
 import com.mycpt.backend.domain.user.service.UserService;
 import com.mycpt.backend.support.SliceTestSupport;
 import org.junit.jupiter.api.DisplayName;
@@ -37,7 +38,7 @@ class UserV1ControllerTest extends SliceTestSupport {
             User user = testUser();
             // updateProfile() 메서드 호출 결과로 수정된 User 반환 시뮬레이션
             // testUser()는 birthYear/gender 필드가 null이므로 직접 업데이트 메서드 호출
-            user.updateProfile("새닉네임", 1998, User.Gender.M);
+            user.updateProfile("새닉네임", 1998, Gender.M);
             given(userService.updateProfile(any(), any())).willReturn(user);
 
             UpdateProfileRequest request =
