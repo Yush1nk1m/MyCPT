@@ -1,19 +1,20 @@
 # MyCPT 시스템 아키텍처 설계
 
-**문서 버전**: v0.5
-**작성일**: '26.06.05.  
+**문서 버전**: v0.6
+**작성일**: '26.06.09.
 **작성자**: 김유신
 
 ---
 
 ## 변경 이력
 
-| 버전 | 변경 내용                                                                                      | 날짜       |
-| ---- | ---------------------------------------------------------------------------------------------- | ---------- |
-| v0.2 | 패키지 루트 com.mycpt.backend로 수정. 컨트롤러 Interface+V1 네이밍 구조 반영. Swagger UI 추가. | '26.05.26. |
-| v0.3 | JWT 인증 방식으로 변경에 따른 아키텍처 및 Redis 명세 수정                                      | '26.05.27. |
-| v0.4 | Next.js 컴포넌트 역할 추가                                                                     | '26.05.28. |
-| v0.5 | 타인 평정 흐름 시퀀스 다이어그램 추가                                                          | '26.06.05  |
+| 버전 | 변경 내용                                                                                                                                           | 날짜       |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| v0.2 | 패키지 루트 com.mycpt.backend로 수정. 컨트롤러 Interface+V1 네이밍 구조 반영. Swagger UI 추가.                                                      | '26.05.26. |
+| v0.3 | JWT 인증 방식으로 변경에 따른 아키텍처 및 Redis 명세 수정                                                                                           | '26.05.27. |
+| v0.4 | Next.js 컴포넌트 역할 추가                                                                                                                          | '26.05.28. |
+| v0.5 | 타인 평정 흐름 시퀀스 다이어그램 추가                                                                                                               | '26.06.05  |
+| v0.6 | result 도메인 패키지 구조 실제 구현 반영. RaterType enums 분리. DTO 패키지 추가. ForbiddenException 추가. EntityNotFoundException 핸들러 전역 이동. | '26.06.09  |
 
 ---
 
@@ -104,64 +105,95 @@ com.mycpt.backend
 │   ├── BatchConfig.java             # Spring Batch Job/Step 정의
 │   └── StorageConfig.java           # 로컬/S3 스토리지 전환 설정
 │
-├── domain/                          # 도메인별 레이어드 구조
-│   ├── result/                      # 검사 결과 (채점, 저장, 이력)
+├── domain/
+│   ├── result/                      # 채점, 결과 저장/이력/상세
 │   │   ├── controller/
-│   │   │   └── ResultController.java        # POST /results/score, POST /results, GET /results, GET /results/{id}
+│   │   │   ├── ResultApi.java               # Swagger 문서 + API 계약 인터페이스
+│   │   │   └── ResultV1Controller.java      # POST /results/score, POST /results, GET /results, GET /results/{id}
 │   │   ├── service/
-│   │   │   ├── ScoringService.java          # 원점수 검증 + 버킷 정규화
+│   │   │   ├── ScoringService.java          # 원점수 검증 + 버킷 정규화 (1~3)
 │   │   │   ├── CacheService.java            # disc_cache Lazy Caching
 │   │   │   ├── LlmService.java              # Claude API 호출 + 응답 파싱
-│   │   │   └── ResultService.java           # 결과 저장 및 이력 조회
+│   │   │   └── ResultService.java           # 결과 저장 + 이력/상세 조회
 │   │   ├── repository/
-│   │   │   ├── TestResultRepository.java
+│   │   │   ├── TestRepository.java
+│   │   │   ├── DiscResultRepository.java
 │   │   │   └── DiscCacheRepository.java
-│   │   └── entity/
-│   │       ├── TestResult.java
-│   │       └── DiscCache.java
+│   │   ├── entity/
+│   │   │   ├── Test.java                    # tests 테이블 (CTI 부모)
+│   │   │   ├── DiscResult.java              # disc_results 테이블 (CTI 자식)
+│   │   │   ├── DiscCache.java               # disc_cache 테이블
+│   │   │   └── DiscCacheId.java             # disc_cache 복합 PK @Embeddable
+│   │   ├── dto/
+│   │   │   ├── ScoreRequest.java            # POST /results/score 요청
+│   │   │   ├── ScoreResponse.java           # POST /results/score 응답
+│   │   │   ├── SaveResponse.java            # POST /results 응답
+│   │   │   ├── ResultListResponse.java      # GET /results 응답 래퍼
+│   │   │   ├── ResultSummaryResponse.java   # GET /results 목록 카드 단위
+│   │   │   ├── ResultDetailResponse.java    # GET /results/{id} 응답
+│   │   │   ├── DiscBuckets.java             # 버킷값 공용 DTO (1~3)
+│   │   │   └── DiscScores.java              # 원점수 공용 DTO (-24~+48)
+│   │   └── enums/
+│   │       └── RaterType.java               # SELF / OTHER (Test 중첩 enum에서 분리)
 │   │
-│   ├── auth/                        # 인증 (Kakao OAuth)
+│   ├── auth/                        # 카카오 OAuth2 + JWT
 │   │   ├── controller/
-│   │   ├── AuthApi.java                    # 인터페이스 (Swagger 문서 + API 계약)
-│   │   │   └── AuthV1Controller.java       # GET /auth/kakao, GET /auth/kakao/callback, POST /auth/logout, GET /auth/me
+│   │   │   ├── AuthApi.java                 # Swagger 문서 + API 계약 인터페이스
+│   │   │   └── AuthV1Controller.java        # GET /auth/kakao, GET /auth/kakao/callback, POST /auth/logout, GET /auth/me
 │   │   ├── service/
-│   │   │   └── AuthService.java
+│   │   │   ├── CustomOAuth2UserService.java # 카카오 사용자 조회/생성
+│   │   │   └── JwtProvider.java             # JWT 발급/검증
+│   │   ├── filter/
+│   │   │   └── JwtAuthenticationFilter.java # 요청마다 JWT 검증
+│   │   ├── repository/
+│   │   │   └── UserRepository.java          # auth 도메인에서도 참조
 │   │   └── dto/
-│   │       └── KakaoUserInfo.java
+│   │       ├── UserPrincipal.java           # SecurityContext 보관 인증 객체
+│   │       └── KakaoUserInfo.java           # 카카오 사용자 정보 파싱
 │   │
-│   ├── user/                        # 회원 프로필
+│   ├── user/                        # 회원 프로필 관리
 │   │   ├── controller/
-│   │   │   └── UserController.java          # PATCH /users/me, POST /users/me/profile-image
+│   │   │   ├── UserApi.java                 # Swagger 문서 + API 계약 인터페이스
+│   │   │   └── UserV1Controller.java        # PATCH /users/me, POST /users/me/profile-image, DELETE /users/me
 │   │   ├── service/
-│   │   │   └── UserService.java
+│   │   │   └── UserService.java             # 프로필 수정, 이미지 업로드, 회원 탈퇴
 │   │   ├── repository/
 │   │   │   └── UserRepository.java
-│   │   └── entity/
-│   │       └── User.java
+│   │   ├── entity/
+│   │   │   └── User.java
+│   │   ├── dto/
+│   │   │   └── UpdateProfileRequest.java
+│   │   └── enums/
+│   │       └── Gender.java                  # M / F / N (User 중첩 enum에서 분리)
 │   │
 │   ├── assessment/                  # 타인 평정
 │   │   ├── controller/
-│   │   │   └── AssessmentController.java    # POST /assessments, GET /assessments/{token}
+│   │   │   ├── AssessmentApi.java
+│   │   │   └── AssessmentV1Controller.java  # POST /assessments, GET /assessments/{token}, POST /assessments/{token}/submit
 │   │   ├── service/
-│   │   │   └── AssessmentService.java       # 일회용 토큰 생성/검증, used 처리
+│   │   │   └── AssessmentService.java       # 일회용 토큰 생성/검증/used 처리
 │   │   ├── repository/
 │   │   │   └── AssessmentTokenRepository.java
-│   │   └── entity/
-│   │       └── AssessmentToken.java
+│   │   ├── entity/
+│   │   │   └── AssessmentToken.java
+│   │   └── dto/
+│   │       └── CreateTokenRequest.java
 │   │
-│   ├── statistics/                  # 통계
+│   ├── statistics/                  # 통계 집계
 │   │   ├── controller/
-│   │   │   └── StatisticsController.java    # GET /statistics/comparison, GET /statistics/trend
+│   │   │   ├── StatisticsApi.java
+│   │   │   └── StatisticsV1Controller.java  # GET /statistics/comparison, GET /statistics/trend
 │   │   ├── service/
 │   │   │   └── StatisticsService.java       # 나이대/성별 집계, 변화 추이
 │   │   └── repository/
 │   │       └── StatisticsRepository.java
 │   │
-│   ├── colleague/                   # 동료
+│   ├── colleague/                   # 동료 관계
 │   │   ├── controller/
-│   │   │   └── ColleagueController.java     # GET /peer-code, GET /colleagues/invite/{code}, POST /colleagues, GET /colleagues, GET /colleagues/{id}, DELETE /colleagues/{id}
+│   │   │   ├── ColleagueApi.java
+│   │   │   └── ColleagueV1Controller.java   # GET /peer-code, POST /peer-code/refresh, GET /colleagues/invite/{code}, POST /colleagues, GET /colleagues, DELETE /colleagues/{id}
 │   │   ├── service/
-│   │   │   ├── PeerCodeService.java         # 동료 코드 생성/갱신
+│   │   │   ├── PeerCodeService.java         # 동료 코드 생성/갱신 (7일 만료, 온디맨드 리프레시)
 │   │   │   └── ColleagueService.java        # 동료 등록/조회/삭제
 │   │   ├── repository/
 │   │   │   ├── PeerCodeRepository.java
@@ -172,18 +204,20 @@ com.mycpt.backend
 │   │
 │   ├── chemistry/                   # 케미 보고서
 │   │   ├── controller/
-│   │   │   └── ChemistryController.java     # POST /chemistry-reports, GET /chemistry-reports, GET /chemistry-reports/{id}
+│   │   │   ├── ChemistryApi.java
+│   │   │   └── ChemistryV1Controller.java   # POST /chemistry-reports, GET /chemistry-reports, GET /chemistry-reports/{id}
 │   │   ├── service/
-│   │   │   ├── ChemistryService.java        # 202 반환 + @Async LLM 호출
-│   │   │   └── ChemistryLlmService.java     # 케미 프롬프트 설계 및 보고서 파싱
+│   │   │   ├── ChemistryService.java        # 202 즉시 반환 + @Async LLM 호출 트리거
+│   │   │   └── ChemistryLlmService.java     # 케미 프롬프트 설계 + 보고서 저장
 │   │   ├── repository/
 │   │   │   └── ChemistryReportRepository.java
 │   │   └── entity/
 │   │       └── ChemistryReport.java
 │   │
-│   ├── notification/                # 알림 + SSE
+│   ├── notification/                # 인앱 알림 + SSE
 │   │   ├── controller/
-│   │   │   └── NotificationController.java  # GET /notifications/stream, GET /notifications, DELETE /notifications/{id}
+│   │   │   ├── NotificationApi.java
+│   │   │   └── NotificationV1Controller.java # GET /notifications/stream, GET /notifications, DELETE /notifications/{id}
 │   │   ├── service/
 │   │   │   ├── NotificationService.java     # 알림 생성/조회/삭제
 │   │   │   └── SseService.java              # SseEmitter 관리, Last-Event-ID 재전송
@@ -194,28 +228,36 @@ com.mycpt.backend
 │   │
 │   └── coin/                        # 코인
 │       ├── controller/
-│       │   └── CoinController.java          # GET /coins
+│       │   ├── CoinApi.java
+│       │   └── CoinV1Controller.java        # GET /coins, GET /coins/history
 │       ├── service/
-│       │   └── CoinService.java             # 온디맨드 충전 (next_coin_at 기반)
+│       │   └── CoinService.java             # 온디맨드 충전 (next_coin_at 기반), 차감
 │       ├── repository/
 │       │   └── CoinTransactionRepository.java
 │       └── entity/
 │           └── CoinTransaction.java
 │
-├── common/                          # 공통 유틸
+├── global/                          # 전역 공통 (실제 구현 기준)
+│   └── exception/
+│       ├── GlobalExceptionHandler.java      # @RestControllerAdvice. 도메인별 예외 → HTTP 응답 변환
+│       ├── InvalidScoreException.java       # 400 INVALID_SCORE
+│       ├── TokenExpiredException.java       # 400 EXPIRED_CODE
+│       ├── TokenAlreadyUsedException.java   # 400 TOKEN_USED
+│       └── ForbiddenException.java          # 403 FORBIDDEN
+│
+├── common/                          # 공통 유틸 (미구현 — 기술 부채)
 │   ├── exception/
-│   │   ├── GlobalExceptionHandler.java      # @RestControllerAdvice
-│   │   ├── BusinessException.java
-│   │   └── ErrorCode.java                   # INSUFFICIENT_COINS, TOKEN_USED 등
+│   │   ├── BusinessException.java           # (미구현) 예외 추상화 베이스
+│   │   └── ErrorCode.java                   # (미구현) 에러 코드 열거형
 │   ├── response/
-│   │   └── ErrorResponse.java               # { code, message } 공통 응답
+│   │   └── ErrorResponse.java               # (미구현) { code, message } 공통 응답 DTO
 │   └── storage/
 │       ├── StorageService.java              # 인터페이스
-│       ├── LocalStorageService.java         # 개발 환경
-│       └── S3StorageService.java            # 운영 환경
+│       ├── LocalStorageService.java         # 개발 환경 (@Profile("local"))
+│       └── S3StorageService.java            # 운영 환경 (@Profile("prod"))
 │
-└── batch/                           # Spring Batch
-    └── ExpiredDataCleanupBatch.java  # 만료 동료 코드 + 만료 평정 토큰 삭제
+└── batch/
+    └── ExpiredDataCleanupBatch.java         # 만료 동료 코드 + 만료 평정 토큰 통합 삭제 (매일 새벽)
 ```
 
 ---

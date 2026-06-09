@@ -63,6 +63,7 @@
 | ---- | ------------------------------- | ------------------------------ | ---------------- |
 | UT   | `@ExtendWith(MockitoExtension)` | JUnit 5 + Mockito              | 기능 구현과 동시 |
 | ST   | `@WebMvcTest`                   | MockMvc + spring-security-test | 기능 구현과 동시 |
+| ST   | `@DataJpaTest`                  | Testcontainers (MySQL) + JPA   | 기능 구현과 동시 |
 | IT   | `@SpringBootTest`               | Testcontainers (MySQL, Redis)  | 4주차 QA 단계    |
 
 ### 자동화 제외 영역 (Swagger UI 수동 테스트)
@@ -91,7 +92,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 | 코드 | 종류            | 어노테이션                      |
 | ---- | --------------- | ------------------------------- |
 | UT   | 단위 테스트     | `@ExtendWith(MockitoExtension)` |
-| ST   | 슬라이스 테스트 | `@WebMvcTest`                   |
+| ST   | 슬라이스 테스트 | `@WebMvcTest` / `@DataJpaTest`  |
 | IT   | 통합 테스트     | `@SpringBootTest`               |
 
 ### 규칙
@@ -193,6 +194,37 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 | UT-CacheService-보고서생성-캐시HIT유효           | DB에 유효한 캐시 존재              | `created_at` 10일 전, ttl=365일 → LLM 미호출, `save` 없음, 기존 보고서 반환 |
 | UT-CacheService-보고서생성-캐시HIT유효경계값분석 | TTL 당일 만료 경계 검증            | `created_at` 364일 전, ttl=365일 → 유효 처리, LLM 미호출                    |
 | UT-CacheService-보고서생성-캐시HIT만료           | DB에 만료된 캐시 존재              | `created_at` 366일 전, ttl=365일 → LLM 1회 호출, `save` 1회, 새 보고서 반환 |
+
+---
+
+### ResultService (UT)
+
+| Test ID                              | 행위                     | 상황                                      |
+| ------------------------------------ | ------------------------ | ----------------------------------------- |
+| UT-ResultSvc-이력조회-성공           | 커서 없이 최신 목록 조회 | size+1 조회 후 hasNext 판단, results 반환 |
+| UT-ResultSvc-이력조회-다음페이지존재 | size+1개 조회 결과       | hasNext=true, nextCursor 설정 검증        |
+| UT-ResultSvc-이력조회-마지막페이지   | size 이하 조회 결과      | hasNext=false, nextCursor=null 검증       |
+| UT-ResultSvc-이력조회-raterType필터  | raterType=SELF 필터      | SELF만 반환 검증                          |
+| UT-ResultSvc-상세조회-성공           | 본인 결과 조회           | ResultDetailResponse 반환 검증            |
+| UT-ResultSvc-상세조회-권한없음       | 타인 결과 조회 시도      | ForbiddenException                        |
+| UT-ResultSvc-상세조회-존재하지않는ID | 없는 testId 조회         | EntityNotFoundException                   |
+
+---
+
+### DiscResultRepository (ST)
+
+> `@DataJpaTest` + Testcontainers MySQL. 실제 쿼리 동작 검증.
+> `findByUserIdWithCursor()` — JOIN FETCH LAZY 동작 + Pageable LIMIT 적용 검증.
+> `findByTestIdWithDetail()` — test JOIN FETCH 정상 로드 검증.
+
+| Test ID                                     | 행위                     | 상황                                                                   |
+| ------------------------------------------- | ------------------------ | ---------------------------------------------------------------------- |
+| ST-DiscResultRepo-커서페이지네이션-성공     | cursor=null, size=5 조회 | 최신순 id DESC, 최대 6개(size+1) 반환 검증                             |
+| ST-DiscResultRepo-커서페이지네이션-커서적용 | cursor=N으로 조회        | id < N인 결과만 반환 검증                                              |
+| ST-DiscResultRepo-raterType필터-SELF        | raterType=SELF 필터      | SELF 결과만 반환, OTHER 미포함 검증                                    |
+| ST-DiscResultRepo-raterType필터-null        | raterType=null           | SELF/OTHER 모두 반환 검증                                              |
+| ST-DiscResultRepo-상세조회-JoinFetch        | findByTestIdWithDetail   | test 연관관계 LAZY 정상 로드 (LazyInitializationException 미발생) 검증 |
+| ST-DiscResultRepo-상세조회-존재하지않는ID   | 없는 testId 조회         | Optional.empty() 반환 검증                                             |
 
 ---
 

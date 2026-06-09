@@ -27,7 +27,7 @@ async function fetchResults(
   cursor: number | null,
 ): Promise<ResultListResponse> {
   const params = new URLSearchParams();
-  if (raterType) params.set("rater", raterType);
+  if (raterType) params.set("raterType", raterType);
   if (cursor) params.set("cursor", String(cursor));
   params.set("size", "5");
 
@@ -39,11 +39,11 @@ async function fetchResults(
   return res.json();
 }
 
-export function useResults(rater: RaterType | null) {
+export function useResults(raterType: RaterType | null) {
   return useInfiniteQuery({
-    queryKey: ["results", rater],
+    queryKey: ["results", raterType],
     queryFn: ({ pageParam: cursor }: { pageParam: number | null }) =>
-      fetchResults(rater, cursor),
+      fetchResults(raterType, cursor),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
       lastPage.hasNext ? lastPage.nextCursor : undefined,

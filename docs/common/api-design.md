@@ -346,12 +346,12 @@ Spring Security JWT 기반.
 
 **요청 파라미터**
 
-| 파라미터 | 타입   | 필수     | 설명                                            |
-| -------- | ------ | -------- | ----------------------------------------------- |
-| `type`   | string | optional | 검사 유형. 현재는 `DISC`만 유효. 미입력 시 전체 |
-| `rater`  | string | optional | `self` / `other`. 미입력 시 전체                |
-| `size`   | number | optional | 페이지 크기. 기본값 5                           |
-| `cursor` | number | optional | 마지막으로 받은 `resultId`. 미입력 시 최신부터  |
+| 파라미터    | 타입   | 필수     | 설명                                            |
+| ----------- | ------ | -------- | ----------------------------------------------- |
+| `type`      | string | optional | 검사 유형. 현재는 `DISC`만 유효. 미입력 시 전체 |
+| `raterType` | string | optional | `self` / `other`. 미입력 시 전체                |
+| `size`      | number | optional | 페이지 크기. 기본값 5                           |
+| `cursor`    | number | optional | 마지막으로 받은 `resultId`. 미입력 시 최신부터  |
 
 **응답 바디 (200)**
 

@@ -145,8 +145,8 @@
 | 날짜       | 작업                                                                                                 | 산출물                                                             | 완료 |
 | ---------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---- |
 | 06.06 (토) | 프로필 설정 API 및 페이지 구현 (닉네임, 생년, 성별, 프로필 이미지)                                   | UserService, UserV1Controller, useMe, /me, /me/profile, middleware | [x]  |
-| 06.07 (일) | '로그인하고 결과 저장' — sessionStorage 원점수를 `POST /results`로 전송, tests + disc_results INSERT | ResultSaveService                                                  | [x]  |
-| 06.08 (월) | 결과 이력 조회 페이지 구현 (자기/타인 평정 구분, 커서 기반 페이지네이션)                             | 이력 페이지                                                        | [ ]  |
+| 06.07 (일) | '로그인하고 결과 저장' — sessionStorage 원점수를 `POST /results`로 전송, tests + disc_results INSERT | ResultService                                                      | [x]  |
+| 06.08 (월) | 결과 이력 조회 페이지 구현 (자기/타인 평정 구분, 커서 기반 페이지네이션)                             | 이력 페이지                                                        | [x]  |
 | 06.09 (화) | 통계 집계 로직 구현 — 나이대/성별 기준 평균 산출 (자기 평정만), tests JOIN disc_results 집계 쿼리    | StatisticsService                                                  | [ ]  |
 | 06.10 (수) | 통계 비교 + 변화 추이 화면 구현 (`GET /statistics/comparison`, `GET /statistics/trend`)              | 통계 페이지                                                        | [ ]  |
 | 06.11 (목) | 동료 초대 코드 생성/조회 API 구현 (대문자+숫자 8자리, 온디맨드 리프레시)                             | PeerCodeService                                                    | [ ]  |
@@ -158,7 +158,7 @@
 - [ ] 프로필 설정 (닉네임, 생년, 성별, 이미지) 정상 동작 확인
 - [ ] 프로필 이미지 업로드 — jpg/png/webp 형식, 10MB 이하 검증 확인
 - [x] sessionStorage 원점수 전송 후 tests + disc_results 정상 저장 확인
-- [ ] 결과 이력 목록 자기/타인 평정 구분 및 라벨 표시 확인
+- [x] 결과 이력 목록 자기/타인 평정 구분 및 라벨 표시 확인
 - [ ] 나이대/성별 통계 비교 수치 정확성 확인 (자기 평정만 집계)
 - [ ] 생년/성별 미입력 시 average: null 반환 확인
 - [ ] 변화 추이 summary + trend 정상 반환 확인
@@ -168,6 +168,17 @@
 - [ ] SELF_INVITE, EXPIRED_CODE, ALREADY_COLLEAGUE 에러 처리 확인
 - [ ] UNION ALL 양방향 동료 목록 조회 확인
 - [ ] 동료 등록 완료 시 알림 전송 확인
+
+### 기술 부채 (4주차 착수 전 처리)
+
+- [ ] ResultService 단위 테스트 작성 - list(): hasNext 판단, raterType 필터, cursor null 여부 - detail(): 본인 소유 검증(403), 존재하지 않는 ID(404)
+- [ ] DiscResultRepository 슬라이스 테스트 작성 (@DataJpaTest) - findByUserIdWithCursor() 커서/raterType 필터 동작 검증 - findByTestIdWithDetail() JOIN FETCH 정상 로드 검증
+- [ ] AssessmentV1Controller, UserV1Controller, AuthV1Controller 응답 DTO 리팩토링 (Map → record)
+- [ ] BusinessException / ErrorCode / ErrorResponse 예외 처리 체계 통합
+      (architecture-design.md 명세와 실제 구현 불일치 해소)
+- [ ] MemberCta "결과 상세로 가기" → "친구에게도 평정 요청해보기" CTA로 교체
+      (검사 완료 화면에서 동일 보고서 중복 표시 문제 해소)
+      공유 시트 연동 후 구현
 
 ---
 
