@@ -1,5 +1,7 @@
 package com.mycpt.backend.domain.assessment.service;
 
+import com.mycpt.backend.common.exception.BusinessException;
+import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.domain.assessment.entity.AssessmentToken;
 import com.mycpt.backend.domain.assessment.repository.AssessmentTokenRepository;
 import com.mycpt.backend.domain.result.dto.ScoreRequest;
@@ -8,8 +10,6 @@ import com.mycpt.backend.domain.result.repository.TestRepository;
 import com.mycpt.backend.domain.result.service.ScoringService;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
-import com.mycpt.backend.global.exception.TokenAlreadyUsedException;
-import com.mycpt.backend.global.exception.TokenExpiredException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -136,7 +136,11 @@ class AssessmentServiceTest {
             // when
             assertThatThrownBy(() -> sut().getSubjectInfo("ghost"))
                     // then
-                    .isInstanceOf(jakarta.persistence.EntityNotFoundException.class);
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> {
+                        BusinessException be = (BusinessException) e;
+                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND);
+                    });
         }
 
         @Test
@@ -149,7 +153,11 @@ class AssessmentServiceTest {
             // when
             assertThatThrownBy(() -> sut().getSubjectInfo("used"))
                     // then
-                    .isInstanceOf(TokenAlreadyUsedException.class);
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> {
+                        BusinessException be = (BusinessException) e;
+                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.TOKEN_USED);
+                    });
         }
 
         @Test
@@ -162,7 +170,11 @@ class AssessmentServiceTest {
             // when
             assertThatThrownBy(() -> sut().getSubjectInfo("expired"))
                     // then
-                    .isInstanceOf(TokenExpiredException.class);
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> {
+                        BusinessException be = (BusinessException) e;
+                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.EXPIRED_CODE);
+                    });
         }
     }
 
@@ -202,7 +214,11 @@ class AssessmentServiceTest {
             // when
             assertThatThrownBy(() -> sut().submit("used", validRequest()))
             // then
-                    .isInstanceOf(TokenAlreadyUsedException.class);
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> {
+                        BusinessException be = (BusinessException) e;
+                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.TOKEN_USED);
+                    });
 
             verify(testRepository, never()).save(any());
         }

@@ -1,12 +1,13 @@
 package com.mycpt.backend.domain.result.service;
 
+import com.mycpt.backend.common.exception.BusinessException;
+import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.domain.result.dto.ScoreRequest;
 import com.mycpt.backend.domain.result.entity.DiscResult;
 import com.mycpt.backend.domain.result.repository.DiscResultRepository;
 import com.mycpt.backend.domain.result.repository.TestRepository;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
-import com.mycpt.backend.global.exception.InvalidScoreException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -23,12 +24,13 @@ import static org.mockito.BDDMockito.*;
 class ResultServiceTest {
 
     @Mock private ScoringService scoringService;
+    @Mock private CacheService cacheService;
     @Mock private TestRepository testRepository;
     @Mock private DiscResultRepository discResultRepository;
     @Mock private UserRepository userRepository;
 
     private ResultService sut() {
-        return new ResultService(scoringService, testRepository, discResultRepository, userRepository);
+        return new ResultService(scoringService, cacheService, testRepository, discResultRepository, userRepository);
     }
 
     // ── 공통 픽스처 ───────────────────────────────────────────────────────────
@@ -71,12 +73,17 @@ class ResultServiceTest {
         void 저장_원점수오류() {
             // given
             given(scoringService.normalize(any()))
-                    .willThrow(new com.mycpt.backend.global.exception.InvalidScoreException("D+I+S+C 합계가 올바르지 않습니다."));
+                    .willThrow(new BusinessException(ErrorCode.INVALID_SCORE, "D+I+S+C 합계가 올바르지 않습니다."));
 
             // when
             assertThatThrownBy(() -> sut().save(1L, validRequest()))
-            // then
-                    .isInstanceOf(InvalidScoreException.class);
+                    // then
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> {
+                        BusinessException be = (BusinessException) e;
+                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_SCORE);
+                        assertThat(be.getMessage()).contains("D+I+S+C 합계가 올바르지 않습니다.");
+                    });
 
             verify(testRepository, never()).save(any());
             verify(discResultRepository, never()).save(any());

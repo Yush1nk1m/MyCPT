@@ -1,5 +1,7 @@
 package com.mycpt.backend.domain.assessment.service;
 
+import com.mycpt.backend.common.exception.BusinessException;
+import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.domain.assessment.entity.AssessmentToken;
 import com.mycpt.backend.domain.assessment.repository.AssessmentTokenRepository;
 import com.mycpt.backend.domain.result.dto.ScoreRequest;
@@ -10,10 +12,7 @@ import com.mycpt.backend.domain.result.repository.TestRepository;
 import com.mycpt.backend.domain.result.service.ScoringService;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
-import com.mycpt.backend.global.exception.TokenAlreadyUsedException;
-import com.mycpt.backend.global.exception.TokenExpiredException;
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -100,9 +99,9 @@ public class AssessmentService {
      *  2. used=TRUE 여부 (400 TOKEN_USED)
      *  3. 만료 여부 (400 EXPIRED_CODE)
      *
-     * @throws jakarta.persistence.EntityNotFoundException                  토큰 없음 -> 컨트롤러가 404로 변환
-     * @throws com.mycpt.backend.global.exception.TokenAlreadyUsedException 이미 사용된 토큰
-     * @throws com.mycpt.backend.global.exception.TokenExpiredException     만료된 토큰
+     * @throws jakarta.persistence.EntityNotFoundException      토큰 없음 -> 컨트롤러가 404로 변환
+     * @throws BusinessException (TOKEN_USED)                   이미 사용된 토큰
+     * @throws BusinessException (EXPIRED_CODE)                 만료된 토큰
      */
     public SubjectInfo getSubjectInfo(String tokenValue) {
         AssessmentToken token = findAndValidate(tokenValue);
@@ -158,15 +157,15 @@ public class AssessmentService {
     private AssessmentToken findAndValidate(String tokenValue) {
         // findByToken이 empty면 NoSuchElementException -> 컨트롤러에서 404로 변환
         AssessmentToken token = assessmentTokenRepository.findByToken(tokenValue)
-                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("존재하지 않는 토큰입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "존재하지 않는 토큰입니다."));
 
         // used 먼저 체크 - 만료된 토큰도 used=TRUE면 TOKEN_USED가 더 직관적인 메시지
         if (token.isUsed()) {
-            throw new TokenAlreadyUsedException();
+            throw new BusinessException(ErrorCode.TOKEN_USED);
         }
 
         if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new TokenExpiredException();
+            throw new BusinessException(ErrorCode.EXPIRED_CODE);
         }
 
         return token;

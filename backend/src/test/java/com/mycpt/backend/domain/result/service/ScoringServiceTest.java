@@ -1,7 +1,8 @@
 package com.mycpt.backend.domain.result.service;
 
+import com.mycpt.backend.common.exception.BusinessException;
+import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.domain.result.dto.ScoreRequest;
-import com.mycpt.backend.global.exception.InvalidScoreException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -112,8 +113,12 @@ class ScoringServiceTest {
             // when
             assertThatThrownBy(() -> scoringService.normalize(request))
                     // then
-                    .isInstanceOf(InvalidScoreException.class)
-                    .hasMessageContaining("합계는 24여야 합니다.");
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> {
+                        BusinessException be = (BusinessException) e;
+                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_SCORE);
+                        assertThat(be.getMessage()).contains("합계는 24여야 합니다.");
+                    });
         }
 
         @Test
@@ -125,8 +130,12 @@ class ScoringServiceTest {
             // when
             assertThatThrownBy(() -> scoringService.normalize(request))
                     // then
-                    .isInstanceOf(InvalidScoreException.class)
-                    .hasMessageContaining("49");
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> {
+                        BusinessException be = (BusinessException) e;
+                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_SCORE);
+                        assertThat(be.getMessage()).contains("49");
+                    });
         }
 
         @Test
@@ -138,8 +147,12 @@ class ScoringServiceTest {
             // when
             assertThatThrownBy(() -> scoringService.normalize(request))
                     // then
-                    .isInstanceOf(InvalidScoreException.class)
-                    .hasMessageContaining("-25");
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> {
+                        BusinessException be = (BusinessException) e;
+                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_SCORE);
+                        assertThat(be.getMessage()).contains("-25");
+                    });
         }
     }
 

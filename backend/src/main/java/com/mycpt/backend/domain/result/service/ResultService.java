@@ -1,5 +1,7 @@
 package com.mycpt.backend.domain.result.service;
 
+import com.mycpt.backend.common.exception.BusinessException;
+import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.domain.result.dto.*;
 import com.mycpt.backend.domain.result.entity.DiscResult;
 import com.mycpt.backend.domain.result.entity.Test;
@@ -8,7 +10,6 @@ import com.mycpt.backend.domain.result.repository.DiscResultRepository;
 import com.mycpt.backend.domain.result.repository.TestRepository;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
-import com.mycpt.backend.global.exception.ForbiddenException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -119,7 +120,7 @@ public class ResultService {
 
         // 본인 소유 검증
         if (!dr.getTest().getUser().getId().equals(userId)) {
-            throw new ForbiddenException();
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
         // disc_cache PK 룩업으로 report 조회 (Fetch Join 대신 별도 쿼리로 복잡도 감소 전략)

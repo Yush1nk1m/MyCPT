@@ -1,5 +1,7 @@
 package com.mycpt.backend.domain.user.service;
 
+import com.mycpt.backend.common.exception.BusinessException;
+import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.common.storage.StorageService;
 import com.mycpt.backend.domain.user.dto.UpdateProfileRequest;
 import com.mycpt.backend.domain.user.entity.User;
@@ -64,13 +66,13 @@ public class UserService {
 
     private void validateImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("파일이 없습니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "파일이 없습니다.");
         }
         if (!ALLOWED_TYPES.contains(file.getContentType())) {
-            throw new IllegalArgumentException("jpg, png, webp 형식만 업로드할 수 있습니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "jpg, png, webp 형식만 업로드할 수 있습니다.");
         }
         if (file.getSize() > MAX_SIZE) {
-            throw new IllegalArgumentException("파일 크기는 10MB를 초과할 수 없습니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "파일 크기는 10MB를 초과할 수 없습니다.");
         }
     }
 }

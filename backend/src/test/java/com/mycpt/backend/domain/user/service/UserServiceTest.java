@@ -1,5 +1,7 @@
 package com.mycpt.backend.domain.user.service;
 
+import com.mycpt.backend.common.exception.BusinessException;
+import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.common.storage.StorageService;
 import com.mycpt.backend.domain.user.dto.UpdateProfileRequest;
 import com.mycpt.backend.domain.user.entity.User;
@@ -102,8 +104,12 @@ class UserServiceTest {
             // when
             assertThatThrownBy(() -> sut().updateProfileImage(1L, file))
                     // then
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("jpg, png, webp");
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> {
+                        BusinessException be = (BusinessException) e;
+                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
+                        assertThat(be.getMessage()).contains("jpg, png, webp");
+                    });
         }
 
         @Test
@@ -118,8 +124,12 @@ class UserServiceTest {
             // when
             assertThatThrownBy(() -> sut().updateProfileImage(1L, file))
                     // then
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("10MB");
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> {
+                        BusinessException be = (BusinessException) e;
+                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
+                        assertThat(be.getMessage()).contains("10MB");
+                    });
         }
     }
 }

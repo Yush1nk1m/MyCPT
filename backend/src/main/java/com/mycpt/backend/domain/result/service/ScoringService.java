@@ -1,7 +1,8 @@
 package com.mycpt.backend.domain.result.service;
 
+import com.mycpt.backend.common.exception.BusinessException;
+import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.domain.result.dto.ScoreRequest;
-import com.mycpt.backend.global.exception.InvalidScoreException;
 import org.springframework.stereotype.Service;
 
 /**
@@ -55,7 +56,7 @@ public class ScoringService {
      * 원점수를 검증하고 버킷 값으로 변환하여 반환
      * @param request POST /results/score 요청 바디
      * @return D/I/S/C 각각의 버킷 값 (1~9)
-     * @throws InvalidScoreException 범위 위반 또는 합계 불일치 시
+     * @throws BusinessException (INVALID_SCORE) 범위 위반 또는 합계 불일치 시
      */
     public Buckets normalize(ScoreRequest request) {
         ScoreRequest.Scores scores = request.scores();
@@ -76,7 +77,7 @@ public class ScoringService {
         int[] values = {scores.d(), scores.i(), scores.s(), scores.c()};
         for (int v : values) {
             if (v < MIN_SCORE || v > MAX_SCORE) {
-                throw new InvalidScoreException(
+                throw new BusinessException(ErrorCode.INVALID_SCORE,
                         "원점수는 %d 이상 %d 이하여야 합니다. 입력 값: %d".formatted(MIN_SCORE, MAX_SCORE, v));
             }
         }
@@ -84,7 +85,7 @@ public class ScoringService {
         // 2. D + I + S + C 합계 검증
         int sum = scores.d() + scores.i() + scores.s() + scores.c();
         if (sum != EXPECTED_SUM) {
-            throw new InvalidScoreException(
+            throw new BusinessException(ErrorCode.INVALID_SCORE,
                     "D+I+S+C 합계는 %d여야 합니다. 입력 값: %d".formatted(EXPECTED_SUM, sum));
         }
     }
