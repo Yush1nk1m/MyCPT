@@ -2,8 +2,10 @@ package com.mycpt.backend.domain.result.service;
 
 import com.mycpt.backend.common.exception.BusinessException;
 import com.mycpt.backend.common.exception.ErrorCode;
+import com.mycpt.backend.domain.result.dto.ResultListResponse;
 import com.mycpt.backend.domain.result.dto.ScoreRequest;
 import com.mycpt.backend.domain.result.entity.DiscResult;
+import com.mycpt.backend.domain.result.enums.RaterType;
 import com.mycpt.backend.domain.result.repository.DiscResultRepository;
 import com.mycpt.backend.domain.result.repository.TestRepository;
 import com.mycpt.backend.domain.user.entity.User;
@@ -14,6 +16,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -35,12 +40,40 @@ class ResultServiceTest {
 
     // ── 공통 픽스처 ───────────────────────────────────────────────────────────
 
+    private static final String REPORT = "## 결과 개요\n테스트 보고서";
+
     private ScoreRequest validRequest() {
         return new ScoreRequest("DISC", new ScoreRequest.Scores(32, 10, -4, -14));
     }
 
     private User stubUser() {
         return User.create("kakao-1", "유신", "https://example.com/img.jpg");
+    }
+
+    private DiscResult stubDiscResult(Long userId, RaterType raterType) {
+        User user = User.create("kakao-" + userId, "유저" + userId, null);
+        // 리플렉션으로 id 주입 - DB AUTO_INCREMENT를 UT에서 시뮬레이션
+        setId(user, userId);
+
+        com.mycpt.backend.domain.result.entity.Test test = (raterType == RaterType.SELF)
+                ? com.mycpt.backend.domain.result.entity.Test.createForSelf(user, "DISC")
+                : com.mycpt.backend.domain.result.entity.Test.createForOther(user, "DISC", "테스트용라벨");
+        setId(test, userId * 10);   // 단순 구분용 id
+
+        return DiscResult.create(test, 32, 10, -4, -14, 3, 2, 1, 2);
+    }
+
+    /**
+     * id 필드 리플렉션 주입 공통 헬퍼
+     */
+    private void setId(Object target, Long id) {
+        try {
+            var field = target.getClass().getDeclaredField("id");
+            field.setAccessible(true);
+            field.set(target, id);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     // ── save() ───────────────────────────────────────────────────────────────
@@ -87,6 +120,102 @@ class ResultServiceTest {
 
             verify(testRepository, never()).save(any());
             verify(discResultRepository, never()).save(any());
+        }
+    }
+
+    // ── list() ───────────────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("list()")
+    class ListResults {
+
+        @Test
+        @DisplayName("[UT-ResultSvc-이력조회-성공]")
+        void 이력조회_성공() {
+            // given: size=5, cursor=null -> 리포지토리에서 5개 반환 (hasNext=false)
+            List<DiscResult> rows = List.of(
+                    stubDiscResult(1L, RaterType.SELF),
+                    stubDiscResult(2L, RaterType.SELF),
+                    stubDiscResult(3L, RaterType.OTHER)
+            );
+            given(discResultRepository.findByUserIdWithCursor(
+                    eq(1L), isNull(), isNull(), any(PageRequest.class)
+            )).willReturn(rows);
+
+            // when
+            ResultListResponse response = sut().list(1L, null, null, 5);
+
+            // then
+            assertThat(response.results()).hasSize(3);
+            assertThat(response.hasNext()).isFalse();
+            assertThat(response.nextCursor()).isNull();
+        }
+
+        @Test
+        @DisplayName("[UT-ResultSvc-이력조회-다음페이지존재]")
+        void 이력조회_다음페이지존재() {
+            // given: size=2, 리포지토리에서 size+1=3개 반환 -> hasNext=true
+            List<DiscResult> rows = List.of(
+                    stubDiscResult(1L, RaterType.SELF),
+                    stubDiscResult(2L, RaterType.SELF),
+                    stubDiscResult(3L, RaterType.SELF)
+            );
+            given(discResultRepository.findByUserIdWithCursor(
+                    eq(1L), isNull(), isNull(), any(PageRequest.class)
+            )).willReturn(rows);
+
+            // when
+            ResultListResponse response = sut().list(1L, null, null, 2);
+
+            // then
+            assertThat(response.results()).hasSize(2);
+            assertThat(response.hasNext()).isTrue();
+            // nextCursor = page.getLast().getTest().getId() = 2L * 10 = 20L
+            assertThat(response.nextCursor()).isEqualTo(20L);
+        }
+
+        @Test
+        @DisplayName("[UT-ResultSvc-이력조회-마지막페이지]")
+        void 이력조회_마지막페이지() {
+            // given: size=5, 리포지토리에서 2개만 반환 -> hasNext=false
+            List<DiscResult> rows = List.of(
+                    stubDiscResult(1L, RaterType.SELF),
+                    stubDiscResult(2L, RaterType.OTHER)
+            );
+            given(discResultRepository.findByUserIdWithCursor(
+                    eq(1L), isNull(), eq(99L), any(PageRequest.class)
+            )).willReturn(rows);
+
+            // when
+            ResultListResponse response = sut().list(1L, null, 99L, 5);
+
+            // then
+            assertThat(response.results()).hasSize(2);
+            assertThat(response.hasNext()).isFalse();
+            assertThat(response.nextCursor()).isNull();
+        }
+
+        @Test
+        @DisplayName("[UT-ResultSvc-이력조회-raterType필터]")
+        void 이력조회_raterType필터() {
+            // given: raterType=SELF 필터 전달 -> 리포지토리가 SELF만 반환한다고 가정
+            // 리포지토리 필터 동작 자체는 DiscResultRepositoryTest에서 검증
+            // 여기서는 파라미터가 올바르게 전달되는지만 검증
+            List<DiscResult> rows = List.of(stubDiscResult(1L, RaterType.SELF));
+            given(discResultRepository.findByUserIdWithCursor(
+                    eq(1L), eq(RaterType.SELF), isNull(), any(PageRequest.class)
+            )).willReturn(rows);
+
+            // when
+            ResultListResponse response = sut().list(1L, RaterType.SELF, null, 5);
+
+            // then
+            assertThat(response.results()).hasSize(1);
+            assertThat(response.results().getFirst().raterType()).isEqualTo(RaterType.SELF);
+            // raterType 파라미터가 리포지토리로 올바르게 전달됐는지 검증
+            verify(discResultRepository).findByUserIdWithCursor(
+                    eq(1L), eq(RaterType.SELF), isNull(), any(PageRequest.class)
+            );
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.mycpt.backend.domain.auth.controller;
 
+import com.mycpt.backend.domain.auth.dto.MeResponse;
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -16,7 +17,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
-import java.util.Map;
 
 // Swagger 문서화 및 API 계약을 담당하는 인터페이스
 // 구현 로직은 AuthController에서 담당하고 이 인터페이스는 "무엇을 제공하는가"만 정의
@@ -93,5 +93,5 @@ public interface AuthApi {
                     )
             )
     })
-    ResponseEntity<Map<String, Object>> getMe(@AuthenticationPrincipal UserPrincipal principal);
+    ResponseEntity<MeResponse> getMe(@AuthenticationPrincipal UserPrincipal principal);
 }

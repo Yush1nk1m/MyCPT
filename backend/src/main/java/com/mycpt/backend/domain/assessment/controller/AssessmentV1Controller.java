@@ -1,6 +1,9 @@
 package com.mycpt.backend.domain.assessment.controller;
 
 import com.mycpt.backend.domain.assessment.dto.CreateTokenRequest;
+import com.mycpt.backend.domain.assessment.dto.CreateTokenResponse;
+import com.mycpt.backend.domain.assessment.dto.SubjectInfoResponse;
+import com.mycpt.backend.domain.assessment.dto.SubmitResponse;
 import com.mycpt.backend.domain.assessment.service.AssessmentService;
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
 import com.mycpt.backend.domain.result.dto.ScoreRequest;
@@ -9,9 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/assessments")
@@ -23,42 +23,34 @@ public class AssessmentV1Controller implements AssessmentApi {
     // POST /api/v1/assessments - 회원 전용 (SecurityConfig에서 anyRequest().authenticated())
     @PostMapping
     @Override
-    public ResponseEntity<Map<String, Object>> createToken(
+    public ResponseEntity<CreateTokenResponse> createToken(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody CreateTokenRequest request
     ) {
         AssessmentService.TokenResult result =
                 assessmentService.createToken(principal.getUser().getId(), request.label());
-
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("token", result.token());
-        body.put("expiresAt", result.expiresAt());
-        return ResponseEntity.status(HttpStatus.CREATED).body(body);
+        return ResponseEntity.status(HttpStatus.CREATED).body(CreateTokenResponse.from(result));
     }
 
     // GET /api/v1/assessments/{token} - 비회원 가능 (SecurityConfig permitAll)
     @GetMapping("/{token}")
     @Override
-    public ResponseEntity<Map<String, Object>> getSubjectInfo(
+    public ResponseEntity<SubjectInfoResponse> getSubjectInfo(
             @PathVariable String token
     ) {
         AssessmentService.SubjectInfo info = assessmentService.getSubjectInfo(token);
-
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("subjectNickname", info.subjectNickname());
-        body.put("subjectProfileImageUrl", info.subjectProfileImageUrl());
-        return ResponseEntity.ok(body);
+        return ResponseEntity.ok(SubjectInfoResponse.from(info));
     }
 
     // POST /api/v1/assessments/{token}/submit - 비회원 가능 (SecurityConfig permitAll)
     @PostMapping("/{token}/submit")
     @Override
-    public ResponseEntity<Map<String, String>> submit(
+    public ResponseEntity<SubmitResponse> submit(
             @PathVariable String token,
             @RequestBody ScoreRequest request
     ) {
         assessmentService.submit(token, request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Map.of("message", "응시가 완료되었습니다."));
+                .body(new SubmitResponse("응시가 완료되었습니다."));
     }
 }
