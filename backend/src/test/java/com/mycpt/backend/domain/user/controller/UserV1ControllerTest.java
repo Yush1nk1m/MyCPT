@@ -5,7 +5,7 @@ import com.mycpt.backend.domain.user.dto.UpdateProfileRequest;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.enums.Gender;
 import com.mycpt.backend.domain.user.service.UserService;
-import com.mycpt.backend.support.SliceTestSupport;
+import com.mycpt.backend.support.MvcTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -20,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(UserV1Controller.class)
 @DisplayName("UserV1Controller 슬라이스 테스트")
-class UserV1ControllerTest extends SliceTestSupport {
+class UserV1ControllerTest extends MvcTestSupport {
 
     @MockitoBean
     private UserService userService;

@@ -1,25 +1,12 @@
 package com.mycpt.backend.domain.auth.controller;
 
-import com.mycpt.backend.config.SecurityConfig;
-import com.mycpt.backend.domain.auth.dto.UserPrincipal;
-import com.mycpt.backend.domain.auth.service.CustomOAuth2UserService;
-import com.mycpt.backend.domain.user.entity.User;
-import com.mycpt.backend.support.SliceTestSupport;
-import org.junit.jupiter.api.BeforeEach;
+import com.mycpt.backend.support.MvcTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
 import static org.hamcrest.Matchers.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -28,7 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // JPA, Service 등 다른 레이어는 로드하지 않으므로 신속한 테스트 가능
 @WebMvcTest(AuthV1Controller.class)
 @DisplayName("AuthV1Controller 슬라이스 테스트")
-class AuthV1ControllerTest extends SliceTestSupport {
+class AuthV1ControllerTest extends MvcTestSupport {
 
     @Nested
     @DisplayName("GET /api/v1/auth/me")

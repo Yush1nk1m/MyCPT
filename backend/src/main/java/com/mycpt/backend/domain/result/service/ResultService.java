@@ -10,7 +10,6 @@ import com.mycpt.backend.domain.result.repository.DiscResultRepository;
 import com.mycpt.backend.domain.result.repository.TestRepository;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -116,7 +115,7 @@ public class ResultService {
      */
     public ResultDetailResponse detail(Long userId, Long testId) {
         DiscResult dr = discResultRepository.findByTestIdWithDetail(testId)
-                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 결과입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "존재하지 않는 결과입니다."));
 
         // 본인 소유 검증
         if (!dr.getTest().getUser().getId().equals(userId)) {

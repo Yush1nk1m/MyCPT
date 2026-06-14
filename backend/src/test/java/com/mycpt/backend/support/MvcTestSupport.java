@@ -20,9 +20,10 @@ import static org.mockito.BDDMockito.*;
 
 @Import(SecurityConfig.class)
 @ActiveProfiles("test")
-public class SliceTestSupport {
+public class MvcTestSupport {
 
-    @MockitoBean
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
     protected MockMvc mockMvc;
 
     @MockitoBean

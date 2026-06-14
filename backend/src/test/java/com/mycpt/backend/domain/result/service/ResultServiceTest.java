@@ -2,6 +2,7 @@ package com.mycpt.backend.domain.result.service;
 
 import com.mycpt.backend.common.exception.BusinessException;
 import com.mycpt.backend.common.exception.ErrorCode;
+import com.mycpt.backend.domain.result.dto.ResultDetailResponse;
 import com.mycpt.backend.domain.result.dto.ResultListResponse;
 import com.mycpt.backend.domain.result.dto.ScoreRequest;
 import com.mycpt.backend.domain.result.entity.DiscResult;
@@ -19,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -216,6 +218,68 @@ class ResultServiceTest {
             verify(discResultRepository).findByUserIdWithCursor(
                     eq(1L), eq(RaterType.SELF), isNull(), any(PageRequest.class)
             );
+        }
+    }
+
+    // ── detail() ─────────────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("detail()")
+    class DetailResult {
+
+        @Test
+        @DisplayName("[UT-ResultSvc-상세조회-성공]")
+        void 상세조회_성공() {
+            // given: userId=1L 본인 결과 조회
+            DiscResult dr = stubDiscResult(1L, RaterType.SELF);
+            given(discResultRepository.findByTestIdWithDetail(10L)).willReturn(Optional.of(dr));
+            given(cacheService.getReport(any())).willReturn(REPORT);
+
+            // when
+            ResultDetailResponse response = sut().detail(1L, 10L);
+
+            // then
+            assertThat(response).isNotNull();
+            assertThat(response.raterType()).isEqualTo(RaterType.SELF);
+            assertThat(response.report()).isEqualTo(REPORT);
+            verify(cacheService, times(1)).getReport(any());
+        }
+
+        @Test
+        @DisplayName("[UT-ResultSvc-상세조회-권한없음]")
+        void 상세조회_권한없음() {
+            // given: DB에는 userId=1L의 결과가 있으나 userId=2로 접근
+            DiscResult dr = stubDiscResult(1L, RaterType.SELF);
+            given(discResultRepository.findByTestIdWithDetail(10L)).willReturn(Optional.of(dr));
+
+            // when
+            assertThatThrownBy(() -> sut().detail(2L, 10L))
+                    // then
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> {
+                        BusinessException be = (BusinessException) e;
+                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
+                    });
+
+            // 권한 없으면 CacheService 미호출
+            verify(cacheService, never()).getReport(any());
+        }
+
+        @Test
+        @DisplayName("[UT-ResultSvc-상세조회-존재하지않는ID]")
+        void 상세조회_존재하지않는ID() {
+            // given
+            given(discResultRepository.findByTestIdWithDetail(999L)).willReturn(Optional.empty());
+
+            // when
+            assertThatThrownBy(() -> sut().detail(1L, 999L))
+                    // then
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> {
+                        BusinessException be = (BusinessException) e;
+                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND);
+                        assertThat(be.getMessage()).contains("존재하지 않는 결과입니다.");
+                    });
         }
     }
 }

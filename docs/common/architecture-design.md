@@ -1,20 +1,21 @@
 # MyCPT 시스템 아키텍처 설계
 
-**문서 버전**: v0.6
-**작성일**: '26.06.09.
+**문서 버전**: v0.7
+**작성일**: '26.06.14.
 **작성자**: 김유신
 
 ---
 
 ## 변경 이력
 
-| 버전 | 변경 내용                                                                                                                                           | 날짜       |
-| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| v0.2 | 패키지 루트 com.mycpt.backend로 수정. 컨트롤러 Interface+V1 네이밍 구조 반영. Swagger UI 추가.                                                      | '26.05.26. |
-| v0.3 | JWT 인증 방식으로 변경에 따른 아키텍처 및 Redis 명세 수정                                                                                           | '26.05.27. |
-| v0.4 | Next.js 컴포넌트 역할 추가                                                                                                                          | '26.05.28. |
-| v0.5 | 타인 평정 흐름 시퀀스 다이어그램 추가                                                                                                               | '26.06.05  |
-| v0.6 | result 도메인 패키지 구조 실제 구현 반영. RaterType enums 분리. DTO 패키지 추가. ForbiddenException 추가. EntityNotFoundException 핸들러 전역 이동. | '26.06.09  |
+| 버전 | 변경 내용                                                                                                                                                                                                                                          | 날짜       |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| v0.2 | 패키지 루트 com.mycpt.backend로 수정. 컨트롤러 Interface+V1 네이밍 구조 반영. Swagger UI 추가.                                                                                                                                                     | '26.05.26. |
+| v0.3 | JWT 인증 방식으로 변경에 따른 아키텍처 및 Redis 명세 수정                                                                                                                                                                                          | '26.05.27. |
+| v0.4 | Next.js 컴포넌트 역할 추가                                                                                                                                                                                                                         | '26.05.28. |
+| v0.5 | 타인 평정 흐름 시퀀스 다이어그램 추가                                                                                                                                                                                                              | '26.06.05  |
+| v0.6 | result 도메인 패키지 구조 실제 구현 반영. RaterType enums 분리. DTO 패키지 추가. ForbiddenException 추가. EntityNotFoundException 핸들러 전역 이동.                                                                                                | '26.06.09  |
+| v0.7 | 예외 처리 체계 통합 (BusinessException/ErrorCode/ErrorResponse). 개별 예외 클래스 제거. 응답 DTO Map → record 교체 반영 (MeResponse, UpdateProfileResponse, UpdateProfileImageResponse, CreateTokenResponse, SubjectInfoResponse, SubmitResponse). | '26.06.13  |
 
 ---
 
@@ -128,43 +129,41 @@ com.mycpt.backend
 │   │   │   ├── ScoreRequest.java            # POST /results/score 요청
 │   │   │   ├── ScoreResponse.java           # POST /results/score 응답
 │   │   │   ├── SaveResponse.java            # POST /results 응답
-│   │   │   ├── ResultListResponse.java      # GET /results 응답 래퍼
-│   │   │   ├── ResultSummaryResponse.java   # GET /results 목록 카드 단위
+│   │   │   ├── ResultListResponse.java      # GET /results 응답
+│   │   │   ├── ResultSummaryResponse.java   # ResultListResponse 내 항목
 │   │   │   ├── ResultDetailResponse.java    # GET /results/{id} 응답
-│   │   │   ├── DiscBuckets.java             # 버킷값 공용 DTO (1~3)
-│   │   │   └── DiscScores.java              # 원점수 공용 DTO (-24~+48)
+│   │   │   ├── DiscScores.java              # 원점수 record
+│   │   │   └── DiscBuckets.java             # 버킷값 record
 │   │   └── enums/
-│   │       └── RaterType.java               # SELF / OTHER (Test 중첩 enum에서 분리)
+│   │       └── RaterType.java               # SELF / OTHER
 │   │
-│   ├── auth/                        # 카카오 OAuth2 + JWT
+│   ├── auth/                        # 인증
 │   │   ├── controller/
-│   │   │   ├── AuthApi.java                 # Swagger 문서 + API 계약 인터페이스
-│   │   │   └── AuthV1Controller.java        # GET /auth/kakao, GET /auth/kakao/callback, POST /auth/logout, GET /auth/me
+│   │   │   ├── AuthApi.java
+│   │   │   └── AuthV1Controller.java        # GET /auth/kakao, GET /auth/me, POST /auth/logout
 │   │   ├── service/
-│   │   │   ├── CustomOAuth2UserService.java # 카카오 사용자 조회/생성
-│   │   │   └── JwtProvider.java             # JWT 발급/검증
-│   │   ├── filter/
-│   │   │   └── JwtAuthenticationFilter.java # 요청마다 JWT 검증
-│   │   ├── repository/
-│   │   │   └── UserRepository.java          # auth 도메인에서도 참조
+│   │   │   └── CustomOAuth2UserService.java # 카카오 사용자 정보 조회 + 회원 가입/로그인
 │   │   └── dto/
-│   │       ├── UserPrincipal.java           # SecurityContext 보관 인증 객체
-│   │       └── KakaoUserInfo.java           # 카카오 사용자 정보 파싱
+│   │       ├── KakaoUserInfo.java           # 카카오 응답 파싱
+│   │       ├── UserPrincipal.java           # SecurityContext 주입 객체
+│   │       └── MeResponse.java             # GET /auth/me 응답
 │   │
-│   ├── user/                        # 회원 프로필 관리
+│   ├── user/                        # 회원 프로필
 │   │   ├── controller/
-│   │   │   ├── UserApi.java                 # Swagger 문서 + API 계약 인터페이스
-│   │   │   └── UserV1Controller.java        # PATCH /users/me, POST /users/me/profile-image, DELETE /users/me
+│   │   │   ├── UserApi.java
+│   │   │   └── UserV1Controller.java        # PATCH /users/me, POST /users/me/profile-image
 │   │   ├── service/
-│   │   │   └── UserService.java             # 프로필 수정, 이미지 업로드, 회원 탈퇴
+│   │   │   └── UserService.java             # 프로필 수정, 이미지 업로드
 │   │   ├── repository/
 │   │   │   └── UserRepository.java
 │   │   ├── entity/
 │   │   │   └── User.java
 │   │   ├── dto/
-│   │   │   └── UpdateProfileRequest.java
+│   │   │   ├── UpdateProfileRequest.java
+│   │   │   ├── UpdateProfileResponse.java       # PATCH /users/me 응답
+│   │   │   └── UpdateProfileImageResponse.java  # POST /users/me/profile-image 응답
 │   │   └── enums/
-│   │       └── Gender.java                  # M / F / N (User 중첩 enum에서 분리)
+│   │       └── Gender.java                  # M / F / N
 │   │
 │   ├── assessment/                  # 타인 평정
 │   │   ├── controller/
@@ -177,7 +176,10 @@ com.mycpt.backend
 │   │   ├── entity/
 │   │   │   └── AssessmentToken.java
 │   │   └── dto/
-│   │       └── CreateTokenRequest.java
+│   │       ├── CreateTokenRequest.java
+│   │       ├── CreateTokenResponse.java     # POST /assessments 응답
+│   │       ├── SubjectInfoResponse.java     # GET /assessments/{token} 응답
+│   │       └── SubmitResponse.java          # POST /assessments/{token}/submit 응답
 │   │
 │   ├── statistics/                  # 통계 집계
 │   │   ├── controller/
@@ -237,20 +239,16 @@ com.mycpt.backend
 │       └── entity/
 │           └── CoinTransaction.java
 │
-├── global/                          # 전역 공통 (실제 구현 기준)
+├── global/                          # 전역 공통
 │   └── exception/
-│       ├── GlobalExceptionHandler.java      # @RestControllerAdvice. 도메인별 예외 → HTTP 응답 변환
-│       ├── InvalidScoreException.java       # 400 INVALID_SCORE
-│       ├── TokenExpiredException.java       # 400 EXPIRED_CODE
-│       ├── TokenAlreadyUsedException.java   # 400 TOKEN_USED
-│       └── ForbiddenException.java          # 403 FORBIDDEN
+│       └── GlobalExceptionHandler.java      # @RestControllerAdvice. BusinessException → HTTP 응답 변환
 │
-├── common/                          # 공통 유틸 (미구현 — 기술 부채)
+├── common/                          # 공통 유틸
 │   ├── exception/
-│   │   ├── BusinessException.java           # (미구현) 예외 추상화 베이스
-│   │   └── ErrorCode.java                   # (미구현) 에러 코드 열거형
+│   │   ├── BusinessException.java           # 서비스 전체 비즈니스 예외 베이스
+│   │   └── ErrorCode.java                   # HTTP 상태 + 기본 메시지 열거형 (INVALID_SCORE, EXPIRED_CODE, TOKEN_USED, FORBIDDEN, NOT_FOUND, ALREADY_COLLEAGUE, SELF_INVITE, INSUFFICIENT_COINS, INVALID_REQUEST)
 │   ├── response/
-│   │   └── ErrorResponse.java               # (미구현) { code, message } 공통 응답 DTO
+│   │   └── ErrorResponse.java               # { code, message } 공통 응답 DTO
 │   └── storage/
 │       ├── StorageService.java              # 인터페이스
 │       ├── LocalStorageService.java         # 개발 환경 (@Profile("local"))
