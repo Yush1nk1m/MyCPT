@@ -23,21 +23,24 @@ const GENDER_OPTIONS: { value: Gender; label: string }[] = [
   { value: "N", label: "선택 안 함" },
 ];
 
-export default function MeProfilePage() {
-  const { data: me } = useMe();
+function MeProfileForm({
+  me,
+}: {
+  me: NonNullable<ReturnType<typeof useMe>["data"]>;
+}) {
   const setUser = useAuthStore((s) => s.setUser);
   const queryClient = useQueryClient();
   const router = useRouter();
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   // 폼 상태 — me 데이터로 초기화
-  const [nickname, setNickname] = useState(me?.nickname ?? "");
+  const [nickname, setNickname] = useState(me.nickname ?? "");
   const [birthYear, setBirthYear] = useState<number | null>(
-    me?.birthYear ?? null,
+    me.birthYear ?? null,
   );
-  const [gender, setGender] = useState<Gender | null>(me?.gender ?? null);
+  const [gender, setGender] = useState<Gender | null>(me.gender ?? null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(
-    me?.profileImageUrl ?? null,
+    me.profileImageUrl ?? null,
   );
   const [imageFile, setImageFile] = useState<File | null>(null);
 
@@ -274,4 +277,25 @@ export default function MeProfilePage() {
       </div>
     </div>
   );
+}
+
+export default function MeProfilePage() {
+  const { data: me, isLoading } = useMe();
+
+  if (isLoading || !me) {
+    return (
+      <div className="flex flex-col min-h-screen bg-paper">
+        <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-line">
+          <div className="h-4 w-24 rounded bg-paper-2 animate-pulse" />
+        </div>
+        <div className="flex flex-col gap-4 px-4 py-4">
+          <div className="h-20 rounded-xl bg-paper-2 animate-pulse" />
+          <div className="h-14 rounded-xl bg-paper-2 animate-pulse" />
+          <div className="h-14 rounded-xl bg-paper-2 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  return <MeProfileForm me={me} />;
 }
