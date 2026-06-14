@@ -22,7 +22,7 @@ import static org.mockito.BDDMockito.*;
 @ActiveProfiles("test")
 public class SliceTestSupport {
 
-    @Autowired
+    @MockitoBean
     protected MockMvc mockMvc;
 
     @MockitoBean
