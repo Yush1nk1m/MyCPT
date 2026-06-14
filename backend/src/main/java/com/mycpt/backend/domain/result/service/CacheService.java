@@ -3,9 +3,9 @@ package com.mycpt.backend.domain.result.service;
 import com.mycpt.backend.domain.result.entity.DiscCache;
 import com.mycpt.backend.domain.result.entity.DiscCacheId;
 import com.mycpt.backend.domain.result.repository.DiscCacheRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;

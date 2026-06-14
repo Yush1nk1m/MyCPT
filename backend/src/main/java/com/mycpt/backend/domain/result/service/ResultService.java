@@ -10,10 +10,10 @@ import com.mycpt.backend.domain.result.repository.DiscResultRepository;
 import com.mycpt.backend.domain.result.repository.TestRepository;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 

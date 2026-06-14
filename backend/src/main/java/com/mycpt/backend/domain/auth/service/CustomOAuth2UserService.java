@@ -4,13 +4,13 @@ import com.mycpt.backend.domain.auth.dto.KakaoUserInfo;
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 // DefaultOAuth2UserService가 카카오 userinfo 엔드포인트 HTTP 호출, 응답 JSON 파싱, OAuth2User 객체 생성까지 처리
 // loadUser() 메서드만 오버라이드하여 결과를 DB에 저장하는 처리 로직만 추가하면 됨

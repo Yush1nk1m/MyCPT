@@ -12,9 +12,9 @@ import com.mycpt.backend.domain.result.repository.TestRepository;
 import com.mycpt.backend.domain.result.service.ScoringService;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
