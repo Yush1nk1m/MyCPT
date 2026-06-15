@@ -1,23 +1,25 @@
 -- ============================================================
 -- MyCPT DDL
--- 버전: v0.5
--- 작성일: '26.05.25.
--- 변경: test_results → tests + disc_results 분리 (Class Table Inheritance)
+-- 버전: v0.9
+-- 작성일: '26.06.15.
+-- 변경: disc_results → disc_tests (JPA @Inheritance(JOINED) 적용)
+--        tests.test_type 제거 → dtype 추가 (@DiscriminatorColumn)
+--        notifications CTI 적용 (colleague_notifications, chemistry_notifications)
 -- ============================================================
 
 -- ============================================================
 -- 1. users
 -- ============================================================
 CREATE TABLE users (
-    id                BIGINT       NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
-    kakao_id          VARCHAR(50)  NOT NULL                  COMMENT '카카오 고유 식별자',
-    nickname          VARCHAR(30)  NOT NULL                  COMMENT '서비스 닉네임 (카카오 닉네임 초기값, 수정 가능)',
-    profile_image_url VARCHAR(300) NULL                      COMMENT '프로필 이미지 Full URL. 카카오 기본 이미지 또는 업로드 후 S3 Full URL. NULL이면 기본 이미지 사용',
-    birth_year        YEAR         NULL                      COMMENT '로그인 후 프로필 설정 시 입력. NULL이면 미입력 상태',
-    gender            ENUM('M','F','N') NULL                 COMMENT 'M: 남성, F: 여성, N: 선택 안 함',
-    coins             TINYINT      NOT NULL DEFAULT 3        COMMENT '현재 코인 잔액 (0~3)',
-    next_coin_at      DATETIME     NULL                      COMMENT '다음 코인 충전 예정 시각. NULL이면 만충 상태',
-    created_at        DATETIME     NOT NULL                  COMMENT '가입 시각',
+    id                BIGINT            NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
+    kakao_id          VARCHAR(50)       NOT NULL                  COMMENT '카카오 고유 식별자',
+    nickname          VARCHAR(30)       NOT NULL                  COMMENT '서비스 닉네임 (카카오 닉네임 초기값, 수정 가능)',
+    profile_image_url VARCHAR(300)      NULL                      COMMENT '프로필 이미지 Full URL. 카카오 기본 이미지 또는 S3 Full URL. NULL이면 기본 이미지 사용',
+    birth_year        YEAR              NULL                      COMMENT '로그인 후 프로필 설정 시 입력. NULL이면 미입력 상태',
+    gender            ENUM('M','F','N') NULL                      COMMENT 'M: 남성, F: 여성, N: 선택 안 함',
+    coins             TINYINT           NOT NULL DEFAULT 3        COMMENT '현재 코인 잔액 (0~3)',
+    next_coin_at      DATETIME          NULL                      COMMENT '다음 코인 충전 예정 시각. NULL이면 만충 상태',
+    created_at        DATETIME          NOT NULL                  COMMENT '가입 시각',
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_kakao_id (kakao_id)
@@ -25,7 +27,7 @@ CREATE TABLE users (
 
 -- ============================================================
 -- 2. disc_cache
---    users/tests 보다 먼저 생성 — disc_results에서 FK 참조
+--    users/tests 보다 먼저 생성 — disc_tests에서 FK 참조
 --    행 DELETE 없이 UPDATE 갱신 → FK 참조 무결성 항상 유지
 -- ============================================================
 CREATE TABLE disc_cache (
@@ -34,10 +36,10 @@ CREATE TABLE disc_cache (
     s           TINYINT  NOT NULL  COMMENT 'S 버킷값 (1~3)',
     c           TINYINT  NOT NULL  COMMENT 'C 버킷값 (1~3)',
     report      TEXT     NULL      COMMENT 'Markdown 형식 보고서. NULL=미생성. 이름 미포함. 렌더링 시 이름 삽입',
-    created_at  DATETIME NULL      COMMENT '캐시 생성/갱신 시각. NULL=미생성. (온디맨드 만료 판단 기준)',
+    created_at  DATETIME NULL      COMMENT '캐시 생성/갱신 시각. NULL=미생성. 온디맨드 만료 판단 기준',
 
     PRIMARY KEY (d, i, s, c)
-) COMMENT = 'DISC 버킷 기반 보고서 캐시. 최대 3^4 = 81 행. 행 삭제 없이 UPDATE 갱신. Markdown 단일 TEXT';
+) COMMENT = 'DISC 버킷 기반 보고서 캐시. 최대 3^4=81 행. 행 삭제 없이 UPDATE 갱신. Markdown 단일 TEXT';
 
 -- 81개 사전 삽입 (d, i, s, c 각 1~3 전체 조합)
 INSERT INTO disc_cache (d, i, s, c, report, created_at) VALUES
@@ -71,35 +73,36 @@ INSERT INTO disc_cache (d, i, s, c, report, created_at) VALUES
 
 -- ============================================================
 -- 3. tests
---    Class Table Inheritance 부모 테이블.
---    검사 유형 무관 공통 메타데이터 (rater_type, label, test_type) 저장.
---    DISC → disc_results, MBTI → mbti_results(추후), Big5 → big5_results(추후)
+--    JPA @Inheritance(JOINED) 부모 테이블.
+--    검사 유형 무관 공통 메타데이터 저장.
+--    dtype: JPA @DiscriminatorColumn — 코드가 값의 유효 범위 보장
+--    DISC → disc_tests, MBTI → mbti_tests(추후), Big5 → big5_tests(추후)
 -- ============================================================
 CREATE TABLE tests (
-    id          BIGINT      NOT NULL AUTO_INCREMENT            COMMENT '내부 식별자',
-    user_id     BIGINT      NOT NULL                           COMMENT 'FK → users.id. 결과 귀속 대상 (피평정자)',
-    rater_type  ENUM('SELF','OTHER') NOT NULL DEFAULT 'SELF'   COMMENT 'SELF: 자기 평정 / OTHER: 타인 평정',
-    test_type   VARCHAR(20) NOT NULL DEFAULT 'DISC'            COMMENT '검사 유형 (DISC / MBTI / BIG5 등)',
-    label       VARCHAR(30) NULL                               COMMENT '타인 평정 식별 라벨 (예: 여자친구). 자기 평정은 NULL. assessment_tokens.label 에서 복사',
-    created_at  DATETIME    NOT NULL                           COMMENT '검사 완료 시각',
+    id          BIGINT               NOT NULL AUTO_INCREMENT            COMMENT '내부 식별자',
+    user_id     BIGINT               NOT NULL                           COMMENT 'FK → users.id. 결과 귀속 대상 (피평정자)',
+    rater_type  ENUM('SELF','OTHER') NOT NULL DEFAULT 'SELF'            COMMENT 'SELF: 자기 평정 / OTHER: 타인 평정',
+    dtype       VARCHAR(20)          NOT NULL                           COMMENT 'JPA @DiscriminatorColumn. DISC / MBTI / BIG5 등. 코드가 유효 범위 보장',
+    label       VARCHAR(30)          NULL                               COMMENT '타인 평정 식별 라벨 (예: 여자친구). 자기 평정은 NULL. assessment_tokens.label 에서 복사',
+    created_at  DATETIME             NOT NULL                           COMMENT '검사 완료 시각',
 
     PRIMARY KEY (id),
-    KEY idx_tests_user_id      (user_id),
-    KEY idx_tests_user_type    (user_id, test_type),
-    KEY idx_tests_rater_type   (rater_type),
+    KEY idx_tests_user_id    (user_id),
+    KEY idx_tests_rater_type (rater_type),
 
     CONSTRAINT fk_tests_user
         FOREIGN KEY (user_id)
         REFERENCES users (id)
-) COMMENT = '검사 응시 헤더. 유형 무관 공통 메타데이터. Class Table Inheritance 부모 테이블';
+) COMMENT = '검사 응시 헤더. 유형 무관 공통 메타데이터. JPA @Inheritance(JOINED) 부모 테이블';
 
 -- ============================================================
--- 4. disc_results
---    tests 1:1 확장 테이블. DISC 전용 원점수 + 버킷값 저장.
---    test_id를 PK로 사용하여 1:1 관계를 스키마 레벨에서 강제.
+-- 4. disc_tests
+--    tests JPA JOINED 상속 자식 테이블. DISC 전용 원점수 + 버킷값 저장.
+--    test_id: tests.id PK 공유 — JPA @Inheritance(JOINED) 구조
+--    MBTI 추가 시 mbti_tests 테이블만 신규 추가. tests 스키마 변경 없음.
 -- ============================================================
-CREATE TABLE disc_results (
-    test_id  BIGINT  NOT NULL  COMMENT 'PK 겸 FK → tests.id. 1:1 관계 강제',
+CREATE TABLE disc_tests (
+    test_id  BIGINT  NOT NULL  COMMENT 'PK 겸 FK → tests.id. JOINED 상속 PK 공유',
     d_score  TINYINT NOT NULL  COMMENT 'D 원점수 (-24 ~ +48)',
     i_score  TINYINT NOT NULL  COMMENT 'I 원점수 (-24 ~ +48)',
     s_score  TINYINT NOT NULL  COMMENT 'S 원점수 (-24 ~ +48)',
@@ -110,16 +113,16 @@ CREATE TABLE disc_results (
     c_bucket TINYINT NOT NULL  COMMENT 'C 버킷값 (1~3)',
 
     PRIMARY KEY (test_id),
-    KEY idx_disc_results_cache (d_bucket, i_bucket, s_bucket, c_bucket),
+    KEY idx_disc_tests_cache (d_bucket, i_bucket, s_bucket, c_bucket),
 
-    CONSTRAINT fk_disc_results_test
+    CONSTRAINT fk_disc_tests_test
         FOREIGN KEY (test_id)
         REFERENCES tests (id),
 
-    CONSTRAINT fk_disc_results_disc_cache
+    CONSTRAINT fk_disc_tests_disc_cache
         FOREIGN KEY (d_bucket, i_bucket, s_bucket, c_bucket)
         REFERENCES disc_cache (d, i, s, c)
-) COMMENT = 'DISC 검사 전용 결과. tests 1:1 확장. 원점수 + 버킷값 저장. test_id PK로 1:1 관계 강제';
+) COMMENT = 'DISC 검사 전용 결과. tests JOINED 상속 자식. 원점수 + 버킷값 저장';
 
 -- ============================================================
 -- 5. coin_transactions
@@ -196,9 +199,9 @@ CREATE TABLE colleagues (
     created_at  DATETIME    NOT NULL                  COMMENT '동료 관계 생성 시각',
 
     PRIMARY KEY (id),
-    UNIQUE KEY uq_colleagues_pair      (user_a_id, user_b_id),
-    KEY idx_colleagues_user_a_id       (user_a_id),
-    KEY idx_colleagues_user_b_id       (user_b_id),
+    UNIQUE KEY uq_colleagues_pair (user_a_id, user_b_id),
+    KEY idx_colleagues_user_a_id  (user_a_id),
+    KEY idx_colleagues_user_b_id  (user_b_id),
 
     CONSTRAINT fk_colleagues_user_a
         FOREIGN KEY (user_a_id)
@@ -241,15 +244,16 @@ CREATE TABLE chemistry_reports (
 
 -- ============================================================
 -- 10. notifications
+--     JPA @Inheritance(JOINED) 부모 테이블.
+--     dtype: JPA @DiscriminatorColumn — 알림 유형별 서브타입 식별
+--     클릭 시 즉시 DELETE — 배치 불필요
 -- ============================================================
 CREATE TABLE notifications (
-    id              BIGINT          NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
-    user_id         BIGINT          NOT NULL                  COMMENT 'FK → users.id. 수신자',
-    type            ENUM('CHEMISTRY_REPORT','COLLEAGUE_REGISTERED') NOT NULL
-                                                              COMMENT 'CHEMISTRY_REPORT: 케미 보고서 완료 / COLLEAGUE_REGISTERED: 동료 등록',
-    reference_id    BIGINT          NOT NULL                  COMMENT '관련 엔티티 id (chemistry_reports.id 또는 colleagues.id)',
-    message         VARCHAR(255)    NOT NULL                  COMMENT '알림 문구',
-    created_at      DATETIME        NOT NULL                  COMMENT '알림 발생 시각',
+    id          BIGINT       NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
+    user_id     BIGINT       NOT NULL                  COMMENT 'FK → users.id. 수신자',
+    dtype       VARCHAR(30)  NOT NULL                  COMMENT 'JPA @DiscriminatorColumn. COLLEAGUE_REGISTERED / CHEMISTRY_REPORT 등',
+    message     VARCHAR(255) NOT NULL                  COMMENT '알림 문구',
+    created_at  DATETIME     NOT NULL                  COMMENT '알림 발생 시각',
 
     PRIMARY KEY (id),
     KEY idx_notifications_user_created (user_id, created_at),
@@ -257,4 +261,44 @@ CREATE TABLE notifications (
     CONSTRAINT fk_notifications_user
         FOREIGN KEY (user_id)
         REFERENCES users (id)
-) COMMENT = '인앱 알림. 클릭 시 즉시 DELETE. 배치 불필요';
+) COMMENT = '인앱 알림 공통 헤더. JPA @Inheritance(JOINED) 부모 테이블. 클릭 시 즉시 DELETE';
+
+-- ============================================================
+-- 11. colleague_notifications
+--     COLLEAGUE_REGISTERED 알림 전용 서브타입.
+--     colleague_id → colleagues.id FK로 타입 안전성 확보.
+-- ============================================================
+CREATE TABLE colleague_notifications (
+    id              BIGINT  NOT NULL  COMMENT 'PK 겸 FK → notifications.id. JOINED 상속 PK 공유',
+    colleague_id    BIGINT  NOT NULL  COMMENT 'FK → colleagues.id. 등록된 동료 관계',
+
+    PRIMARY KEY (id),
+
+    CONSTRAINT fk_colleague_notifications_notification
+        FOREIGN KEY (id)
+        REFERENCES notifications (id),
+
+    CONSTRAINT fk_colleague_notifications_colleague
+        FOREIGN KEY (colleague_id)
+        REFERENCES colleagues (id)
+) COMMENT = 'COLLEAGUE_REGISTERED 알림 전용. notifications JOINED 상속 자식';
+
+-- ============================================================
+-- 12. chemistry_notifications
+--     CHEMISTRY_REPORT 알림 전용 서브타입.
+--     chemistry_report_id → chemistry_reports.id FK로 타입 안전성 확보.
+-- ============================================================
+CREATE TABLE chemistry_notifications (
+    id                  BIGINT  NOT NULL  COMMENT 'PK 겸 FK → notifications.id. JOINED 상속 PK 공유',
+    chemistry_report_id BIGINT  NOT NULL  COMMENT 'FK → chemistry_reports.id. 완료된 케미 보고서',
+
+    PRIMARY KEY (id),
+
+    CONSTRAINT fk_chemistry_notifications_notification
+        FOREIGN KEY (id)
+        REFERENCES notifications (id),
+
+    CONSTRAINT fk_chemistry_notifications_chemistry_report
+        FOREIGN KEY (chemistry_report_id)
+        REFERENCES chemistry_reports (id)
+) COMMENT = 'CHEMISTRY_REPORT 알림 전용. notifications JOINED 상속 자식';

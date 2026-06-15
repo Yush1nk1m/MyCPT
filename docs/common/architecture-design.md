@@ -1,6 +1,6 @@
 # MyCPT 시스템 아키텍처 설계
 
-**문서 버전**: v0.7
+**문서 버전**: v0.8
 **작성일**: '26.06.14.
 **작성자**: 김유신
 
@@ -8,14 +8,15 @@
 
 ## 변경 이력
 
-| 버전 | 변경 내용                                                                                                                                                                                                                                          | 날짜       |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| v0.2 | 패키지 루트 com.mycpt.backend로 수정. 컨트롤러 Interface+V1 네이밍 구조 반영. Swagger UI 추가.                                                                                                                                                     | '26.05.26. |
-| v0.3 | JWT 인증 방식으로 변경에 따른 아키텍처 및 Redis 명세 수정                                                                                                                                                                                          | '26.05.27. |
-| v0.4 | Next.js 컴포넌트 역할 추가                                                                                                                                                                                                                         | '26.05.28. |
-| v0.5 | 타인 평정 흐름 시퀀스 다이어그램 추가                                                                                                                                                                                                              | '26.06.05  |
-| v0.6 | result 도메인 패키지 구조 실제 구현 반영. RaterType enums 분리. DTO 패키지 추가. ForbiddenException 추가. EntityNotFoundException 핸들러 전역 이동.                                                                                                | '26.06.09  |
-| v0.7 | 예외 처리 체계 통합 (BusinessException/ErrorCode/ErrorResponse). 개별 예외 클래스 제거. 응답 DTO Map → record 교체 반영 (MeResponse, UpdateProfileResponse, UpdateProfileImageResponse, CreateTokenResponse, SubjectInfoResponse, SubmitResponse). | '26.06.13  |
+| 버전 | 변경 내용                                                                                                                                                                                                                                                                                           | 날짜       |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| v0.2 | 패키지 루트 com.mycpt.backend로 수정. 컨트롤러 Interface+V1 네이밍 구조 반영. Swagger UI 추가.                                                                                                                                                                                                      | '26.05.26. |
+| v0.3 | JWT 인증 방식으로 변경에 따른 아키텍처 및 Redis 명세 수정                                                                                                                                                                                                                                           | '26.05.27. |
+| v0.4 | Next.js 컴포넌트 역할 추가                                                                                                                                                                                                                                                                          | '26.05.28. |
+| v0.5 | 타인 평정 흐름 시퀀스 다이어그램 추가                                                                                                                                                                                                                                                               | '26.06.05. |
+| v0.6 | result 도메인 패키지 구조 실제 구현 반영. RaterType enums 분리. DTO 패키지 추가. ForbiddenException 추가. EntityNotFoundException 핸들러 전역 이동.                                                                                                                                                 | '26.06.09. |
+| v0.7 | 예외 처리 체계 통합 (BusinessException/ErrorCode/ErrorResponse). 개별 예외 클래스 제거. 응답 DTO Map → record 교체 반영 (MeResponse, UpdateProfileResponse, UpdateProfileImageResponse, CreateTokenResponse, SubjectInfoResponse, SubmitResponse).                                                  | '26.06.13. |
+| v0.8 | `DiscResult` → `DiscTest`, `DiscResultRepository` → `DiscTestRepository` 이름 변경. `Test` 엔티티 추상 클래스 전환 (`@Inheritance(JOINED)`). notification 도메인 CTI 적용 (`Notification` 추상화, `ColleagueNotification` / `ChemistryNotification` 서브클래스 추가). MySQL 테이블 수 10 → 12 반영. | '26.06.15. |
 
 ---
 
@@ -64,7 +65,7 @@
 
 | 시스템               | 용도                                                   |
 | -------------------- | ------------------------------------------------------ |
-| MySQL                | 메인 데이터 저장소 (9개 테이블)                        |
+| MySQL                | 메인 데이터 저장소 (12개 테이블)                       |
 | Redis                | disc_cache @Cacheable (운영 환경)                      |
 | Anthropic Claude API | DISC 분석 보고서 생성, 케미 보고서 생성                |
 | AWS S3               | 프로필 이미지 저장 (운영 환경. 개발은 로컬 파일시스템) |
@@ -118,52 +119,53 @@ com.mycpt.backend
 │   │   │   └── ResultService.java           # 결과 저장 + 이력/상세 조회
 │   │   ├── repository/
 │   │   │   ├── TestRepository.java
-│   │   │   ├── DiscResultRepository.java
+│   │   │   ├── DiscTestRepository.java      # disc_tests 테이블 (JOINED 상속 자식)
 │   │   │   └── DiscCacheRepository.java
 │   │   ├── entity/
-│   │   │   ├── Test.java                    # tests 테이블 (CTI 부모)
-│   │   │   ├── DiscResult.java              # disc_results 테이블 (CTI 자식)
+│   │   │   ├── Test.java                    # tests 테이블. @Inheritance(JOINED) 추상 부모
+│   │   │   ├── DiscTest.java                # disc_tests 테이블. Test 상속 자식 (DISC 전용)
 │   │   │   ├── DiscCache.java               # disc_cache 테이블
 │   │   │   └── DiscCacheId.java             # disc_cache 복합 PK @Embeddable
-│   │   ├── dto/
-│   │   │   ├── ScoreRequest.java            # POST /results/score 요청
-│   │   │   ├── ScoreResponse.java           # POST /results/score 응답
-│   │   │   ├── SaveResponse.java            # POST /results 응답
-│   │   │   ├── ResultListResponse.java      # GET /results 응답
-│   │   │   ├── ResultSummaryResponse.java   # ResultListResponse 내 항목
-│   │   │   ├── ResultDetailResponse.java    # GET /results/{id} 응답
-│   │   │   ├── DiscScores.java              # 원점수 record
-│   │   │   └── DiscBuckets.java             # 버킷값 record
-│   │   └── enums/
-│   │       └── RaterType.java               # SELF / OTHER
+│   │   ├── enums/
+│   │   │   └── RaterType.java               # SELF / OTHER
+│   │   └── dto/
+│   │       ├── ScoreRequest.java            # POST /results/score 요청
+│   │       ├── ScoreResponse.java           # POST /results/score 응답
+│   │       ├── SaveResponse.java            # POST /results 응답
+│   │       ├── ResultListResponse.java      # GET /results 응답
+│   │       ├── ResultSummaryResponse.java   # GET /results 목록 항목
+│   │       ├── ResultDetailResponse.java    # GET /results/{id} 응답
+│   │       ├── DiscScores.java              # 원점수 공용 record
+│   │       └── DiscBuckets.java             # 버킷값 공용 record
 │   │
 │   ├── auth/                        # 인증
 │   │   ├── controller/
 │   │   │   ├── AuthApi.java
 │   │   │   └── AuthV1Controller.java        # GET /auth/kakao, GET /auth/me, POST /auth/logout
 │   │   ├── service/
-│   │   │   └── CustomOAuth2UserService.java # 카카오 사용자 정보 조회 + 회원 가입/로그인
-│   │   └── dto/
-│   │       ├── KakaoUserInfo.java           # 카카오 응답 파싱
-│   │       ├── UserPrincipal.java           # SecurityContext 주입 객체
-│   │       └── MeResponse.java             # GET /auth/me 응답
+│   │   │   └── CustomOAuth2UserService.java # 카카오 사용자 조회/신규 가입
+│   │   ├── dto/
+│   │   │   ├── MeResponse.java
+│   │   │   └── UserPrincipal.java           # Spring Security Principal
+│   │   └── handler/
+│   │       └── OAuth2SuccessHandler.java    # 로그인 성공 후 JWT 발급
 │   │
-│   ├── user/                        # 회원 프로필
+│   ├── user/                        # 프로필
 │   │   ├── controller/
 │   │   │   ├── UserApi.java
 │   │   │   └── UserV1Controller.java        # PATCH /users/me, POST /users/me/profile-image
 │   │   ├── service/
-│   │   │   └── UserService.java             # 프로필 수정, 이미지 업로드
+│   │   │   └── UserService.java
 │   │   ├── repository/
 │   │   │   └── UserRepository.java
 │   │   ├── entity/
 │   │   │   └── User.java
-│   │   ├── dto/
-│   │   │   ├── UpdateProfileRequest.java
-│   │   │   ├── UpdateProfileResponse.java       # PATCH /users/me 응답
-│   │   │   └── UpdateProfileImageResponse.java  # POST /users/me/profile-image 응답
-│   │   └── enums/
-│   │       └── Gender.java                  # M / F / N
+│   │   ├── enums/
+│   │   │   └── Gender.java
+│   │   └── dto/
+│   │       ├── UpdateProfileRequest.java
+│   │       ├── UpdateProfileResponse.java
+│   │       └── UpdateProfileImageResponse.java
 │   │
 │   ├── assessment/                  # 타인 평정
 │   │   ├── controller/
@@ -177,9 +179,9 @@ com.mycpt.backend
 │   │   │   └── AssessmentToken.java
 │   │   └── dto/
 │   │       ├── CreateTokenRequest.java
-│   │       ├── CreateTokenResponse.java     # POST /assessments 응답
-│   │       ├── SubjectInfoResponse.java     # GET /assessments/{token} 응답
-│   │       └── SubmitResponse.java          # POST /assessments/{token}/submit 응답
+│   │       ├── CreateTokenResponse.java
+│   │       ├── SubjectInfoResponse.java
+│   │       └── SubmitResponse.java
 │   │
 │   ├── statistics/                  # 통계 집계
 │   │   ├── controller/
@@ -188,7 +190,7 @@ com.mycpt.backend
 │   │   ├── service/
 │   │   │   └── StatisticsService.java       # 나이대/성별 집계, 변화 추이
 │   │   └── repository/
-│   │       └── StatisticsRepository.java
+│   │       └── StatisticsRepository.java    # DiscTest 대상 집계 쿼리 (JOINED 상속 활용)
 │   │
 │   ├── colleague/                   # 동료 관계
 │   │   ├── controller/
@@ -224,9 +226,11 @@ com.mycpt.backend
 │   │   │   ├── NotificationService.java     # 알림 생성/조회/삭제
 │   │   │   └── SseService.java              # SseEmitter 관리, Last-Event-ID 재전송
 │   │   ├── repository/
-│   │   │   └── NotificationRepository.java
+│   │   │   └── NotificationRepository.java  # 부모 타입으로 다형 조회 (JOINED 전략)
 │   │   └── entity/
-│   │       └── Notification.java
+│   │       ├── Notification.java            # notifications 테이블. @Inheritance(JOINED) 추상 부모
+│   │       ├── ColleagueNotification.java   # colleague_notifications 테이블. 동료 등록 알림
+│   │       └── ChemistryNotification.java   # chemistry_notifications 테이블. 케미 보고서 알림
 │   │
 │   └── coin/                        # 코인
 │       ├── controller/

@@ -127,7 +127,7 @@
 - [x] 캐시 MISS 시 LLM 호출 후 INSERT 확인
 - [x] 비회원 원점수 sessionStorage 저장 확인
 - [x] 타인 평정 링크 생성 및 일회용 처리 확인
-- [x] 타인 평정 응시 완료 시 라벨 포함 tests + disc_results 저장 확인
+- [x] 타인 평정 응시 완료 시 라벨 포함 tests + disc_tests 저장 확인
 - [x] 결과 화면 6개 섹션 보고서 정상 표시 확인
 - [x] 비회원 이름 "사용자"로 렌더링 확인
 
@@ -142,22 +142,22 @@
 
 ### 일별 계획
 
-| 날짜       | 작업                                                                                                 | 산출물                                                             | 완료 |
-| ---------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---- |
-| 06.06 (토) | 프로필 설정 API 및 페이지 구현 (닉네임, 생년, 성별, 프로필 이미지)                                   | UserService, UserV1Controller, useMe, /me, /me/profile, middleware | [x]  |
-| 06.07 (일) | '로그인하고 결과 저장' — sessionStorage 원점수를 `POST /results`로 전송, tests + disc_results INSERT | ResultService                                                      | [x]  |
-| 06.08 (월) | 결과 이력 조회 페이지 구현 (자기/타인 평정 구분, 커서 기반 페이지네이션)                             | 이력 페이지                                                        | [x]  |
-| 06.09 (화) | 통계 집계 로직 구현 — 나이대/성별 기준 평균 산출 (자기 평정만), tests JOIN disc_results 집계 쿼리    | StatisticsService                                                  | [ ]  |
-| 06.10 (수) | 통계 비교 + 변화 추이 화면 구현 (`GET /statistics/comparison`, `GET /statistics/trend`)              | 통계 페이지                                                        | [ ]  |
-| 06.11 (목) | 동료 초대 코드 생성/조회 API 구현 (대문자+숫자 8자리, 온디맨드 리프레시)                             | PeerCodeService                                                    | [ ]  |
-| 06.12 (금) | 동료 등록 흐름 구현 (링크/코드 입력 → colleagues INSERT, UNION ALL 조회), 동료 등록 알림 전송        | ColleagueService, NotificationService                              | [ ]  |
+| 날짜       | 작업                                                                                               | 산출물                                                             | 완료 |
+| ---------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---- |
+| 06.06 (토) | 프로필 설정 API 및 페이지 구현 (닉네임, 생년, 성별, 프로필 이미지)                                 | UserService, UserV1Controller, useMe, /me, /me/profile, middleware | [x]  |
+| 06.07 (일) | '로그인하고 결과 저장' — sessionStorage 원점수를 `POST /results`로 전송, tests + disc_tests INSERT | ResultService                                                      | [x]  |
+| 06.08 (월) | 결과 이력 조회 페이지 구현 (자기/타인 평정 구분, 커서 기반 페이지네이션)                           | 이력 페이지                                                        | [x]  |
+| 06.09 (화) | 통계 집계 로직 구현 — 나이대/성별 기준 평균 산출 (자기 평정만), tests JOIN disc_tests 집계 쿼리    | StatisticsService                                                  | [ ]  |
+| 06.10 (수) | 통계 비교 + 변화 추이 화면 구현 (`GET /statistics/comparison`, `GET /statistics/trend`)            | 통계 페이지                                                        | [ ]  |
+| 06.11 (목) | 동료 초대 코드 생성/조회 API 구현 (대문자+숫자 8자리, 온디맨드 리프레시)                           | PeerCodeService                                                    | [ ]  |
+| 06.12 (금) | 동료 등록 흐름 구현 (링크/코드 입력 → colleagues INSERT, UNION ALL 조회), 동료 등록 알림 전송      | ColleagueService, NotificationService                              | [ ]  |
 
 ### 체크리스트
 
 - [ ] 카카오 로그인 후 JWT 발급/갱신 처리
 - [ ] 프로필 설정 (닉네임, 생년, 성별, 이미지) 정상 동작 확인
 - [ ] 프로필 이미지 업로드 — jpg/png/webp 형식, 10MB 이하 검증 확인
-- [x] sessionStorage 원점수 전송 후 tests + disc_results 정상 저장 확인
+- [x] sessionStorage 원점수 전송 후 tests + disc_tests 정상 저장 확인
 - [x] 결과 이력 목록 자기/타인 평정 구분 및 라벨 표시 확인
 - [ ] 나이대/성별 통계 비교 수치 정확성 확인 (자기 평정만 집계)
 - [ ] 생년/성별 미입력 시 average: null 반환 확인
@@ -172,7 +172,7 @@
 ### 기술 부채 (4주차 착수 전 처리)
 
 - [x] ResultService 단위 테스트 작성 — list(): hasNext 판단, raterType 필터, cursor null 여부 / detail(): 본인 소유 검증(403), 존재하지 않는 ID(404)
-- [x] DiscResultRepository 슬라이스 테스트 작성 (@DataJpaTest + JpaTestSupport) — findByUserIdWithCursor() 커서/raterType 필터 동작 검증 / findByTestIdWithDetail() JOIN FETCH 정상 로드 검증
+- [x] DiscTestRepository 슬라이스 테스트 작성 (@DataJpaTest + JpaTestSupport) — findByUserIdWithCursor() 커서/raterType 필터 동작 검증 / findByTestIdWithDetail() JOIN FETCH 정상 로드 검증
 - [x] AssessmentV1Controller, UserV1Controller, AuthV1Controller 응답 DTO 리팩토링 (Map → record)
 - [x] BusinessException / ErrorCode / ErrorResponse 예외 처리 체계 통합 — 개별 예외 클래스 4개 제거, IllegalArgumentException도 BusinessException(INVALID_REQUEST)으로 통합
 - [ ] MemberCta "결과 상세로 가기" → "친구에게도 평정 요청해보기" CTA로 교체 (공유 시트 연동 후 구현)
@@ -187,19 +187,19 @@
 
 ### 일별 계획
 
-| 날짜       | 작업                                                                                                                                                                                                                                   | 산출물                                                                                                                   | 완료 |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---- |
-| 06.13 (토) | 기술 부채 해소 (4주차 착수 전 처리) — BusinessException/ErrorCode/ErrorResponse 통합, 응답 DTO Map→record 리팩토링, ResultService/DiscResultRepository 테스트 작성, MvcTestSupport→JpaTestSupport 테스트 지원 클래스 분리 (06.13 완료) | BusinessException, ErrorCode, ErrorResponse, MvcTestSupport, JpaTestSupport, ResultServiceTest, DiscResultRepositoryTest | [x]  |
-|            | 코인 시스템 구현 — 가입 초기 지급(3개), 온디맨드 충전 로직(next_coin_at 기반), coin_transactions 적재                                                                                                                                  | CoinService                                                                                                              | [ ]  |
-| 06.14 (일) | 동료 목록 페이지 구현 및 케미 보고서 발행 흐름 구현 (@Async LLM 호출, 202 즉시 반환)                                                                                                                                                   | ChemistryService                                                                                                         | [ ]  |
-| 06.15 (월) | SSE 연결 구현 (`GET /notifications/stream`) — Last-Event-ID 기반 재전송, 인터넷 재연결 토스트 알림                                                                                                                                     | SseEmitter, SSE 핸들러                                                                                                   | [ ]  |
-| 06.16 (화) | Claude API 케미 프롬프트 설계 — 두 사람의 DISC 버킷값 기반 6개 섹션 보고서 생성                                                                                                                                                        | 케미 프롬프트                                                                                                            | [ ]  |
-| 06.17 (수) | 케미 보고서 결과 화면 구현 — 6개 섹션 표시, 발행자/대상자 이름 렌더링                                                                                                                                                                  | 케미 결과 페이지                                                                                                         | [ ]  |
-| 06.18 (목) | 케미 보고서 발행 완료 시 SSE 푸시 + 상대방 인앱 알림 전송 처리                                                                                                                                                                         | NotificationService                                                                                                      | [ ]  |
-| 06.19 (금) | Spring Batch — 만료 동료 코드 + 만료 평정 토큰 통합 삭제 스케줄러 구현                                                                                                                                                                 | BatchScheduler                                                                                                           | [ ]  |
-| 06.20 (토) | 전체 흐름 통합 테스트 — 비회원/회원/타인 평정/케미 시나리오                                                                                                                                                                            | QA 체크리스트                                                                                                            | [ ]  |
-| 06.21 (일) | 버그 수정 및 UI 마감 정리. 배포 환경 구성 (Redis, AWS S3 스토리지 연동)                                                                                                                                                                | 배포 완료                                                                                                                | [ ]  |
-| 06.22 (월) | 베타 테스터 초대 및 설문조사 배포                                                                                                                                                                                                      | 테스터 초대, 설문 링크                                                                                                   | [ ]  |
+| 날짜       | 작업                                                                                                                                                                                                                                 | 산출물                                                                                                                 | 완료 |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ---- |
+| 06.13 (토) | 기술 부채 해소 (4주차 착수 전 처리) — BusinessException/ErrorCode/ErrorResponse 통합, 응답 DTO Map→record 리팩토링, ResultService/DiscTestRepository 테스트 작성, MvcTestSupport→JpaTestSupport 테스트 지원 클래스 분리 (06.13 완료) | BusinessException, ErrorCode, ErrorResponse, MvcTestSupport, JpaTestSupport, ResultServiceTest, DiscTestRepositoryTest | [x]  |
+|            | 코인 시스템 구현 — 가입 초기 지급(3개), 온디맨드 충전 로직(next_coin_at 기반), coin_transactions 적재                                                                                                                                | CoinService                                                                                                            | [ ]  |
+| 06.14 (일) | 동료 목록 페이지 구현 및 케미 보고서 발행 흐름 구현 (@Async LLM 호출, 202 즉시 반환)                                                                                                                                                 | ChemistryService                                                                                                       | [ ]  |
+| 06.15 (월) | SSE 연결 구현 (`GET /notifications/stream`) — Last-Event-ID 기반 재전송, 인터넷 재연결 토스트 알림                                                                                                                                   | SseEmitter, SSE 핸들러                                                                                                 | [ ]  |
+| 06.16 (화) | Claude API 케미 프롬프트 설계 — 두 사람의 DISC 버킷값 기반 6개 섹션 보고서 생성                                                                                                                                                      | 케미 프롬프트                                                                                                          | [ ]  |
+| 06.17 (수) | 케미 보고서 결과 화면 구현 — 6개 섹션 표시, 발행자/대상자 이름 렌더링                                                                                                                                                                | 케미 결과 페이지                                                                                                       | [ ]  |
+| 06.18 (목) | 케미 보고서 발행 완료 시 SSE 푸시 + 상대방 인앱 알림 전송 처리                                                                                                                                                                       | NotificationService                                                                                                    | [ ]  |
+| 06.19 (금) | Spring Batch — 만료 동료 코드 + 만료 평정 토큰 통합 삭제 스케줄러 구현                                                                                                                                                               | BatchScheduler                                                                                                         | [ ]  |
+| 06.20 (토) | 전체 흐름 통합 테스트 — 비회원/회원/타인 평정/케미 시나리오                                                                                                                                                                          | QA 체크리스트                                                                                                          | [ ]  |
+| 06.21 (일) | 버그 수정 및 UI 마감 정리. 배포 환경 구성 (Redis, AWS S3 스토리지 연동)                                                                                                                                                              | 배포 완료                                                                                                              | [ ]  |
+| 06.22 (월) | 베타 테스터 초대 및 설문조사 배포                                                                                                                                                                                                    | 테스터 초대, 설문 링크                                                                                                 | [ ]  |
 
 ### 체크리스트
 

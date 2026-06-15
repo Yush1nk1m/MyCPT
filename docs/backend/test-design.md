@@ -1,8 +1,19 @@
 # MyCPT 테스트 설계 문서
 
-**문서 버전**: v0.3
+**문서 버전**: v0.4
 **작성일**: '26.06.13.
 **작성자**: 김유신
+
+---
+
+## 변경 이력
+
+| 버전 | 변경 내용                                                                                                                                                                                                                                                          | 날짜       |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| v0.1 | 초안 작성. 레이어별 전략, Auth/User 도메인 테스트 케이스 ID 체계 수립.                                                                                                                                                                                             | '26.05.26. |
+| v0.2 | Result/Assessment 도메인 테스트 케이스 추가. JpaTestSupport 기반 슬라이스 테스트 전략 확정.                                                                                                                                                                        | '26.06.09. |
+| v0.3 | 예외 처리 체계 통합 반영 (BusinessException/ErrorCode). ScoringService 경계값 케이스 보강.                                                                                                                                                                         | '26.06.13. |
+| v0.4 | `DiscResultRepository` → `DiscTestRepository` 이름 변경. Test ID `ST-DiscResultRepo-*` → `ST-DiscTestRepo-*` 전면 변경. `ResultService` 저장 행위 설명 `disc_results` → `disc_tests` 수정. `AssessmentService` 평정 제출 상황 설명 `DiscResult` → `DiscTest` 수정. | '26.06.15. |
 
 ---
 
@@ -144,29 +155,16 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 [[Test Code](../backend/src/test/java/com/mycpt/backend/domain/auth/controller/AuthV1ControllerTest.java)]
 
-> `@WebMvcTest` 슬라이스 테스트. `MvcTestSupport.authenticated()`로 JWT 쿠키 주입.
-> `JwtAuthenticationFilter` 실제 실행을 통해 인증 분기 검증.
+> `@WebMvcTest` 슬라이스 테스트. `MvcTestSupport` 상속.
 
-| Test ID                                 | 행위                          | 상황                                                                            |
-| --------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------- |
-| ST-AuthController-사용자인증-성공       | 인증된 사용자 `/auth/me` 호출 | 200 응답 검증                                                                   |
-| ST-AuthController-사용자인증-미인증접근 | 미인증 사용자 `/auth/me` 호출 | 401 + `{"code":"UNAUTHORIZED"}` 검증                                            |
-| ST-AuthController-응답바디형식확인-성공 | `/auth/me` 응답 바디 스펙     | userId/nickname/profileImageUrl/coins/nextCoinAt/birthYear/gender 7개 필드 검증 |
+| Test ID                       | 행위                       | 상황                      |
+| ----------------------------- | -------------------------- | ------------------------- |
+| ST-AuthCtrl-내정보조회-성공   | 인증된 사용자 GET /auth/me | 200 + 응답 바디 필드 검증 |
+| ST-AuthCtrl-내정보조회-미인증 | 미인증 GET /auth/me        | 401                       |
 
 ---
 
 ## 5. User 도메인
-
-### UserService (UT)
-
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/user/service/UserServiceTest.java)]
-
-| Test ID                          | 행위                       | 상황                                                                 |
-| -------------------------------- | -------------------------- | -------------------------------------------------------------------- |
-| UT-UserSvc-프로필수정-성공       | 닉네임/생년/성별 전체 수정 | 3개 필드 모두 반영 검증                                              |
-| UT-UserSvc-프로필수정-부분수정   | nickname만 전달            | birthYear/gender 기존값 유지 검증                                    |
-| UT-UserSvc-이미지업로드-형식오류 | text/plain 파일 전달       | `BusinessException(INVALID_REQUEST)`, 메시지에 "jpg, png, webp" 포함 |
-| UT-UserSvc-이미지업로드-크기초과 | 11MB 파일 전달             | `BusinessException(INVALID_REQUEST)`, 메시지에 "10MB" 포함           |
 
 ### UserV1Controller (ST)
 
@@ -212,34 +210,34 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 [[Test Code](../backend/src/test/java/com/mycpt/backend/domain/result/service/ResultServiceTest.java)]
 
-| Test ID                              | 행위                        | 상황                                                           |
-| ------------------------------------ | --------------------------- | -------------------------------------------------------------- |
-| UT-ResultSvc-저장-성공               | tests + disc_results INSERT | `testRepository.save()` 1회, `discResultRepository.save()` 1회 |
-| UT-ResultSvc-저장-원점수오류         | 원점수 합계 불일치          | `BusinessException(INVALID_SCORE)`, save 미호출                |
-| UT-ResultSvc-이력조회-성공           | 커서 없이 최신 목록 조회    | size+1 조회 후 hasNext 판단, results 반환                      |
-| UT-ResultSvc-이력조회-다음페이지존재 | size+1개 조회 결과          | hasNext=true, nextCursor 설정 검증                             |
-| UT-ResultSvc-이력조회-마지막페이지   | size 이하 조회 결과         | hasNext=false, nextCursor=null 검증                            |
-| UT-ResultSvc-이력조회-raterType필터  | raterType=SELF 필터         | raterType 파라미터 리포지토리로 올바르게 전달 검증             |
-| UT-ResultSvc-상세조회-성공           | 본인 결과 조회              | ResultDetailResponse 반환, CacheService 1회 호출 검증          |
-| UT-ResultSvc-상세조회-권한없음       | 타인 결과 조회 시도         | `BusinessException(FORBIDDEN)`, CacheService 미호출            |
-| UT-ResultSvc-상세조회-존재하지않는ID | 없는 testId 조회            | `BusinessException(NOT_FOUND)`                                 |
+| Test ID                              | 행위                      | 상황                                                         |
+| ------------------------------------ | ------------------------- | ------------------------------------------------------------ |
+| UT-ResultSvc-저장-성공               | tests + disc_tests INSERT | `testRepository.save()` 1회, `discTestRepository.save()` 1회 |
+| UT-ResultSvc-저장-원점수오류         | 원점수 합계 불일치        | `BusinessException(INVALID_SCORE)`, save 미호출              |
+| UT-ResultSvc-이력조회-성공           | 커서 없이 최신 목록 조회  | size+1 조회 후 hasNext 판단, results 반환                    |
+| UT-ResultSvc-이력조회-다음페이지존재 | size+1개 조회 결과        | hasNext=true, nextCursor 설정 검증                           |
+| UT-ResultSvc-이력조회-마지막페이지   | size 이하 조회 결과       | hasNext=false, nextCursor=null 검증                          |
+| UT-ResultSvc-이력조회-raterType필터  | raterType=SELF 필터       | raterType 파라미터 리포지토리로 올바르게 전달 검증           |
+| UT-ResultSvc-상세조회-성공           | 본인 결과 조회            | ResultDetailResponse 반환, CacheService 1회 호출 검증        |
+| UT-ResultSvc-상세조회-권한없음       | 타인 결과 조회 시도       | `BusinessException(FORBIDDEN)`, CacheService 미호출          |
+| UT-ResultSvc-상세조회-존재하지않는ID | 없는 testId 조회          | `BusinessException(NOT_FOUND)`                               |
 
-### DiscResultRepository (ST)
+### DiscTestRepository (ST)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/result/repository/DiscResultRepositoryTest.java)]
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/result/repository/DiscTestRepositoryTest.java)]
 
 > `@DataJpaTest` + Testcontainers MySQL (`JpaTestSupport` 상속).
 > `@Sql("/sql/disc_cache_seed.sql")` 로 disc_cache 복합 FK 제약 해소.
 > `@DataJpaTest` 기본 동작인 트랜잭션 롤백으로 테스트 간 데이터 격리.
 
-| Test ID                                     | 행위                   | 상황                                                                     |
-| ------------------------------------------- | ---------------------- | ------------------------------------------------------------------------ |
-| ST-DiscResultRepo-커서페이지네이션-성공     | cursor=null 조회       | 최신순 id DESC 정렬, 저장한 3개 전체 반환 검증                           |
-| ST-DiscResultRepo-커서페이지네이션-커서검증 | cursor=N으로 조회      | id < N인 결과만 반환 검증                                                |
-| ST-DiscResultRepo-raterType필터-SELF        | raterType=SELF 필터    | SELF 결과만 반환, OTHER 미포함 검증                                      |
-| ST-DiscResultRepo-raterType필터-null        | raterType=null         | SELF/OTHER 모두 반환 검증                                                |
-| ST-DiscResultRepo-상세조회-JoinFetch        | findByTestIdWithDetail | test 연관관계 LAZY 정상 로드 (`LazyInitializationException` 미발생) 검증 |
-| ST-DiscResultRepo-상세조회-존재하지않는ID   | 없는 testId 조회       | `Optional.empty()` 반환 검증                                             |
+| Test ID                                   | 행위                   | 상황                                                                     |
+| ----------------------------------------- | ---------------------- | ------------------------------------------------------------------------ |
+| ST-DiscTestRepo-커서페이지네이션-성공     | cursor=null 조회       | 최신순 id DESC 정렬, 저장한 3개 전체 반환 검증                           |
+| ST-DiscTestRepo-커서페이지네이션-커서검증 | cursor=N으로 조회      | id < N인 결과만 반환 검증                                                |
+| ST-DiscTestRepo-raterType필터-SELF        | raterType=SELF 필터    | SELF 결과만 반환, OTHER 미포함 검증                                      |
+| ST-DiscTestRepo-raterType필터-null        | raterType=null         | SELF/OTHER 모두 반환 검증                                                |
+| ST-DiscTestRepo-상세조회-JoinFetch        | findByTestIdWithDetail | test 연관관계 LAZY 정상 로드 (`LazyInitializationException` 미발생) 검증 |
+| ST-DiscTestRepo-상세조회-존재하지않는ID   | 없는 testId 조회       | `Optional.empty()` 반환 검증                                             |
 
 ---
 
@@ -249,15 +247,15 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 [[Test Code](../backend/src/test/java/com/mycpt/backend/domain/assessment/service/AssessmentServiceTest.java)]
 
-| Test ID                                  | 행위                       | 상황                                                         |
-| ---------------------------------------- | -------------------------- | ------------------------------------------------------------ |
-| UT-AssessmentSvc-토큰생성-성공           | 회원이 타인 평정 링크 생성 | 32자 토큰 생성, expiresAt = now+7일 이후 검증, save 1회      |
-| UT-AssessmentSvc-링크접속-성공           | 유효한 토큰으로 접속       | subjectNickname 반환 검증                                    |
-| UT-AssessmentSvc-링크접속-토큰없음       | 존재하지 않는 토큰         | `BusinessException(NOT_FOUND)`                               |
-| UT-AssessmentSvc-링크접속-이미사용된토큰 | used=TRUE 토큰             | `BusinessException(TOKEN_USED)`                              |
-| UT-AssessmentSvc-링크접속-만료된토큰     | expiresAt < now            | `BusinessException(EXPIRED_CODE)`                            |
-| UT-AssessmentSvc-평정제출-성공           | 유효한 토큰으로 제출       | Test + DiscResult save 각 1회, token.isUsed()=true           |
-| UT-AssessmentSvc-평정제출-이미사용된토큰 | used=TRUE 토큰             | `BusinessException(TOKEN_USED)`, Test/DiscResult save 미호출 |
+| Test ID                                  | 행위                       | 상황                                                    |
+| ---------------------------------------- | -------------------------- | ------------------------------------------------------- |
+| UT-AssessmentSvc-토큰생성-성공           | 회원이 타인 평정 링크 생성 | 32자 토큰 생성, expiresAt = now+7일 이후 검증, save 1회 |
+| UT-AssessmentSvc-링크접속-성공           | 유효한 토큰으로 접속       | subjectNickname 반환 검증                               |
+| UT-AssessmentSvc-링크접속-토큰없음       | 존재하지 않는 토큰         | `BusinessException(NOT_FOUND)`                          |
+| UT-AssessmentSvc-링크접속-이미사용된토큰 | used=TRUE 토큰             | `BusinessException(TOKEN_USED)`                         |
+| UT-AssessmentSvc-링크접속-만료된토큰     | expiresAt < now            | `BusinessException(EXPIRED_CODE)`                       |
+| UT-AssessmentSvc-평정제출-성공           | 유효한 토큰으로 제출       | DiscTest save 1회, token.isUsed()=true                  |
+| UT-AssessmentSvc-평정제출-이미사용된토큰 | used=TRUE 토큰             | `BusinessException(TOKEN_USED)`, DiscTest save 미호출   |
 
 ---
 
@@ -293,18 +291,4 @@ _4주차 구현 시 작성_
 
 ## 13. 통합 테스트 시나리오
 
-_4주차 QA 단계에 Testcontainers 기반으로 작성_
-
-| Test ID                                  | 행위                                        | 상황                                   |
-| ---------------------------------------- | ------------------------------------------- | -------------------------------------- |
-| IT-AuthFlow-로그인후JWT쿠키발급-성공     | 카카오 로그인 완료 후 accessToken 쿠키 발급 | 쿠키 존재 및 보호된 API 접근 가능 검증 |
-| IT-ResultFlow-비회원채점-성공            | 문항 조회 → POST /results/score             | 원점수/버킷값/보고서 반환 검증         |
-| IT-ResultFlow-비회원결과저장연계-성공    | 로그인 후 비회원 결과 저장                  | POST /results → DB 저장 검증           |
-| IT-AssessmentFlow-타인평정전체흐름-성공  | 링크 생성 → 토큰 접속 → 제출                | tests/disc_results 저장 검증           |
-| IT-ChemistryFlow-보고서발행전체흐름-성공 | 코인 차감 → LLM 호출 → SSE 푸시             | 알림 저장 및 보고서 생성 검증          |
-| IT-ColleagueFlow-동료등록전체흐름-성공   | 코드 생성 → 유효성 확인 → 등록              | 알림 전송 검증                         |
-
----
-
-_본 문서는 기능 구현 진행에 따라 지속적으로 업데이트됩니다._
-_테스트 코드 경로는 각 섹션의 링크를 참조한다._
+_4주차 QA 단계 작성_

@@ -27,7 +27,7 @@ public class AssessmentV1Controller implements AssessmentApi {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody CreateTokenRequest request
     ) {
-        AssessmentService.TokenResult result =
+        AssessmentService.TokenInfo result =
                 assessmentService.createToken(principal.getUser().getId(), request.label());
         return ResponseEntity.status(HttpStatus.CREATED).body(CreateTokenResponse.from(result));
     }

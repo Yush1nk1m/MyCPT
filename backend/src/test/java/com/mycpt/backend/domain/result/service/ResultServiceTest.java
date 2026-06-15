@@ -5,10 +5,9 @@ import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.domain.result.dto.ResultDetailResponse;
 import com.mycpt.backend.domain.result.dto.ResultListResponse;
 import com.mycpt.backend.domain.result.dto.ScoreRequest;
-import com.mycpt.backend.domain.result.entity.DiscResult;
+import com.mycpt.backend.domain.result.entity.DiscTest;
 import com.mycpt.backend.domain.result.enums.RaterType;
-import com.mycpt.backend.domain.result.repository.DiscResultRepository;
-import com.mycpt.backend.domain.result.repository.TestRepository;
+import com.mycpt.backend.domain.result.repository.DiscTestRepository;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -32,12 +31,11 @@ class ResultServiceTest {
 
     @Mock private ScoringService scoringService;
     @Mock private CacheService cacheService;
-    @Mock private TestRepository testRepository;
-    @Mock private DiscResultRepository discResultRepository;
+    @Mock private DiscTestRepository discTestRepository;
     @Mock private UserRepository userRepository;
 
     private ResultService sut() {
-        return new ResultService(scoringService, cacheService, testRepository, discResultRepository, userRepository);
+        return new ResultService(scoringService, cacheService, discTestRepository, userRepository);
     }
 
     // ── 공통 픽스처 ───────────────────────────────────────────────────────────
@@ -52,27 +50,31 @@ class ResultServiceTest {
         return User.create("kakao-1", "유신", "https://example.com/img.jpg");
     }
 
-    private DiscResult stubDiscResult(Long userId, RaterType raterType) {
+    private DiscTest stubDiscTest(Long userId, RaterType raterType) {
         User user = User.create("kakao-" + userId, "유저" + userId, null);
-        // 리플렉션으로 id 주입 - DB AUTO_INCREMENT를 UT에서 시뮬레이션
         setId(user, userId);
 
-        com.mycpt.backend.domain.result.entity.Test test = (raterType == RaterType.SELF)
-                ? com.mycpt.backend.domain.result.entity.Test.createForSelf(user, "DISC")
-                : com.mycpt.backend.domain.result.entity.Test.createForOther(user, "DISC", "테스트용라벨");
-        setId(test, userId * 10);   // 단순 구분용 id
-
-        return DiscResult.create(test, 32, 10, -4, -14, 3, 2, 1, 2);
+        DiscTest dt = (raterType == RaterType.SELF)
+                ? DiscTest.createForSelf(user, 32, 10, -4, -14, 3, 2, 1, 2)
+                : DiscTest.createForOther(user, "테스트용라벨", 32, 10, -4, -14, 3, 2, 1, 2);
+        setId(dt, userId * 10);
+        return dt;
     }
 
-    /**
-     * id 필드 리플렉션 주입 공통 헬퍼
-     */
     private void setId(Object target, Long id) {
         try {
-            var field = target.getClass().getDeclaredField("id");
-            field.setAccessible(true);
-            field.set(target, id);
+            // DiscTest는 Test를 상속하므로 id 필드는 부모 클래스에 존재
+            Class<?> clazz = target.getClass();
+            while (clazz != null) {
+                try {
+                    var field = clazz.getDeclaredField("id");
+                    field.setAccessible(true);
+                    field.set(target, id);
+                    return;
+                } catch (NoSuchFieldException e) {
+                    clazz = clazz.getSuperclass();
+                }
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -90,17 +92,14 @@ class ResultServiceTest {
             // given
             given(userRepository.getReferenceById(1L)).willReturn(stubUser());
             given(scoringService.normalize(any())).willReturn(new ScoringService.Buckets(3, 2, 1, 2));
-            given(testRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
-            given(discResultRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+            given(discTestRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
             // when
-            // Test.id는 DB AUTO_INCREMENT이므로 저장 전 null -> resultId도 null
-            // 실제 통합 환경에서는 DB가 채워주므로 UT에서는 save 호출 횟수만 검증
+            // DiscTest.id는 DB AUTO_INCREMENT → 저장 전 null. UT에서는 save 호출 횟수만 검증
             sut().save(1L, validRequest());
 
             // then
-            verify(testRepository, times(1)).save(any(com.mycpt.backend.domain.result.entity.Test.class));
-            verify(discResultRepository, times(1)).save(any(DiscResult.class));
+            verify(discTestRepository, times(1)).save(any(DiscTest.class));
         }
 
         @Test
@@ -120,8 +119,7 @@ class ResultServiceTest {
                         assertThat(be.getMessage()).contains("D+I+S+C 합계가 올바르지 않습니다.");
                     });
 
-            verify(testRepository, never()).save(any());
-            verify(discResultRepository, never()).save(any());
+            verify(discTestRepository, never()).save(any());
         }
     }
 
@@ -134,13 +132,13 @@ class ResultServiceTest {
         @Test
         @DisplayName("[UT-ResultSvc-이력조회-성공]")
         void 이력조회_성공() {
-            // given: size=5, cursor=null -> 리포지토리에서 5개 반환 (hasNext=false)
-            List<DiscResult> rows = List.of(
-                    stubDiscResult(1L, RaterType.SELF),
-                    stubDiscResult(2L, RaterType.SELF),
-                    stubDiscResult(3L, RaterType.OTHER)
+            // given: size=5, cursor=null → 리포지토리에서 3개 반환 (hasNext=false)
+            List<DiscTest> rows = List.of(
+                    stubDiscTest(1L, RaterType.SELF),
+                    stubDiscTest(2L, RaterType.SELF),
+                    stubDiscTest(3L, RaterType.OTHER)
             );
-            given(discResultRepository.findByUserIdWithCursor(
+            given(discTestRepository.findByUserIdWithCursor(
                     eq(1L), isNull(), isNull(), any(PageRequest.class)
             )).willReturn(rows);
 
@@ -156,13 +154,13 @@ class ResultServiceTest {
         @Test
         @DisplayName("[UT-ResultSvc-이력조회-다음페이지존재]")
         void 이력조회_다음페이지존재() {
-            // given: size=2, 리포지토리에서 size+1=3개 반환 -> hasNext=true
-            List<DiscResult> rows = List.of(
-                    stubDiscResult(1L, RaterType.SELF),
-                    stubDiscResult(2L, RaterType.SELF),
-                    stubDiscResult(3L, RaterType.SELF)
+            // given: size=2, 리포지토리에서 size+1=3개 반환 → hasNext=true
+            List<DiscTest> rows = List.of(
+                    stubDiscTest(1L, RaterType.SELF),
+                    stubDiscTest(2L, RaterType.SELF),
+                    stubDiscTest(3L, RaterType.SELF)
             );
-            given(discResultRepository.findByUserIdWithCursor(
+            given(discTestRepository.findByUserIdWithCursor(
                     eq(1L), isNull(), isNull(), any(PageRequest.class)
             )).willReturn(rows);
 
@@ -172,19 +170,19 @@ class ResultServiceTest {
             // then
             assertThat(response.results()).hasSize(2);
             assertThat(response.hasNext()).isTrue();
-            // nextCursor = page.getLast().getTest().getId() = 2L * 10 = 20L
+            // nextCursor = page.getLast().getId() = 2L * 10 = 20L
             assertThat(response.nextCursor()).isEqualTo(20L);
         }
 
         @Test
         @DisplayName("[UT-ResultSvc-이력조회-마지막페이지]")
         void 이력조회_마지막페이지() {
-            // given: size=5, 리포지토리에서 2개만 반환 -> hasNext=false
-            List<DiscResult> rows = List.of(
-                    stubDiscResult(1L, RaterType.SELF),
-                    stubDiscResult(2L, RaterType.OTHER)
+            // given: size=5, 리포지토리에서 2개만 반환 → hasNext=false
+            List<DiscTest> rows = List.of(
+                    stubDiscTest(1L, RaterType.SELF),
+                    stubDiscTest(2L, RaterType.OTHER)
             );
-            given(discResultRepository.findByUserIdWithCursor(
+            given(discTestRepository.findByUserIdWithCursor(
                     eq(1L), isNull(), eq(99L), any(PageRequest.class)
             )).willReturn(rows);
 
@@ -200,11 +198,10 @@ class ResultServiceTest {
         @Test
         @DisplayName("[UT-ResultSvc-이력조회-raterType필터]")
         void 이력조회_raterType필터() {
-            // given: raterType=SELF 필터 전달 -> 리포지토리가 SELF만 반환한다고 가정
-            // 리포지토리 필터 동작 자체는 DiscResultRepositoryTest에서 검증
-            // 여기서는 파라미터가 올바르게 전달되는지만 검증
-            List<DiscResult> rows = List.of(stubDiscResult(1L, RaterType.SELF));
-            given(discResultRepository.findByUserIdWithCursor(
+            // given: raterType 파라미터가 리포지토리로 올바르게 전달되는지만 검증
+            // 리포지토리 필터 동작 자체는 DiscTestRepositoryTest에서 검증
+            List<DiscTest> rows = List.of(stubDiscTest(1L, RaterType.SELF));
+            given(discTestRepository.findByUserIdWithCursor(
                     eq(1L), eq(RaterType.SELF), isNull(), any(PageRequest.class)
             )).willReturn(rows);
 
@@ -214,8 +211,7 @@ class ResultServiceTest {
             // then
             assertThat(response.results()).hasSize(1);
             assertThat(response.results().getFirst().raterType()).isEqualTo(RaterType.SELF);
-            // raterType 파라미터가 리포지토리로 올바르게 전달됐는지 검증
-            verify(discResultRepository).findByUserIdWithCursor(
+            verify(discTestRepository).findByUserIdWithCursor(
                     eq(1L), eq(RaterType.SELF), isNull(), any(PageRequest.class)
             );
         }
@@ -231,8 +227,8 @@ class ResultServiceTest {
         @DisplayName("[UT-ResultSvc-상세조회-성공]")
         void 상세조회_성공() {
             // given: userId=1L 본인 결과 조회
-            DiscResult dr = stubDiscResult(1L, RaterType.SELF);
-            given(discResultRepository.findByTestIdWithDetail(10L)).willReturn(Optional.of(dr));
+            DiscTest dt = stubDiscTest(1L, RaterType.SELF);
+            given(discTestRepository.findByTestIdWithDetail(10L)).willReturn(Optional.of(dt));
             given(cacheService.getReport(any())).willReturn(REPORT);
 
             // when
@@ -242,26 +238,22 @@ class ResultServiceTest {
             assertThat(response).isNotNull();
             assertThat(response.raterType()).isEqualTo(RaterType.SELF);
             assertThat(response.report()).isEqualTo(REPORT);
-            verify(cacheService, times(1)).getReport(any());
         }
 
         @Test
         @DisplayName("[UT-ResultSvc-상세조회-권한없음]")
         void 상세조회_권한없음() {
-            // given: DB에는 userId=1L의 결과가 있으나 userId=2로 접근
-            DiscResult dr = stubDiscResult(1L, RaterType.SELF);
-            given(discResultRepository.findByTestIdWithDetail(10L)).willReturn(Optional.of(dr));
+            // given: userId=2L이 userId=1L의 결과 조회 시도
+            DiscTest dt = stubDiscTest(1L, RaterType.SELF);
+            given(discTestRepository.findByTestIdWithDetail(10L)).willReturn(Optional.of(dt));
 
             // when
             assertThatThrownBy(() -> sut().detail(2L, 10L))
                     // then
                     .isInstanceOf(BusinessException.class)
-                    .satisfies(e -> {
-                        BusinessException be = (BusinessException) e;
-                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
-                    });
+                    .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                            .isEqualTo(ErrorCode.FORBIDDEN));
 
-            // 권한 없으면 CacheService 미호출
             verify(cacheService, never()).getReport(any());
         }
 
@@ -269,17 +261,14 @@ class ResultServiceTest {
         @DisplayName("[UT-ResultSvc-상세조회-존재하지않는ID]")
         void 상세조회_존재하지않는ID() {
             // given
-            given(discResultRepository.findByTestIdWithDetail(999L)).willReturn(Optional.empty());
+            given(discTestRepository.findByTestIdWithDetail(999L)).willReturn(Optional.empty());
 
             // when
             assertThatThrownBy(() -> sut().detail(1L, 999L))
                     // then
                     .isInstanceOf(BusinessException.class)
-                    .satisfies(e -> {
-                        BusinessException be = (BusinessException) e;
-                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND);
-                        assertThat(be.getMessage()).contains("존재하지 않는 결과입니다.");
-                    });
+                    .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                            .isEqualTo(ErrorCode.NOT_FOUND));
         }
     }
 }

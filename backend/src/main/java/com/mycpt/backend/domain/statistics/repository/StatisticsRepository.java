@@ -1,6 +1,6 @@
 package com.mycpt.backend.domain.statistics.repository;
 
-import com.mycpt.backend.domain.result.entity.Test;
+import com.mycpt.backend.domain.result.entity.DiscTest;
 import com.mycpt.backend.domain.result.enums.RaterType;
 import com.mycpt.backend.domain.statistics.dto.BucketAverage;
 import com.mycpt.backend.domain.statistics.dto.LatestBuckets;
@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-public interface StatisticsRepository extends JpaRepository<Test, Long> {
+public interface StatisticsRepository extends JpaRepository<DiscTest, Long> {
 
     /**
      * [comparison] 본인 최신 자기 평정 버킷 값 1건 조회
@@ -24,13 +24,13 @@ public interface StatisticsRepository extends JpaRepository<Test, Long> {
      * List<>로 받아서 empty -> my.buckets = null 처리
      */
     @Query("""
-                SELECT dr.dBucket AS dBucket, dr.iBucket AS iBucket, dr.sBucket AS sBucket, dr.cBucket AS cBucket
-                FROM DiscResult dr
-                JOIN dr.test t
-                WHERE t.user.id = :userId
-                    AND t.raterType = :raterType
-                ORDER BY t.id DESC
-            """)
+        SELECT dt.dBucket AS dBucket, dt.iBucket AS iBucket,
+               dt.sBucket AS sBucket, dt.cBucket AS cBucket
+        FROM DiscTest dt
+        WHERE dt.user.id = :userId
+            AND dt.raterType = :raterType
+        ORDER BY dt.id DESC
+    """)
     List<LatestBuckets> findLatestBuckets(
             @Param("userId") Long userId,
             @Param("raterType") RaterType raterType,
@@ -44,25 +44,24 @@ public interface StatisticsRepository extends JpaRepository<Test, Long> {
      * 결과 없을 시 AVG=null, COUNT=0 -> Optional.empty() 처리
      */
     @Query("""
-                SELECT new com.mycpt.backend.domain.statistics.dto.BucketAverage(
-                    AVG(dr.dBucket), AVG(dr.iBucket), AVG(dr.sBucket), AVG(dr.cBucket), COUNT(dr)
-                )
-                FROM DiscResult dr
-                JOIN dr.test t
-                JOIN t.user u
-                WHERE t.raterType = :raterType
-                    AND u.birthYear BETWEEN :birthYearFrom AND :birthYearTo
-                    AND u.gender = :gender
-                    AND t.id IN (
-                        SELECT MAX(t2.id)
-                        FROM Test t2
-                        JOIN t2.user u2
-                        WHERE t2.raterType = :raterType
-                            AND u2.birthYear BETWEEN :birthYearFrom AND :birthYearTo
-                            AND u2.gender = :gender
-                        GROUP BY t2.user.id
-                    )
-            """)
+        SELECT new com.mycpt.backend.domain.statistics.dto.BucketAverage(
+            AVG(dt.dBucket), AVG(dt.iBucket), AVG(dt.sBucket), AVG(dt.cBucket), COUNT(dt)
+        )
+        FROM DiscTest dt
+        JOIN dt.user u
+        WHERE dt.raterType = :raterType
+            AND u.birthYear BETWEEN :birthYearFrom AND :birthYearTo
+            AND u.gender = :gender
+            AND dt.id IN (
+                SELECT MAX(dt2.id)
+                FROM DiscTest dt2
+                JOIN dt2.user u2
+                WHERE dt2.raterType = :raterType
+                    AND u2.birthYear BETWEEN :birthYearFrom AND :birthYearTo
+                    AND u2.gender = :gender
+                GROUP BY dt2.user.id
+            )
+    """)
     Optional<BucketAverage> findAverageBuckets(
             @Param("raterType") RaterType raterType,
             @Param("birthYearFrom") int birthYearFrom,
@@ -74,16 +73,15 @@ public interface StatisticsRepository extends JpaRepository<Test, Long> {
      * [trend] 자기 평정 변화 추이 (기간 필터, 오름차순)
      */
     @Query("""
-                SELECT new com.mycpt.backend.domain.statistics.dto.TrendPoint(
-                    dr.dBucket, dr.iBucket, dr.sBucket, dr.cBucket, t.createdAt
-                )
-                FROM DiscResult dr
-                JOIN dr.test t
-                WHERE t.user.id = :userId
-                    AND t.raterType = :raterType
-                    AND t.createdAt >= :from
-                ORDER BY t.id ASC
-            """)
+        SELECT new com.mycpt.backend.domain.statistics.dto.TrendPoint(
+            dt.dBucket, dt.iBucket, dt.sBucket, dt.cBucket, dt.createdAt
+        )
+        FROM DiscTest dt
+        WHERE dt.user.id = :userId
+            AND dt.raterType = :raterType
+            AND dt.createdAt >= :from
+        ORDER BY dt.id ASC
+    """)
     List<TrendPoint> findTrendBuckets(
             @Param("userId") Long userId,
             @Param("raterType") RaterType raterType,

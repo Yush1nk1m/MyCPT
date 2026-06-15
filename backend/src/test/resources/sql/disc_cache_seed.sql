@@ -1,6 +1,6 @@
--- disc_results → disc_cache 복합 FK 제약 해소용 시드
+-- disc_tests → disc_cache 복합 FK 제약 해소용 시드
 -- @DataJpaTest는 ddl-auto=create-drop이라 schema.sql의 INSERT가 자동 실행되지 않음
--- DiscResultRepositoryTest에서 @Sql로 명시 주입
+-- DiscTestRepositoryTest에서 @Sql로 명시 주입
 INSERT INTO disc_cache (d, i, s, c, report, created_at) VALUES
                                                             (1,1,1,1,NULL,NULL),(1,1,1,2,NULL,NULL),(1,1,1,3,NULL,NULL),
                                                             (1,1,2,1,NULL,NULL),(1,1,2,2,NULL,NULL),(1,1,2,3,NULL,NULL),
