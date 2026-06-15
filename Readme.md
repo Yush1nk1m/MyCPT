@@ -96,43 +96,7 @@ LLM 호출 비용이 사용자 수에 비례해 선형 증가하는 문제를, *
 
 ## 🏗️ Architecture · 아키텍처
 
-```mermaid
-flowchart LR
-    subgraph Client["Client — Next.js 15"]
-        UI["App Router / SSR"]
-        SS["sessionStorage<br/>비회원 원점수"]
-        Q["TanStack Query"]
-        Z["Zustand"]
-    end
-
-    subgraph Server["Spring Boot 3.5 — Layered"]
-        SEC["Security<br/>Kakao OAuth2 + JWT"]
-        CTRL["Controllers<br/>Domain Api + V1"]
-        SVC["Services<br/>Scoring / Cache / LLM"]
-        ASYNC["Async + SSE<br/>케미 발행"]
-        REPO["JPA Repositories"]
-    end
-
-    subgraph External["External Systems"]
-        DB[("MySQL")]
-        REDIS[("Redis<br/>Cacheable")]
-        CLAUDE["Anthropic<br/>Claude API"]
-        S3["AWS S3<br/>프로필 이미지"]
-        KAKAO["Kakao OAuth"]
-    end
-
-    UI --> CTRL
-    SS -. "로그인 시 전송" .-> CTRL
-    SEC --> KAKAO
-    CTRL --> SVC
-    SVC --> REPO
-    SVC --> CLAUDE
-    ASYNC --> CLAUDE
-    ASYNC -. "SSE push" .-> UI
-    REPO --> DB
-    SVC --> REDIS
-    SVC --> S3
-```
+![System Architecture](docs/images/MyCPT_Architecture.svg)
 
 주요 데이터 흐름(검사 채점·캐시 / 케미 발행 @Async+SSE / 비회원→회원 결과 저장 / 타인 평정)의
 상세 시퀀스 다이어그램은 [설계 문서](#-documentation--설계-문서)를 참조하세요.
