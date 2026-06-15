@@ -9,6 +9,8 @@ import java.util.Optional;
 
 public interface PeerCodeRepository extends JpaRepository<PeerCode, Long> {
 
+    Optional<PeerCode> findByCode(String code);
+
     /**
      * userId로 본인 코드 조회
      * user_id UNIQUE 제약으로 0~1건만 존재
