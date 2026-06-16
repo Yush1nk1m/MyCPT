@@ -4,11 +4,9 @@ import com.mycpt.backend.common.exception.BusinessException;
 import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.domain.assessment.entity.AssessmentToken;
 import com.mycpt.backend.domain.assessment.repository.AssessmentTokenRepository;
-import com.mycpt.backend.domain.result.dto.ScoreRequest;
+import com.mycpt.backend.domain.result.dto.DiscScoreRequest;
 import com.mycpt.backend.domain.result.entity.DiscTest;
-import com.mycpt.backend.domain.result.entity.Test;
 import com.mycpt.backend.domain.result.repository.DiscTestRepository;
-import com.mycpt.backend.domain.result.repository.TestRepository;
 import com.mycpt.backend.domain.result.service.ScoringService;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
@@ -119,11 +117,11 @@ public class AssessmentService {
      * @param request    DISC 원점수 (testType, scores)
      */
     @Transactional
-    public void submit(String tokenValue, ScoreRequest request) {
+    public void submit(String tokenValue, DiscScoreRequest request) {
         AssessmentToken token = findAndValidate(tokenValue);
 
         ScoringService.Buckets buckets = scoringService.normalize(request);
-        ScoreRequest.Scores s = request.scores();
+        DiscScoreRequest.Scores s = request.scores();
 
         User subject = token.getSubject();
         DiscTest discTest = DiscTest.createForOther(

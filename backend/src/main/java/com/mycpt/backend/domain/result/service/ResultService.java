@@ -48,9 +48,9 @@ public class ResultService {
      * @return tests.id (resultId) - 프론트가 결과 상세 페이지로 이동 시 사용
      */
     @Transactional
-    public Long save(Long userId, ScoreRequest request) {
+    public Long save(Long userId, DiscScoreRequest request) {
         ScoringService.Buckets buckets = scoringService.normalize(request);
-        ScoreRequest.Scores s = request.scores();
+        DiscScoreRequest.Scores s = request.scores();
 
         User user = userRepository.getReferenceById(userId);
         // DiscTest.createForSelf()가 tests + disc_tests 두 테이블에 저장될 단일 엔티티 생성

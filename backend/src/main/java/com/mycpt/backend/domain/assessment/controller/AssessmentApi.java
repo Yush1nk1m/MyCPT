@@ -5,7 +5,7 @@ import com.mycpt.backend.domain.assessment.dto.CreateTokenResponse;
 import com.mycpt.backend.domain.assessment.dto.SubjectInfoResponse;
 import com.mycpt.backend.domain.assessment.dto.SubmitResponse;
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
-import com.mycpt.backend.domain.result.dto.ScoreRequest;
+import com.mycpt.backend.domain.result.dto.DiscScoreRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -41,6 +41,6 @@ public interface AssessmentApi {
     )
     ResponseEntity<SubmitResponse> submit(
             @PathVariable String token,
-            @RequestBody ScoreRequest request
+            @RequestBody DiscScoreRequest request
     );
 }

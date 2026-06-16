@@ -4,7 +4,7 @@ import com.mycpt.backend.common.exception.BusinessException;
 import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.domain.result.dto.ResultDetailResponse;
 import com.mycpt.backend.domain.result.dto.ResultListResponse;
-import com.mycpt.backend.domain.result.dto.ScoreRequest;
+import com.mycpt.backend.domain.result.dto.DiscScoreRequest;
 import com.mycpt.backend.domain.result.entity.DiscTest;
 import com.mycpt.backend.domain.result.enums.RaterType;
 import com.mycpt.backend.domain.result.repository.DiscTestRepository;
@@ -42,8 +42,8 @@ class ResultServiceTest {
 
     private static final String REPORT = "## 결과 개요\n테스트 보고서";
 
-    private ScoreRequest validRequest() {
-        return new ScoreRequest("DISC", new ScoreRequest.Scores(32, 10, -4, -14));
+    private DiscScoreRequest validRequest() {
+        return new DiscScoreRequest(new DiscScoreRequest.Scores(32, 10, -4, -14));
     }
 
     private User stubUser() {

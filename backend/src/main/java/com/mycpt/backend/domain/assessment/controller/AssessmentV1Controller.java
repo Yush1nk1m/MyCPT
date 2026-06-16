@@ -6,7 +6,7 @@ import com.mycpt.backend.domain.assessment.dto.SubjectInfoResponse;
 import com.mycpt.backend.domain.assessment.dto.SubmitResponse;
 import com.mycpt.backend.domain.assessment.service.AssessmentService;
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
-import com.mycpt.backend.domain.result.dto.ScoreRequest;
+import com.mycpt.backend.domain.result.dto.DiscScoreRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,7 +47,7 @@ public class AssessmentV1Controller implements AssessmentApi {
     @Override
     public ResponseEntity<SubmitResponse> submit(
             @PathVariable String token,
-            @RequestBody ScoreRequest request
+            @RequestBody DiscScoreRequest request
     ) {
         assessmentService.submit(token, request);
         return ResponseEntity.status(HttpStatus.CREATED)

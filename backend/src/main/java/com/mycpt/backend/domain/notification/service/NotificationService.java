@@ -2,6 +2,7 @@ package com.mycpt.backend.domain.notification.service;
 
 import com.mycpt.backend.common.exception.BusinessException;
 import com.mycpt.backend.common.exception.ErrorCode;
+import com.mycpt.backend.domain.chemistry.entity.ChemistryReport;
 import com.mycpt.backend.domain.colleague.entity.Colleague;
 import com.mycpt.backend.domain.notification.entity.ChemistryNotification;
 import com.mycpt.backend.domain.notification.entity.ColleagueNotification;

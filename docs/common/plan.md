@@ -148,7 +148,7 @@
 | 06.07 (일) | '로그인하고 결과 저장' — sessionStorage 원점수를 `POST /results`로 전송, tests + disc_tests INSERT | ResultService                                                      | [x]  |
 | 06.08 (월) | 결과 이력 조회 페이지 구현 (자기/타인 평정 구분, 커서 기반 페이지네이션)                           | 이력 페이지                                                        | [x]  |
 | 06.09 (화) | 통계 집계 로직 구현 — 나이대/성별 기준 평균 산출 (자기 평정만), tests JOIN disc_tests 집계 쿼리    | StatisticsService                                                  | [x]  |
-| 06.10 (수) | 통계 비교 + 변화 추이 화면 구현 (`GET /statistics/comparison`, `GET /statistics/trend`)            | 통계 페이지                                                        | [ ]  |
+| 06.10 (수) | 통계 비교 + 변화 추이 화면 구현 (`GET /statistics/comparison`, `GET /statistics/trend`)            | 통계 페이지                                                        | [x]  |
 | 06.11 (목) | 동료 초대 코드 생성/조회 API 구현 (대문자+숫자 8자리, 온디맨드 리프레시)                           | PeerCodeService                                                    | [ ]  |
 | 06.12 (금) | 동료 등록 흐름 구현 (링크/코드 입력 → colleagues INSERT, UNION ALL 조회), 동료 등록 알림 전송      | ColleagueService, NotificationService                              | [ ]  |
 

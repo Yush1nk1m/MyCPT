@@ -4,7 +4,7 @@ import com.mycpt.backend.common.exception.BusinessException;
 import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.domain.assessment.entity.AssessmentToken;
 import com.mycpt.backend.domain.assessment.repository.AssessmentTokenRepository;
-import com.mycpt.backend.domain.result.dto.ScoreRequest;
+import com.mycpt.backend.domain.result.dto.DiscScoreRequest;
 import com.mycpt.backend.domain.result.repository.DiscTestRepository;
 import com.mycpt.backend.domain.result.service.ScoringService;
 import com.mycpt.backend.domain.user.entity.User;
@@ -70,8 +70,8 @@ class AssessmentServiceTest {
         return User.create("kakao-123", "유신", null);
     }
 
-    private ScoreRequest validRequest() {
-        return new ScoreRequest("DISC", new ScoreRequest.Scores(32, 10, -4, -14));
+    private DiscScoreRequest validRequest() {
+        return new DiscScoreRequest(new DiscScoreRequest.Scores(32, 10, -4, -14));
     }
 
     // ── createToken() ─────────────────────────────────────────────────────────

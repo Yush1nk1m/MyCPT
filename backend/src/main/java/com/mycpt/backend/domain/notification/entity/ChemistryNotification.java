@@ -1,5 +1,6 @@
 package com.mycpt.backend.domain.notification.entity;
 
+import com.mycpt.backend.domain.chemistry.entity.ChemistryReport;
 import com.mycpt.backend.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;

@@ -2,7 +2,7 @@ package com.mycpt.backend.domain.result.service;
 
 import com.mycpt.backend.common.exception.BusinessException;
 import com.mycpt.backend.common.exception.ErrorCode;
-import com.mycpt.backend.domain.result.dto.ScoreRequest;
+import com.mycpt.backend.domain.result.dto.DiscScoreRequest;
 import org.springframework.stereotype.Service;
 
 /**
@@ -58,8 +58,8 @@ public class ScoringService {
      * @return D/I/S/C 각각의 버킷 값 (1~9)
      * @throws BusinessException (INVALID_SCORE) 범위 위반 또는 합계 불일치 시
      */
-    public Buckets normalize(ScoreRequest request) {
-        ScoreRequest.Scores scores = request.scores();
+    public Buckets normalize(DiscScoreRequest request) {
+        DiscScoreRequest.Scores scores = request.scores();
         validate(scores);
         return new Buckets(
                 toBucket(scores.d()),
@@ -72,7 +72,7 @@ public class ScoringService {
      * 원점수 유효성 검증
      * 범위 초과 여부 검사 -> 합계 오류 검사
      */
-    private void validate(ScoreRequest.Scores scores) {
+    private void validate(DiscScoreRequest.Scores scores) {
         // 1. 개별 원점수 범위 검증
         int[] values = {scores.d(), scores.i(), scores.s(), scores.c()};
         for (int v : values) {

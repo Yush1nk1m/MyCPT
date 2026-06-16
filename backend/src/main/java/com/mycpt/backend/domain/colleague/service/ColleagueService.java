@@ -127,16 +127,7 @@ public class ColleagueService {
         Long idA = Math.min(myUserId, colleagueUserId);
         Long idB = Math.max(myUserId, colleagueUserId);
 
-        if (!colleagueRepository.existsByPair(idA, idB)) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
-        // 관계 행 조회 (응답 구성용)
-        // findAllByUserId에서 단건으로 조회하는 대신 pair로 직접 조회
-        List<Colleague> colleagues = colleagueRepository.findAllByUserId(myUserId);
-        Colleague colleague = colleagues.stream()
-                .filter(c -> c.getPartner(myUserId).getId().equals(colleagueUserId))
-                .findFirst()
+        Colleague colleague = colleagueRepository.findByPair(idA, idB)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN));
 
         return ColleagueResponse.from(colleague, myUserId);
@@ -156,14 +147,7 @@ public class ColleagueService {
         Long idA = Math.min(myUserId, colleagueUserId);
         Long idB = Math.max(myUserId, colleagueUserId);
 
-        Colleague colleague = colleagueRepository.findAllByUserId(myUserId)
-                .stream()
-                .filter(c -> {
-                    Long a = Math.min(c.getUserA().getId(), c.getUserB().getId());
-                    Long b = Math.max(c.getUserA().getId(), c.getUserB().getId());
-                    return a.equals(idA) && b.equals(idB);
-                })
-                .findFirst()
+        Colleague colleague = colleagueRepository.findByPair(idA, idB)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN));
 
         colleagueRepository.delete(colleague);

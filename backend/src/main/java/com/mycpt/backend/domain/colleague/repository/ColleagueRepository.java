@@ -35,6 +35,17 @@ public interface ColleagueRepository extends JpaRepository<Colleague, Long> {
             @Param("userId") Long userId
     );
 
+    @Query("""
+        SELECT c FROM Colleague c
+        JOIN FETCH c.userA
+        JOIN FETCH c.userB
+        WHERE c.userA.id = :userAId AND c.userB.id = :userBId
+    """)
+    Optional<Colleague> findByPair(
+            @Param("userAId") Long userAId,
+            @Param("userBId") Long userBId
+    );
+
     // 이미 동료인지 확인 (user_a_id < user_b_id 정렬 적용)
     @Query("""
         SELECT COUNT(c) > 0 FROM Colleague c

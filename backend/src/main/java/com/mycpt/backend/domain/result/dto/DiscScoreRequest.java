@@ -16,7 +16,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *  - equals/hashCode/toString 자동 생성
  *  - getter 자동 생성(d(), i(), s(), c())
  */
-public record ScoreRequest (
+public record DiscScoreRequest(
         Scores scores
 ) {
     /**

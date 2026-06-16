@@ -16,8 +16,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.Map;
-
 /**
  * Result 도메인 API 계약 인터페이스
  *
@@ -62,7 +60,7 @@ public interface ResultApi {
                     )
             )
     })
-    ResponseEntity<ScoreResponse> score(@RequestBody ScoreRequest request);
+    ResponseEntity<DiscScoreResponse> score(@RequestBody DiscScoreRequest request);
 
     @Operation(
             summary = "결과 저장",
@@ -85,7 +83,7 @@ public interface ResultApi {
     })
     ResponseEntity<SaveResponse> save(
             @AuthenticationPrincipal UserPrincipal principal,
-            @RequestBody ScoreRequest request
+            @RequestBody DiscScoreRequest request
     );
 
     @Operation(

@@ -32,16 +32,15 @@ public class ResultV1Controller implements ResultApi {
     // 비회원 접근 가능 - SecurityConfig에서 접근 경로 permitAll() 메서드 적용
     @PostMapping("/results/score")
     @Override
-    public ResponseEntity<ScoreResponse> score(@RequestBody ScoreRequest request) {
+    public ResponseEntity<DiscScoreResponse> score(@RequestBody DiscScoreRequest request) {
         // 검증 + 버킷 정규화
         ScoringService.Buckets buckets = scoringService.normalize(request);
-        ScoreRequest.Scores s = request.scores();
+        DiscScoreRequest.Scores s = request.scores();
 
         // CacheService가 HIT/MISS/만료를 판단하고 보고서를 반환
         String report = cacheService.getReport(buckets);
 
-        return ResponseEntity.ok(new ScoreResponse(
-                request.testType(),
+        return ResponseEntity.ok(new DiscScoreResponse(
                 new DiscScores(s.d(), s.i(), s.s(), s.c()),
                 new DiscBuckets(buckets.d(), buckets.i(), buckets.s(), buckets.c()),
                 report
@@ -53,7 +52,7 @@ public class ResultV1Controller implements ResultApi {
     @Override
     public ResponseEntity<SaveResponse> save(
             @AuthenticationPrincipal UserPrincipal principal,
-            @RequestBody ScoreRequest request
+            @RequestBody DiscScoreRequest request
     ) {
         Long resultId = resultService.save(principal.getUser().getId(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(new SaveResponse(resultId));

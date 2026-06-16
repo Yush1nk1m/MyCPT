@@ -2,7 +2,7 @@ package com.mycpt.backend.domain.result.service;
 
 import com.mycpt.backend.common.exception.BusinessException;
 import com.mycpt.backend.common.exception.ErrorCode;
-import com.mycpt.backend.domain.result.dto.ScoreRequest;
+import com.mycpt.backend.domain.result.dto.DiscScoreRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -69,7 +69,7 @@ class ScoringServiceTest {
         @DisplayName("[UT-ScoringService-버킷정규화-성공]")
         void 버킷정규화_성공() {
             // given: D=32(High), I=10(Mid), S=-4(Mid), C=-14(Low)
-            ScoreRequest request = request(32, 10, -4, -14);
+            DiscScoreRequest request = request(32, 10, -4, -14);
 
             // when
             ScoringService.Buckets buckets = scoringService.normalize(request);
@@ -85,7 +85,7 @@ class ScoringServiceTest {
         @DisplayName("[UT-ScoringService-버킷정규화-최솟값최댓값혼합]")
         void 버킷정규화_최솟값최댓값혼합() {
             // given: D=-24(Low 하한), C=48(High 상한), I+S=0 합계 맞춤
-            ScoreRequest request = request(-24, 0, 0, 48);
+            DiscScoreRequest request = request(-24, 0, 0, 48);
 
             // when
             ScoringService.Buckets buckets = scoringService.normalize(request);
@@ -108,7 +108,7 @@ class ScoringServiceTest {
         @DisplayName("[UT-ScoringService-합계검증-실패]")
         void 합계검증_실패() {
             // given
-            ScoreRequest request = request(10, 10, 10, -5);
+            DiscScoreRequest request = request(10, 10, 10, -5);
 
             // when
             assertThatThrownBy(() -> scoringService.normalize(request))
@@ -125,7 +125,7 @@ class ScoringServiceTest {
         @DisplayName("[UT-ScoringService-범위초과-상한]")
         void 범위초과_상한() {
             // given
-            ScoreRequest request = request(49, 0, 0, 0);
+            DiscScoreRequest request = request(49, 0, 0, 0);
 
             // when
             assertThatThrownBy(() -> scoringService.normalize(request))
@@ -142,7 +142,7 @@ class ScoringServiceTest {
         @DisplayName("[UT-ScoringService-범위초과-하한")
         void 범위초과_하한() {
             // given
-            ScoreRequest request = request(0, -25, 0, 0);
+            DiscScoreRequest request = request(0, -25, 0, 0);
 
             // when
             assertThatThrownBy(() -> scoringService.normalize(request))
@@ -163,7 +163,7 @@ class ScoringServiceTest {
      * - 코드 반복 감소
      * - 의도 명확화
      */
-    private ScoreRequest request(int d, int i, int s, int c) {
-        return new ScoreRequest("DISC", new ScoreRequest.Scores(d, i, s, c));
+    private DiscScoreRequest request(int d, int i, int s, int c) {
+        return new DiscScoreRequest(new DiscScoreRequest.Scores(d, i, s, c));
     }
 }
