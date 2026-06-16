@@ -17,7 +17,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *  - getter 자동 생성(d(), i(), s(), c())
  */
 public record ScoreRequest (
-        String testType,
         Scores scores
 ) {
     /**

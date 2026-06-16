@@ -7,7 +7,6 @@ package com.mycpt.backend.domain.result.dto;
  * buckets: MinDiscBars / DiscBarsLarge 렌더링 용도 (1~3)
  */
 public record ScoreResponse(
-        String testType,
         DiscScores scores,
         DiscBuckets buckets,
         String report
