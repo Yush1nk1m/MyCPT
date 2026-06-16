@@ -1,22 +1,23 @@
 # MyCPT API 명세서
 
-**문서 버전**: v0.7
-**작성일**: '26.06.08.
+**문서 버전**: v0.8
+**작성일**: '26.06.16.
 **작성자**: 김유신
 
 ---
 
 ## 변경 이력
 
-| 버전 | 변경 내용                                                                                                                                  | 날짜       |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| v0.1 | 초안 작성 (28개 엔드포인트)                                                                                                                | '26.05.24. |
-| v0.2 | POST /assessments testType 파라미터 추가. DELETE /users/me 신규 추가. 타인 평정 링크 클라이언트 URL 구조 명시.                             | '26.05.25. |
-| v0.3 | POST /assessments/{token}/submit 신규 추가. POST /results 응답 코드 200 → 201. POST /chemistry-reports INSUFFICIENT_COINS 409 → 422.       | '26.05.25. |
-| v0.4 | GET /auth/me 응답에 nextCoinAt 추가. profile_image_url로 컬럼명 통일 반영.                                                                 | '26.05.26. |
-| v0.5 | JWT 인증 방식으로의 변경에 따른 인증 API 명세 수정                                                                                         | '26.05.27. |
-| v0.6 | GET /questions 제거 (문항 프론트 위임). POST /results/score · POST /assessments/{token}/submit 요청 바디를 원점수 직접 전송 방식으로 변경. | '26.05.30. |
-| v0.7 | 비회원 로그인 시 DISC 결과 저장을 위해 OAuth 로그인에 redirect 기능 추가                                                                   | '26.06.08. |
+| 버전 | 변경 내용                                                                                                                                                                                                        | 날짜       |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| v0.1 | 초안 작성 (28개 엔드포인트)                                                                                                                                                                                      | '26.05.24. |
+| v0.2 | POST /assessments testType 파라미터 추가. DELETE /users/me 신규 추가. 타인 평정 링크 클라이언트 URL 구조 명시.                                                                                                   | '26.05.25. |
+| v0.3 | POST /assessments/{token}/submit 신규 추가. POST /results 응답 코드 200 → 201. POST /chemistry-reports INSUFFICIENT_COINS 409 → 422.                                                                             | '26.05.25. |
+| v0.4 | GET /auth/me 응답에 nextCoinAt 추가. profile_image_url로 컬럼명 통일 반영.                                                                                                                                       | '26.05.26. |
+| v0.5 | JWT 인증 방식으로의 변경에 따른 인증 API 명세 수정                                                                                                                                                               | '26.05.27. |
+| v0.6 | GET /questions 제거 (문항 프론트 위임). POST /results/score · POST /assessments/{token}/submit 요청 바디를 원점수 직접 전송 방식으로 변경.                                                                       | '26.05.30. |
+| v0.7 | 비회원 로그인 시 DISC 결과 저장을 위해 OAuth 로그인에 redirect 기능 추가                                                                                                                                         | '26.06.08. |
+| v0.8 | POST /results/score 요청/응답에서 testType 제거 (엔드포인트가 검사 유형 결정). POST /results 요청에서 testType 제거. POST /assessments 요청에서 testType 제거. 검사 유형 확장 시 전용 엔드포인트 분리 방침 명시. | '26.06.16. |
 
 ---
 
@@ -89,7 +90,6 @@ Spring Security JWT 기반.
 
 ```json
 {
-  "testType": "DISC",
   "scores": { "d": 32, "i": 10, "s": -4, "c": 18 }
 }
 ```
@@ -313,7 +313,6 @@ Spring Security JWT 기반.
 
 ```json
 {
-  "testType": "DISC",
   "scores": { "d": 32, "i": 10, "s": -4, "c": 18 }
 }
 ```
@@ -441,7 +440,6 @@ Spring Security JWT 기반.
 
 ```json
 {
-  "testType": "DISC",
   "label": "여자친구"
 }
 ```

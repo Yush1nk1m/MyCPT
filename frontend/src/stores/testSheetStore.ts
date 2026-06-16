@@ -26,7 +26,6 @@ import { TOTAL_QUESTIONS } from "@/lib/disc/questions";
 
 // POST /results/score 응답 타입 (api-design.md §2 참고)
 export interface ScoreResult {
-  testType: string;
   scores: { d: number; i: number; s: number; c: number };
   buckets: { d: number; i: number; s: number; c: number };
   report: string;
@@ -174,7 +173,7 @@ export const useTestSheetStore = create<TestSheetState>((set, get) => ({
       const res = await fetch("/api/v1/results/score", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ testType: "DISC", scores }),
+        body: JSON.stringify({ scores }),
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

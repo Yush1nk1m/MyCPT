@@ -7,7 +7,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *
  * 요청 JSON 구조:
  * {
- *     "testType": "DISC",
  *     "scores": { "d": 32, "i": 10, "s": -4, "c": 14 }
  * }
  *

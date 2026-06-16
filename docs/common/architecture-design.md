@@ -1,7 +1,7 @@
 # MyCPT 시스템 아키텍처 설계
 
-**문서 버전**: v0.8
-**작성일**: '26.06.14.
+**문서 버전**: v0.9
+**작성일**: '26.06.16.
 **작성자**: 김유신
 
 ---
@@ -17,6 +17,7 @@
 | v0.6 | result 도메인 패키지 구조 실제 구현 반영. RaterType enums 분리. DTO 패키지 추가. ForbiddenException 추가. EntityNotFoundException 핸들러 전역 이동.                                                                                                                                                 | '26.06.09. |
 | v0.7 | 예외 처리 체계 통합 (BusinessException/ErrorCode/ErrorResponse). 개별 예외 클래스 제거. 응답 DTO Map → record 교체 반영 (MeResponse, UpdateProfileResponse, UpdateProfileImageResponse, CreateTokenResponse, SubjectInfoResponse, SubmitResponse).                                                  | '26.06.13. |
 | v0.8 | `DiscResult` → `DiscTest`, `DiscResultRepository` → `DiscTestRepository` 이름 변경. `Test` 엔티티 추상 클래스 전환 (`@Inheritance(JOINED)`). notification 도메인 CTI 적용 (`Notification` 추상화, `ColleagueNotification` / `ChemistryNotification` 서브클래스 추가). MySQL 테이블 수 10 → 12 반영. | '26.06.15. |
+| v0.9 | ScoreRequest → DiscScoreRequest, ScoreResponse → DiscScoreResponse 이름 변경. common/enums/TestType.java 추가 (ChemistryReport 전용). TestType을 DTO에 사용하지 않는 설계 근거 반영.                                                                                                                | '26.06.16. |
 
 ---
 
@@ -129,8 +130,8 @@ com.mycpt.backend
 │   │   ├── enums/
 │   │   │   └── RaterType.java               # SELF / OTHER
 │   │   └── dto/
-│   │       ├── ScoreRequest.java            # POST /results/score 요청
-│   │       ├── ScoreResponse.java           # POST /results/score 응답
+│   │       ├── DiscScoreRequest.java        # POST /results/score 요청
+│   │       ├── DiscScoreResponse.java       # POST /results/score 응답
 │   │       ├── SaveResponse.java            # POST /results 응답
 │   │       ├── ResultListResponse.java      # GET /results 응답
 │   │       ├── ResultSummaryResponse.java   # GET /results 목록 항목
@@ -254,10 +255,11 @@ com.mycpt.backend
 │   ├── response/
 │   │   └── ErrorResponse.java               # { code, message } 공통 응답 DTO
 │   └── storage/
-│       ├── StorageService.java              # 인터페이스
-│       ├── LocalStorageService.java         # 개발 환경 (@Profile("local"))
-│       └── S3StorageService.java            # 운영 환경 (@Profile("prod"))
-│
+│   │   ├── StorageService.java              # 인터페이스
+│   │   ├── LocalStorageService.java         # 개발 환경 (@Profile("local"))
+│   │   └── S3StorageService.java            # 운영 환경 (@Profile("prod"))
+│   └── enums/
+│       └── TestType.java
 └── batch/
     └── ExpiredDataCleanupBatch.java         # 만료 동료 코드 + 만료 평정 토큰 통합 삭제 (매일 새벽)
 ```

@@ -54,7 +54,6 @@ export function DoneState({ result, onClose }: DoneStateProps) {
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        testType: result.testType,
         scores: result.scores,
       }),
     })
@@ -74,7 +73,7 @@ export function DoneState({ result, onClose }: DoneStateProps) {
       .catch(() => {
         setSaveStatus("failed");
       });
-  }, [isAuthenticated, result.testType, result.scores]);
+  }, [isAuthenticated, result.scores]);
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto">

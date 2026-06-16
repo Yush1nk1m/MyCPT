@@ -55,7 +55,7 @@ collections "Kakao OAuth" as Kakao
 == 비회원 검사 응시 ==
 
 Guest -> Client : 검사 시작
-Client -> ResultCtrl : POST /results/score\n{ testType, scores: { d, i, s, c } }
+Client -> ResultCtrl : POST /results/score\n{ scores: { d, i, s, c } }
 ResultCtrl --> Client : 200 OK\n{ rawScores, buckets, report }
 
 note right of Client
@@ -104,7 +104,7 @@ deactivate AuthCtrl
 Client -> Client : sessionStorage에서\n원점수 꺼내기
 
 alt sessionStorage에 원점수 있음
-  Client -> ResultCtrl : POST /results\n{ testType, scores: { d, i, s, c } }
+  Client -> ResultCtrl : POST /results\n{ scores: { d, i, s, c } }
   activate ResultCtrl
 
   ResultCtrl -> ResultSvc : save(userId, rawScores)
