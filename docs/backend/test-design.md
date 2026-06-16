@@ -261,13 +261,58 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ## 8. Statistics 도메인
 
-_3주차 구현 시 작성_
+### StatisticsService (UT)
+
+#### comparison()
+
+| Test ID                                | 행위                                    | 상황                                            |
+| -------------------------------------- | --------------------------------------- | ----------------------------------------------- |
+| `UT-StatisticsSvc-비교조회-검사없음`   | 본인 SELF 검사 이력 없음                | `my.buckets = null`, `average` 집계는 계속 진행 |
+| `UT-StatisticsSvc-비교조회-생년미입력` | `birthYear = null`                      | `average = null` 즉시 반환                      |
+| `UT-StatisticsSvc-비교조회-성별미입력` | `gender = null`                         | `average = null` 즉시 반환                      |
+| `UT-StatisticsSvc-비교조회-성별N`      | `gender = N`                            | `average = null` 즉시 반환                      |
+| `UT-StatisticsSvc-비교조회-샘플없음`   | 나이대/성별 집계 결과 `sampleCount = 0` | `average = null` 반환                           |
+| `UT-StatisticsSvc-비교조회-성공`       | 모든 조건 충족                          | `average.ageGroupLabel`, `sampleCount > 0` 검증 |
+
+#### trend()
+
+| Test ID                              | 행위                          | 상황                                                        |
+| ------------------------------------ | ----------------------------- | ----------------------------------------------------------- |
+| `UT-StatisticsSvc-추이조회-결과없음` | `days` 기간 내 SELF 검사 없음 | `summary.count = 0`, `summary.average = null`, `trend = []` |
+| `UT-StatisticsSvc-추이조회-성공`     | 검사 이력 있음                | `entries` 수 일치, `summary.average` 산술 평균 정확성       |
 
 ---
 
 ## 9. Colleague 도메인
 
-_3주차 구현 시 작성_
+### PeerCodeService (UT)
+
+| Test ID                          | 행위                          | 상황                                            |
+| -------------------------------- | ----------------------------- | ----------------------------------------------- |
+| `UT-PeerCodeSvc-코드조회-행없음` | 코드 행이 없을 때 getOrCreate | 신규 `PeerCode` save 1회, 코드/만료일 반환      |
+| `UT-PeerCodeSvc-코드조회-유효`   | 기존 유효 코드 존재           | save 미호출, 기존 코드 그대로 반환              |
+| `UT-PeerCodeSvc-코드조회-만료`   | 기존 만료 코드 존재           | `refresh()` 후 save 1회, 새 코드 반환           |
+| `UT-PeerCodeSvc-코드갱신-성공`   | refresh() 호출                | save 1회, 새 코드 반환                          |
+| `UT-PeerCodeSvc-코드갱신-행없음` | 코드 행 없을 때 refresh       | 신규 생성 후 refresh, save 1회 (방어 로직 검증) |
+
+### ColleagueService (UT)
+
+| Test ID                                   | 행위                           | 상황                                                                            |
+| ----------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------- |
+| `UT-ColleagueSvc-초대정보조회-성공`       | 유효한 코드로 초대자 정보 조회 | `InviteInfoResponse` 반환 (inviter 닉네임/이미지 포함)                          |
+| `UT-ColleagueSvc-초대정보조회-코드없음`   | 존재하지 않는 코드             | `BusinessException(NOT_FOUND)`                                                  |
+| `UT-ColleagueSvc-초대정보조회-만료코드`   | `isExpired()` = true           | `BusinessException(EXPIRED_CODE)`                                               |
+| `UT-ColleagueSvc-초대정보조회-자기초대`   | 초대자 == 요청자               | `BusinessException(SELF_INVITE)`                                                |
+| `UT-ColleagueSvc-동료등록-성공`           | 유효한 코드로 동료 등록        | `Colleague` save 1회, `sendColleagueNotification` 1회, `ColleagueResponse` 반환 |
+| `UT-ColleagueSvc-동료등록-코드없음`       | 존재하지 않는 코드             | `BusinessException(NOT_FOUND)`                                                  |
+| `UT-ColleagueSvc-동료등록-만료코드`       | `isExpired()` = true           | `BusinessException(EXPIRED_CODE)`                                               |
+| `UT-ColleagueSvc-동료등록-자기초대`       | 초대자 == 요청자               | `BusinessException(SELF_INVITE)`                                                |
+| `UT-ColleagueSvc-동료등록-이미동료`       | `existsByPair()` = true        | `BusinessException(ALREADY_COLLEAGUE)`, save 미호출                             |
+| `UT-ColleagueSvc-동료목록조회-성공`       | 동료 목록 조회                 | `ColleagueListResponse` 반환, 상대방 정보 포함                                  |
+| `UT-ColleagueSvc-동료프로필조회-성공`     | 동료 관계인 상대 조회          | `ColleagueResponse` 반환                                                        |
+| `UT-ColleagueSvc-동료프로필조회-동료아님` | 동료 관계 없음                 | `BusinessException(FORBIDDEN)`                                                  |
+| `UT-ColleagueSvc-동료삭제-성공`           | 동료 관계 삭제                 | `delete` 1회 호출                                                               |
+| `UT-ColleagueSvc-동료삭제-동료아님`       | 동료 관계 없음                 | `BusinessException(FORBIDDEN)`, delete 미호출                                   |
 
 ---
 
@@ -279,7 +324,15 @@ _4주차 구현 시 작성_
 
 ## 11. Notification 도메인
 
-_3주차 구현 시 작성_
+### NotificationService (UT)
+
+| Test ID                                | 행위                | 상황                                          |
+| -------------------------------------- | ------------------- | --------------------------------------------- |
+| `UT-NotificationSvc-동료알림전송-성공` | 동료 등록 알림 생성 | `ColleagueNotification` save 1회              |
+| `UT-NotificationSvc-알림목록조회-성공` | 내 알림 목록 조회   | `NotificationListResponse` 반환, 항목 수 일치 |
+| `UT-NotificationSvc-알림삭제-성공`     | 본인 알림 삭제      | `delete` 1회 호출                             |
+| `UT-NotificationSvc-알림삭제-없는ID`   | 존재하지 않는 알림  | `BusinessException(NOT_FOUND)`                |
+| `UT-NotificationSvc-알림삭제-권한없음` | 타인 알림 삭제 시도 | `BusinessException(FORBIDDEN)`, delete 미호출 |
 
 ---
 

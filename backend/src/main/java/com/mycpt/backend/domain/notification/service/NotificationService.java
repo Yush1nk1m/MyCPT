@@ -4,6 +4,8 @@ import com.mycpt.backend.common.exception.BusinessException;
 import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.domain.chemistry.entity.ChemistryReport;
 import com.mycpt.backend.domain.colleague.entity.Colleague;
+import com.mycpt.backend.domain.notification.dto.NotificationListResponse;
+import com.mycpt.backend.domain.notification.dto.NotificationResponse;
 import com.mycpt.backend.domain.notification.entity.ChemistryNotification;
 import com.mycpt.backend.domain.notification.entity.ColleagueNotification;
 import com.mycpt.backend.domain.notification.entity.Notification;
@@ -47,8 +49,13 @@ public class NotificationService {
      * GET /notifications - 내 알림 목록
      */
     @Transactional(readOnly = true)
-    public List<Notification> list(Long userId) {
-        return notificationRepository.findAllByUserId(userId);
+    public NotificationListResponse list(Long userId) {
+        return new NotificationListResponse(
+                notificationRepository.findAllByUserId(userId)
+                        .stream()
+                        .map(NotificationResponse::from)
+                        .toList()
+        );
     }
 
     /**

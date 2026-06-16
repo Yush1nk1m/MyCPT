@@ -164,10 +164,10 @@
 - [x] 변화 추이 summary + trend 정상 반환 확인
 - [x] 동료 코드 생성 및 만료 7일 확인
 - [x] 동료 코드 온디맨드 리프레시 확인
-- [ ] 초대 링크 및 코드 직접 입력 양방향 동료 등록 확인
-- [ ] SELF_INVITE, EXPIRED_CODE, ALREADY_COLLEAGUE 에러 처리 확인
-- [ ] UNION ALL 양방향 동료 목록 조회 확인
-- [ ] 동료 등록 완료 시 알림 전송 확인
+- [x] 초대 링크 및 코드 직접 입력 양방향 동료 등록 확인
+- [x] SELF_INVITE, EXPIRED_CODE, ALREADY_COLLEAGUE 에러 처리 확인
+- [x] UNION ALL 양방향 동료 목록 조회 확인
+- [x] 동료 등록 완료 시 알림 전송 확인
 
 ### 기술 부채 (4주차 착수 전 처리)
 
@@ -195,6 +195,10 @@
 | 06.15 (월) | SSE 연결 구현 (`GET /notifications/stream`) — Last-Event-ID 기반 재전송, 인터넷 재연결 토스트 알림                                                                                                                                   | SseEmitter, SSE 핸들러                                                                                                 | [ ]  |
 | 06.16 (화) | Claude API 케미 프롬프트 설계 — 두 사람의 DISC 버킷값 기반 6개 섹션 보고서 생성                                                                                                                                                      | 케미 프롬프트                                                                                                          | [ ]  |
 | 06.17 (수) | 케미 보고서 결과 화면 구현 — 6개 섹션 표시, 발행자/대상자 이름 렌더링                                                                                                                                                                | 케미 결과 페이지                                                                                                       | [ ]  |
+|            | Colleague 도메인 백엔드 구현 — ColleagueRepository, ColleagueService, ColleagueApi/V1Controller (GET /colleagues/invite/{code}, POST /colleagues, GET /colleagues, GET /colleagues/{colleagueId}, DELETE /colleagues/{colleagueId})  | ColleagueService, ColleagueV1Controller                                                                                | [x]  |
+|            | Notification CTI 엔티티 3종 + NotificationService + NotificationRepository 구현                                                                                                                                                      | Notification, ColleagueNotification, ChemistryNotification, NotificationService                                        | [x]  |
+|            | ChemistryReport 스텁 엔티티, TestType enum 추가                                                                                                                                                                                      | ChemistryReport, TestType                                                                                              | [x]  |
+|            | NotificationResponse / NotificationListResponse DTO 추가, NotificationService.list() 반환 타입 변경                                                                                                                                  | NotificationResponse, NotificationListResponse                                                                         | [x]  |
 | 06.18 (목) | 케미 보고서 발행 완료 시 SSE 푸시 + 상대방 인앱 알림 전송 처리                                                                                                                                                                       | NotificationService                                                                                                    | [ ]  |
 | 06.19 (금) | Spring Batch — 만료 동료 코드 + 만료 평정 토큰 통합 삭제 스케줄러 구현                                                                                                                                                               | BatchScheduler                                                                                                         | [ ]  |
 | 06.20 (토) | 전체 흐름 통합 테스트 — 비회원/회원/타인 평정/케미 시나리오                                                                                                                                                                          | QA 체크리스트                                                                                                          | [ ]  |
