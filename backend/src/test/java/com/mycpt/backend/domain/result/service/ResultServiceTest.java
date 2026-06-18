@@ -21,6 +21,7 @@ import org.springframework.data.domain.PageRequest;
 import java.util.List;
 import java.util.Optional;
 
+import static com.mycpt.backend.support.EntityIdSetter.*;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
@@ -59,25 +60,6 @@ class ResultServiceTest {
                 : DiscTest.createForOther(user, "테스트용라벨", 32, 10, -4, -14, 3, 2, 1, 2);
         setId(dt, userId * 10);
         return dt;
-    }
-
-    private void setId(Object target, Long id) {
-        try {
-            // DiscTest는 Test를 상속하므로 id 필드는 부모 클래스에 존재
-            Class<?> clazz = target.getClass();
-            while (clazz != null) {
-                try {
-                    var field = clazz.getDeclaredField("id");
-                    field.setAccessible(true);
-                    field.set(target, id);
-                    return;
-                } catch (NoSuchFieldException e) {
-                    clazz = clazz.getSuperclass();
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
     // ── save() ───────────────────────────────────────────────────────────────
