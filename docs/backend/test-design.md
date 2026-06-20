@@ -1,6 +1,6 @@
 # MyCPT 테스트 설계 문서
 
-**문서 버전**: v0.4
+**문서 버전**: v0.5
 **작성일**: '26.06.13.
 **작성자**: 김유신
 
@@ -14,6 +14,7 @@
 | v0.2 | Result/Assessment 도메인 테스트 케이스 추가. JpaTestSupport 기반 슬라이스 테스트 전략 확정.                                                                                                                                                                        | '26.06.09. |
 | v0.3 | 예외 처리 체계 통합 반영 (BusinessException/ErrorCode). ScoringService 경계값 케이스 보강.                                                                                                                                                                         | '26.06.13. |
 | v0.4 | `DiscResultRepository` → `DiscTestRepository` 이름 변경. Test ID `ST-DiscResultRepo-*` → `ST-DiscTestRepo-*` 전면 변경. `ResultService` 저장 행위 설명 `disc_results` → `disc_tests` 수정. `AssessmentService` 평정 제출 상황 설명 `DiscResult` → `DiscTest` 수정. | '26.06.15. |
+| v0.5 | §8~§11 누락된 Test Code 링크 4건 추가(Statistics/PeerCode/Colleague/Notification Service). `ColleagueV1Controller` ST 테스트 미작성 상태 명시(TODO).                                                                                                               | '26.06.20. |
 
 ---
 
@@ -263,6 +264,8 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### StatisticsService (UT)
 
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/statistics/service/StatisticsServiceTest.java)]
+
 #### comparison()
 
 | Test ID                                | 행위                                    | 상황                                            |
@@ -287,6 +290,8 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### PeerCodeService (UT)
 
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/colleague/service/PeerCodeServiceTest.java)]
+
 | Test ID                          | 행위                          | 상황                                            |
 | -------------------------------- | ----------------------------- | ----------------------------------------------- |
 | `UT-PeerCodeSvc-코드조회-행없음` | 코드 행이 없을 때 getOrCreate | 신규 `PeerCode` save 1회, 코드/만료일 반환      |
@@ -296,6 +301,8 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 | `UT-PeerCodeSvc-코드갱신-행없음` | 코드 행 없을 때 refresh       | 신규 생성 후 refresh, save 1회 (방어 로직 검증) |
 
 ### ColleagueService (UT)
+
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/colleague/service/ColleagueServiceTest.java)]
 
 | Test ID                                   | 행위                           | 상황                                                                            |
 | ----------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------- |
@@ -314,6 +321,31 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 | `UT-ColleagueSvc-동료삭제-성공`           | 동료 관계 삭제                 | `delete` 1회 호출                                                               |
 | `UT-ColleagueSvc-동료삭제-동료아님`       | 동료 관계 없음                 | `BusinessException(FORBIDDEN)`, delete 미호출                                   |
 
+### ColleagueV1Controller (ST)
+
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/colleague/controller/ColleagueV1ControllerTest.java)]
+
+> `@WebMvcTest(ColleagueV1Controller.class)` 슬라이스 테스트. `MvcTestSupport` 상속.
+> `PeerCodeService`, `ColleagueService`는 `@MockitoBean`으로 대체.
+> 비즈니스 예외 분기는 `ColleagueServiceTest`(UT)에서 전담 검증. ST는 인증 분기만 다룬다.
+
+| Test ID                                | 행위                                           | 상황                                   |
+| -------------------------------------- | ---------------------------------------------- | -------------------------------------- |
+| `ST-ColleagueCtrl-코드조회-성공`       | 인증된 사용자 GET /peer-code                   | 200 + 응답 바디 필드 검증              |
+| `ST-ColleagueCtrl-코드조회-미인증`     | 미인증 GET /peer-code                          | 401                                    |
+| `ST-ColleagueCtrl-코드갱신-성공`       | 인증된 사용자 POST /peer-code/refresh          | 200 + 응답 바디 필드 검증              |
+| `ST-ColleagueCtrl-코드갱신-미인증`     | 미인증 POST /peer-code/refresh                 | 401                                    |
+| `ST-ColleagueCtrl-초대정보조회-성공`   | 인증된 사용자 GET /colleagues/invite/{code}    | 200 + 응답 바디 필드 검증              |
+| `ST-ColleagueCtrl-초대정보조회-미인증` | 미인증 GET /colleagues/invite/{code}           | 401                                    |
+| `ST-ColleagueCtrl-동료등록-성공`       | 인증된 사용자 POST /colleagues                 | 201 + 응답 바디 필드 검증              |
+| `ST-ColleagueCtrl-동료등록-미인증`     | 미인증 POST /colleagues                        | 401                                    |
+| `ST-ColleagueCtrl-목록조회-성공`       | 인증된 사용자 GET /colleagues                  | 200 + 응답 바디 `colleagues` 배열 검증 |
+| `ST-ColleagueCtrl-목록조회-미인증`     | 미인증 GET /colleagues                         | 401                                    |
+| `ST-ColleagueCtrl-프로필조회-성공`     | 인증된 사용자 GET /colleagues/{colleagueId}    | 200 + 응답 바디 필드 검증              |
+| `ST-ColleagueCtrl-프로필조회-미인증`   | 미인증 GET /colleagues/{colleagueId}           | 401                                    |
+| `ST-ColleagueCtrl-삭제-성공`           | 인증된 사용자 DELETE /colleagues/{colleagueId} | 200                                    |
+| `ST-ColleagueCtrl-삭제-미인증`         | 미인증 DELETE /colleagues/{colleagueId}        | 401                                    |
+
 ---
 
 ## 10. Chemistry 도메인
@@ -326,6 +358,8 @@ _4주차 구현 시 작성_
 
 ### NotificationService (UT)
 
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/notification/service/NotificationServiceTest.java)]
+
 | Test ID                                | 행위                | 상황                                                                   |
 | -------------------------------------- | ------------------- | ---------------------------------------------------------------------- |
 | `UT-NotificationSvc-동료알림전송-성공` | 동료 등록 알림 생성 | `ColleagueNotification` save 1회                                       |
@@ -333,6 +367,21 @@ _4주차 구현 시 작성_
 | `UT-NotificationSvc-알림삭제-성공`     | 본인 알림 삭제      | `delete` 1회 호출                                                      |
 | `UT-NotificationSvc-알림삭제-없는ID`   | 존재하지 않는 알림  | `BusinessException(NOT_FOUND)`                                         |
 | `UT-NotificationSvc-알림삭제-권한없음` | 타인 알림 삭제 시도 | `BusinessException(FORBIDDEN)`, delete 미호출                          |
+
+---
+
+### NotificationV1Controller (ST)
+
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/notification/controller/NotificationV1ControllerTest.java)]
+
+> `@WebMvcTest` 슬라이스 테스트. `MvcTestSupport` 상속.
+
+| Test ID                               | 행위                                     | 상황                                                            |
+| ------------------------------------- | ---------------------------------------- | --------------------------------------------------------------- |
+| `ST-NotificationCtrl-목록조회-성공`   | 인증된 사용자 GET /notifications         | 200 + 응답 바디 `notificationId`/`type`/`referenceId` 필드 검증 |
+| `ST-NotificationCtrl-목록조회-미인증` | 미인증 GET /notifications                | 401                                                             |
+| `ST-NotificationCtrl-삭제-성공`       | 인증된 사용자 DELETE /notifications/{id} | 200                                                             |
+| `ST-NotificationCtrl-삭제-미인증`     | 미인증 DELETE /notifications/{id}        | 401                                                             |
 
 ---
 
