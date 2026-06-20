@@ -326,13 +326,13 @@ _4주차 구현 시 작성_
 
 ### NotificationService (UT)
 
-| Test ID                                | 행위                | 상황                                          |
-| -------------------------------------- | ------------------- | --------------------------------------------- |
-| `UT-NotificationSvc-동료알림전송-성공` | 동료 등록 알림 생성 | `ColleagueNotification` save 1회              |
-| `UT-NotificationSvc-알림목록조회-성공` | 내 알림 목록 조회   | `NotificationListResponse` 반환, 항목 수 일치 |
-| `UT-NotificationSvc-알림삭제-성공`     | 본인 알림 삭제      | `delete` 1회 호출                             |
-| `UT-NotificationSvc-알림삭제-없는ID`   | 존재하지 않는 알림  | `BusinessException(NOT_FOUND)`                |
-| `UT-NotificationSvc-알림삭제-권한없음` | 타인 알림 삭제 시도 | `BusinessException(FORBIDDEN)`, delete 미호출 |
+| Test ID                                | 행위                | 상황                                                                   |
+| -------------------------------------- | ------------------- | ---------------------------------------------------------------------- |
+| `UT-NotificationSvc-동료알림전송-성공` | 동료 등록 알림 생성 | `ColleagueNotification` save 1회                                       |
+| `UT-NotificationSvc-알림목록조회-성공` | 내 알림 목록 조회   | `NotificationListResponse` 반환, 항목 수 / `type` / `referenceId` 검증 |
+| `UT-NotificationSvc-알림삭제-성공`     | 본인 알림 삭제      | `delete` 1회 호출                                                      |
+| `UT-NotificationSvc-알림삭제-없는ID`   | 존재하지 않는 알림  | `BusinessException(NOT_FOUND)`                                         |
+| `UT-NotificationSvc-알림삭제-권한없음` | 타인 알림 삭제 시도 | `BusinessException(FORBIDDEN)`, delete 미호출                          |
 
 ---
 

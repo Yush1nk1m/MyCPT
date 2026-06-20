@@ -4,6 +4,7 @@ import com.mycpt.backend.common.exception.BusinessException;
 import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.domain.colleague.entity.Colleague;
 import com.mycpt.backend.domain.notification.dto.NotificationListResponse;
+import com.mycpt.backend.domain.notification.dto.NotificationResponse;
 import com.mycpt.backend.domain.notification.entity.ColleagueNotification;
 import com.mycpt.backend.domain.notification.entity.Notification;
 import com.mycpt.backend.domain.notification.repository.NotificationRepository;
@@ -81,17 +82,22 @@ class NotificationServiceTest {
             // given
             User recipient = stubUser(1L);
             User requester = stubUser(2L);
-            ColleagueNotification n1 = stubColleagueNotification(recipient, requester);
-            ColleagueNotification n2 = stubColleagueNotification(recipient, requester);
+
+            Colleague colleague = setId(Colleague.create(recipient, requester), 5L);
+            ColleagueNotification n1 = setId(ColleagueNotification.create(recipient, colleague), 10L);
 
             given(notificationRepository.findAllByUserId(1L))
-                    .willReturn(List.of(n1, n2));
+                    .willReturn(List.of(n1));
 
             // when
             NotificationListResponse response = sut().list(1L);
 
             // then
-            assertThat(response.notifications()).hasSize(2);
+            assertThat(response.notifications()).hasSize(1);
+            NotificationResponse item = response.notifications().get(0);
+            assertThat(item.notificationId()).isEqualTo(10L);
+            assertThat(item.type()).isEqualTo("COLLEAGUE_REGISTERED");
+            assertThat(item.referenceId()).isEqualTo(5L);
         }
     }
 
