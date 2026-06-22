@@ -303,3 +303,26 @@ CREATE TABLE chemistry_notifications (
         FOREIGN KEY (chemistry_report_id)
         REFERENCES chemistry_reports (id)
 ) COMMENT = 'CHEMISTRY_REPORT 알림 전용. notifications JOINED 상속 자식';
+
+-- ============================================================
+-- 13. chemistry_cache
+--     케미 보고서 Lazy Cache.
+--     복합 PK (requester 4축 + partner 4축) — 최대 81×81=6,561행.
+--     disc_cache와 달리 사전 삽입 없음 — 미스 시 INSERT, 히트 시 UPDATE.
+--     A/B 순서 미정규화 — requester/partner 주어가 다른 보고서이므로 별도 캐시.
+-- ============================================================
+CREATE TABLE chemistry_cache (
+    requester_d  TINYINT   NOT NULL  COMMENT 'requester D 버킷 (1~3)',
+    requester_i  TINYINT   NOT NULL  COMMENT 'requester I 버킷 (1~3)',
+    requester_s  TINYINT   NOT NULL  COMMENT 'requester S 버킷 (1~3)',
+    requester_c  TINYINT   NOT NULL  COMMENT 'requester C 버킷 (1~3)',
+    partner_d    TINYINT   NOT NULL  COMMENT 'partner D 버킷 (1~3)',
+    partner_i    TINYINT   NOT NULL  COMMENT 'partner I 버킷 (1~3)',
+    partner_s    TINYINT   NOT NULL  COMMENT 'partner S 버킷 (1~3)',
+    partner_c    TINYINT   NOT NULL  COMMENT 'partner C 버킷 (1~3)',
+    report       TEXT      NULL      COMMENT 'Markdown 케미 보고서. NULL=미생성. 이름 미포함',
+    created_at   DATETIME  NULL      COMMENT '캐시 생성/갱신 시각. NULL=미생성. 온디맨드 만료 판단 기준',
+
+    PRIMARY KEY (requester_d, requester_i, requester_s, requester_c,
+                 partner_d,   partner_i,   partner_s,   partner_c)
+) COMMENT = '케미 보고서 Lazy Cache. 복합 PK 8축. 사전 삽입 없음. 최대 6,561행';

@@ -16,7 +16,7 @@
 | v0.5 | 타인 평정 흐름 시퀀스 다이어그램 추가                                                                                                                                                                                                                                                               | '26.06.05. |
 | v0.6 | result 도메인 패키지 구조 실제 구현 반영. RaterType enums 분리. DTO 패키지 추가. ForbiddenException 추가. EntityNotFoundException 핸들러 전역 이동.                                                                                                                                                 | '26.06.09. |
 | v0.7 | 예외 처리 체계 통합 (BusinessException/ErrorCode/ErrorResponse). 개별 예외 클래스 제거. 응답 DTO Map → record 교체 반영 (MeResponse, UpdateProfileResponse, UpdateProfileImageResponse, CreateTokenResponse, SubjectInfoResponse, SubmitResponse).                                                  | '26.06.13. |
-| v0.8 | `DiscResult` → `DiscTest`, `DiscResultRepository` → `DiscTestRepository` 이름 변경. `Test` 엔티티 추상 클래스 전환 (`@Inheritance(JOINED)`). notification 도메인 CTI 적용 (`Notification` 추상화, `ColleagueNotification` / `ChemistryNotification` 서브클래스 추가). MySQL 테이블 수 10 → 12 반영. | '26.06.15. |
+| v0.8 | `DiscResult` → `DiscTest`, `DiscResultRepository` → `DiscTestRepository` 이름 변경. `Test` 엔티티 추상 클래스 전환 (`@Inheritance(JOINED)`). notification 도메인 CTI 적용 (`Notification` 추상화, `ColleagueNotification` / `ChemistryNotification` 서브클래스 추가). MySQL 테이블 수 12 → 13 반영. | '26.06.15. |
 | v0.9 | ScoreRequest → DiscScoreRequest, ScoreResponse → DiscScoreResponse 이름 변경. common/enums/TestType.java 추가 (ChemistryReport 전용). TestType을 DTO에 사용하지 않는 설계 근거 반영.                                                                                                                | '26.06.16. |
 
 ---
@@ -66,7 +66,7 @@
 
 | 시스템               | 용도                                                   |
 | -------------------- | ------------------------------------------------------ |
-| MySQL                | 메인 데이터 저장소 (12개 테이블)                       |
+| MySQL                | 메인 데이터 저장소 (13개 테이블)                       |
 | Redis                | disc_cache @Cacheable (운영 환경)                      |
 | Anthropic Claude API | DISC 분석 보고서 생성, 케미 보고서 생성                |
 | AWS S3               | 프로필 이미지 저장 (운영 환경. 개발은 로컬 파일시스템) |

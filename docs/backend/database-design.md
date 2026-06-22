@@ -1,6 +1,6 @@
 # MyCPT 데이터베이스 설계 문서
 
-**문서 버전**: v0.10
+**문서 버전**: v0.11
 **작성일**: '26.06.22.
 **작성자**: 김유신
 
@@ -20,6 +20,7 @@
 | v0.8  | `disc_cache` 초기화 시드 스크립트 추가 (81개 행 사전 삽입).                                                                                                                                                                    | '26.06.03. |
 | v0.9  | `disc_results` → `disc_tests` 이름 변경. `tests.test_type` 제거 → `dtype` 추가 (JPA `@DiscriminatorColumn`). `notifications` CTI 적용 (`colleague_notifications`, `chemistry_notifications` 서브타입 분리). 테이블 수 10 → 12. | '26.06.15. |
 | v0.10 | `chemistry_reports.report` NOT NULL → NULL 변경. `status ENUM('GENERATING','READY','ERROR')` 컬럼 추가.                                                                                                                        | '26.06.22. |
+| v0.11 | `chemistry_cache` 테이블 추가 (케미 보고서 Lazy Caching. 복합 PK 8개 버킷값).                                                                                                                                                  | '26.06.22. |
 
 ---
 
@@ -42,20 +43,21 @@
 
 ### 1.1 테이블 목록
 
-| 테이블                    | 설명                       | 비고                                               |
-| ------------------------- | -------------------------- | -------------------------------------------------- |
-| `users`                   | 회원 정보                  | 카카오 OAuth 기반                                  |
-| `tests`                   | 검사 응시 헤더 (공통)      | JPA `@Inheritance(JOINED)` 부모. `dtype` 식별자    |
-| `disc_tests`              | DISC 검사 전용 결과        | `tests` JOINED 상속 자식. 원점수 + 버킷값          |
-| `disc_cache`              | DISC 버킷 기반 보고서 캐시 | Markdown 단일 TEXT, 온디맨드 만료                  |
-| `coin_transactions`       | 코인 충전/차감 이력        | 이상 감지 및 CS 대응 용도                          |
-| `peer_codes`              | 동료 초대 코드             | 대문자+숫자 8자리, 7일 만료                        |
-| `assessment_tokens`       | 타인 평정 일회용 링크 토큰 | 7일 만료, 단 1회 사용 가능                         |
-| `colleagues`              | 동료 관계                  | 단일 행 양방향, 작은 ID → user_a                   |
-| `chemistry_reports`       | 케미 보고서                | Markdown 단일 TEXT, 검사 유형 확장 가능            |
-| `notifications`           | 인앱 알림 공통 헤더        | JPA `@Inheritance(JOINED)` 부모. 클릭 시 즉시 삭제 |
-| `colleague_notifications` | 동료 등록 알림             | `notifications` JOINED 상속 자식                   |
-| `chemistry_notifications` | 케미 보고서 알림           | `notifications` JOINED 상속 자식                   |
+| 테이블                    | 설명                       | 비고                                                           |
+| ------------------------- | -------------------------- | -------------------------------------------------------------- |
+| `users`                   | 회원 정보                  | 카카오 OAuth 기반                                              |
+| `tests`                   | 검사 응시 헤더 (공통)      | JPA `@Inheritance(JOINED)` 부모. `dtype` 식별자                |
+| `disc_tests`              | DISC 검사 전용 결과        | `tests` JOINED 상속 자식. 원점수 + 버킷값                      |
+| `disc_cache`              | DISC 버킷 기반 보고서 캐시 | Markdown 단일 TEXT, 온디맨드 만료                              |
+| `coin_transactions`       | 코인 충전/차감 이력        | 이상 감지 및 CS 대응 용도                                      |
+| `peer_codes`              | 동료 초대 코드             | 대문자+숫자 8자리, 7일 만료                                    |
+| `assessment_tokens`       | 타인 평정 일회용 링크 토큰 | 7일 만료, 단 1회 사용 가능                                     |
+| `colleagues`              | 동료 관계                  | 단일 행 양방향, 작은 ID → user_a                               |
+| `chemistry_reports`       | 케미 보고서                | Markdown 단일 TEXT, 검사 유형 확장 가능                        |
+| `chemistry_cache`         | 케미 보고서 버킷 기반 캐시 | 복합 PK (requester 4축 + partner 4축). 순수 Lazy. 최대 6,561행 |
+| `notifications`           | 인앱 알림 공통 헤더        | JPA `@Inheritance(JOINED)` 부모. 클릭 시 즉시 삭제             |
+| `colleague_notifications` | 동료 등록 알림             | `notifications` JOINED 상속 자식                               |
+| `chemistry_notifications` | 케미 보고서 알림           | `notifications` JOINED 상속 자식                               |
 
 ### 1.2 설계 원칙
 
@@ -163,6 +165,19 @@ erDiagram
     DATETIME  created_at
   }
 
+  chemistry_cache {
+    TINYINT requester_d  PK
+    TINYINT requester_i  PK
+    TINYINT requester_s  PK
+    TINYINT requester_c  PK
+    TINYINT partner_d    PK
+    TINYINT partner_i    PK
+    TINYINT partner_s    PK
+    TINYINT partner_c    PK
+    TEXT    report           "NULL=미생성"
+    DATETIME created_at      "NULL=미생성"
+  }
+
   notifications {
     BIGINT     id         PK
     BIGINT     user_id    FK
@@ -229,6 +244,10 @@ Enum chemistry_report_status_enum {
   READY      [note: '발행 완료. report = TEXT']
   ERROR      [note: 'LLM 실패. report = NULL. 코인 환불됨']
 }
+
+// chemistry_cache: 복합 PK (requester 4축 + partner 4축) 기반 Lazy Caching
+// disc_cache와 달리 사전 삽입 없음 — 미스 시 INSERT, 히트 시 UPDATE
+// A/B 순서 미정규화 — requester/partner 주어가 다른 보고서이므로 별도 캐시
 
 // ============================================================
 // Tables
@@ -361,6 +380,24 @@ Table chemistry_reports [note: '케미 보고서. Markdown 단일 TEXT로 검사
   }
 }
 
+Table chemistry_cache [note: '케미 보고서 Lazy Cache. 복합 PK 8축. 사전 삽입 없음. 최대 6,561행'] {
+  requester_d TINYINT  [not null, note: 'requester D 버킷 (1~3)']
+  requester_i TINYINT  [not null, note: 'requester I 버킷 (1~3)']
+  requester_s TINYINT  [not null, note: 'requester S 버킷 (1~3)']
+  requester_c TINYINT  [not null, note: 'requester C 버킷 (1~3)']
+  partner_d   TINYINT  [not null, note: 'partner D 버킷 (1~3)']
+  partner_i   TINYINT  [not null, note: 'partner I 버킷 (1~3)']
+  partner_s   TINYINT  [not null, note: 'partner S 버킷 (1~3)']
+  partner_c   TINYINT  [not null, note: 'partner C 버킷 (1~3)']
+  report      TEXT     [null,     note: 'Markdown 케미 보고서. NULL=미생성. 이름 미포함']
+  created_at  DATETIME [null,     note: '캐시 생성/갱신 시각. NULL=미생성. 온디맨드 만료 판단 기준']
+
+  indexes {
+    (requester_d, requester_i, requester_s, requester_c,
+     partner_d, partner_i, partner_s, partner_c) [pk]
+  }
+}
+
 Table notifications [note: '인앱 알림 공통 헤더. JPA @Inheritance(JOINED) 부모 테이블. 클릭 시 즉시 DELETE'] {
   id         BIGINT      [pk, increment, note: '내부 식별자']
   user_id    BIGINT      [not null,      note: 'FK → users.id. 수신자']
@@ -414,6 +451,7 @@ Ref: colleague_notifications.id                                 - notifications.
 Ref: colleague_notifications.colleague_id                       > colleagues.id
 Ref: chemistry_notifications.id                                 - notifications.id
 Ref: chemistry_notifications.chemistry_report_id                > chemistry_reports.id
+// chemistry_cache는 외부 FK 없음 — 버킷값 조합이 PK이며 독립 테이블
 ```
 
 ---

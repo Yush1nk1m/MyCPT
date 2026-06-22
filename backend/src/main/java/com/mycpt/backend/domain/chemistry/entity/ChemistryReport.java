@@ -1,6 +1,7 @@
 package com.mycpt.backend.domain.chemistry.entity;
 
 import com.mycpt.backend.common.enums.TestType;
+import com.mycpt.backend.domain.chemistry.enums.ChemistryReportStatus;
 import com.mycpt.backend.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -9,17 +10,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/**
- * 케미 보고서 (chemistry_reports 테이블)
- *
- * 현재 상태: 스텁 — ChemistryNotification 컴파일 의존성 해소 목적.
- * 비즈니스 로직(발행, LLM 호출)은 Chemistry 도메인 구현 시 추가.
- *
- * 설계:
- *  - testType: common.enums.TestType — DTO에는 사용하지 않음 (점수 구조가 유형마다 달라 혼용 불가)
- *  - report: nullable — @Async 발행 중 null, 완료 후 TEXT 저장
- *    schema.sql의 NOT NULL은 Chemistry 구현 시 nullable로 변경 필요
- */
 @Entity
 @Table(name = "chemistry_reports")
 @Getter
@@ -42,10 +32,39 @@ public class ChemistryReport {
     @Column(nullable = false, length = 20)
     private TestType testType;
 
+    // GENERATING / READY / ERROR
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ChemistryReportStatus status;
+
     // nullable: @Async 발행 중 null, LLM 완료 후 UPDATE
     @Column(columnDefinition = "TEXT")
     private String report;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    // POST /chemistry-reports 202 반환 직전 호출
+    // status = GENERATING, report = null로 행 선점
+    public static ChemistryReport create(User requester, User partner, TestType testType) {
+        ChemistryReport cr = new ChemistryReport();
+        cr.requester = requester;
+        cr.partner = partner;
+        cr.testType = testType;
+        cr.status = ChemistryReportStatus.GENERATING;
+        cr.report = null;
+        cr.createdAt = LocalDateTime.now();
+        return cr;
+    }
+
+    // LLM 보고서 생성 완료 후 ChemistryLlmService에서 호출
+    public void complete(String report) {
+        this.status = ChemistryReportStatus.READY;
+        this.report = report;
+    }
+
+    // LLM 실패(@Retryable 소진) 후 ChemistryLlmService에서 호출
+    public void fail() {
+        this.status = ChemistryReportStatus.ERROR;
+    }
 }
