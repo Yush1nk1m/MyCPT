@@ -841,6 +841,7 @@ Spring Security JWT 기반.
       "requesterId": 1,
       "partnerId": 15,
       "testType": "DISC",
+      "status": "READY",
       "createdAt": "2026-05-24T14:30:00"
     }
   ],
@@ -884,17 +885,19 @@ Spring Security JWT 기반.
     "profileImageUrl": "https://..."
   },
   "testType": "DISC",
+  "status": "READY",
   "report": "## 두 사람의 케미 요약\n...\n\n## 시너지 포인트\n...",
   "createdAt": "2026-05-24T14:30:00"
 }
 ```
 
-| 필드        | 타입   | 설명                                                                  |
-| ----------- | ------ | --------------------------------------------------------------------- |
-| `requester` | object | 발행자 정보                                                           |
-| `partner`   | object | 대상자 정보                                                           |
-| `testType`  | string | 검사 유형 (DISC / MBTI / BIG5 등)                                     |
-| `report`    | string | Markdown 형식 케미 보고서 전문. Next.js에서 react-markdown으로 렌더링 |
+| 필드        | 타입   | 설명                                                                        |
+| ----------- | ------ | --------------------------------------------------------------------------- |
+| `requester` | object | 발행자 정보                                                                 |
+| `partner`   | object | 대상자 정보                                                                 |
+| `testType`  | string | 검사 유형 (DISC / MBTI / BIG5 등)                                           |
+| `status`    | string | `GENERATING` / `READY` / `ERROR`. ERROR는 목록에서 필터링되어 반환되지 않음 |
+| `report`    | string | Markdown 형식 케미 보고서 전문. Next.js에서 react-markdown으로 렌더링       |
 
 | 응답 코드 | 설명                                  |
 | --------- | ------------------------------------- |

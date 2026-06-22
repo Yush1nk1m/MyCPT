@@ -225,7 +225,8 @@ CREATE TABLE chemistry_reports (
     requester_id    BIGINT      NOT NULL                           COMMENT 'FK → users.id. 보고서 발행자',
     partner_id      BIGINT      NOT NULL                           COMMENT 'FK → users.id. 보고서 대상자',
     test_type       VARCHAR(20) NOT NULL DEFAULT 'DISC'            COMMENT '검사 유형 (DISC / MBTI / BIG5 등)',
-    report          TEXT        NULL                           COMMENT 'Markdown 형식 케미 보고서 전문. 이름 미포함. 렌더링 시 발행자/상대 이름 삽입',
+    status          VARCHAR(20) NOT NULL DEFAULT 'GENERATING'      COMMENT '발행 상태. GENERATING(발행 중) / READY(완료) / ERROR(실패)',
+    report          TEXT        NULL                               COMMENT 'Markdown 형식 케미 보고서 전문. 이름 미포함. 렌더링 시 발행자/상대 이름 삽입',
     created_at      DATETIME    NOT NULL                           COMMENT '발행 시각',
 
     PRIMARY KEY (id),

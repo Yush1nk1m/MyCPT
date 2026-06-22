@@ -1,36 +1,40 @@
 # MyCPT 데이터베이스 설계 문서
 
-**문서 버전**: v0.9
-**작성일**: '26.05.25.
+**문서 버전**: v0.10
+**작성일**: '26.06.22.
 **작성자**: 김유신
 
 ---
 
 ## 변경 이력
 
-| 버전 | 변경 내용                                                                                                                                                                                                                      | 날짜       |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| v0.1 | 초안 작성 (9개 테이블)                                                                                                                                                                                                         | '26.05.23. |
-| v0.2 | `test_results`에 `rater_type`, `label` 컬럼 추가. `assessment_tokens` 테이블 신규 추가 (10개 테이블). 배치 작업에 만료 토큰 삭제 통합. 통계 집계 기준 명시.                                                                    | '26.05.24. |
-| v0.3 | `chemistry_reports` DISC 버킷 스냅샷 컬럼 제거. `test_type VARCHAR(20)` 컬럼 추가로 다중 검사 유형 확장성 확보.                                                                                                                | '26.05.24. |
-| v0.4 | `disc_cache` 섹션별 TEXT 6개 → `report TEXT` 단일화 (Markdown). `chemistry_reports` 동일 적용. `statistics` 테이블 제거 (MVP에서 직접 집계 쿼리로 대체).                                                                       | '26.05.24. |
-| v0.5 | `test_results` → `tests` (헤더) + `disc_results` (DISC 전용) 로 분리. Class Table Inheritance 패턴 적용으로 검사 유형 확장성 확보. 테이블 수 9 → 10.                                                                           | '26.05.25. |
-| v0.6 | `users.profile_image_key` → `profile_image_url` 변경. Full URL 저장 방식으로 통일.                                                                                                                                             | '26.05.26. |
-| v0.7 | 검사 결과 버킷을 9단계에서 3단계로 수정.                                                                                                                                                                                       | '26.06.01. |
-| v0.8 | `disc_cache` 초기화 시드 스크립트 추가 (81개 행 사전 삽입).                                                                                                                                                                    | '26.06.03. |
-| v0.9 | `disc_results` → `disc_tests` 이름 변경. `tests.test_type` 제거 → `dtype` 추가 (JPA `@DiscriminatorColumn`). `notifications` CTI 적용 (`colleague_notifications`, `chemistry_notifications` 서브타입 분리). 테이블 수 10 → 12. | '26.06.15. |
+| 버전  | 변경 내용                                                                                                                                                                                                                      | 날짜       |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| v0.1  | 초안 작성 (9개 테이블)                                                                                                                                                                                                         | '26.05.23. |
+| v0.2  | `test_results`에 `rater_type`, `label` 컬럼 추가. `assessment_tokens` 테이블 신규 추가 (10개 테이블). 배치 작업에 만료 토큰 삭제 통합. 통계 집계 기준 명시.                                                                    | '26.05.24. |
+| v0.3  | `chemistry_reports` DISC 버킷 스냅샷 컬럼 제거. `test_type VARCHAR(20)` 컬럼 추가로 다중 검사 유형 확장성 확보.                                                                                                                | '26.05.24. |
+| v0.4  | `disc_cache` 섹션별 TEXT 6개 → `report TEXT` 단일화 (Markdown). `chemistry_reports` 동일 적용. `statistics` 테이블 제거 (MVP에서 직접 집계 쿼리로 대체).                                                                       | '26.05.24. |
+| v0.5  | `test_results` → `tests` (헤더) + `disc_results` (DISC 전용) 로 분리. Class Table Inheritance 패턴 적용으로 검사 유형 확장성 확보. 테이블 수 9 → 10.                                                                           | '26.05.25. |
+| v0.6  | `users.profile_image_key` → `profile_image_url` 변경. Full URL 저장 방식으로 통일.                                                                                                                                             | '26.05.26. |
+| v0.7  | 검사 결과 버킷을 9단계에서 3단계로 수정.                                                                                                                                                                                       | '26.06.01. |
+| v0.8  | `disc_cache` 초기화 시드 스크립트 추가 (81개 행 사전 삽입).                                                                                                                                                                    | '26.06.03. |
+| v0.9  | `disc_results` → `disc_tests` 이름 변경. `tests.test_type` 제거 → `dtype` 추가 (JPA `@DiscriminatorColumn`). `notifications` CTI 적용 (`colleague_notifications`, `chemistry_notifications` 서브타입 분리). 테이블 수 10 → 12. | '26.06.15. |
+| v0.10 | `chemistry_reports.report` NOT NULL → NULL 변경. `status ENUM('GENERATING','READY','ERROR')` 컬럼 추가.                                                                                                                        | '26.06.22. |
 
 ---
 
 ## 목차
 
-- [1. 개요](#1-개요)
-  - [1.1 테이블 목록](#11-테이블-목록)
-  - [1.2 설계 원칙](#12-설계-원칙)
-- [2. ERD](#2-erd)
-- [3. 테이블 명세 (DBML)](#3-테이블-명세-dbml)
-- [4. 인덱스 전략](#4-인덱스-전략)
-- [5. 배치 작업](#5-배치-작업)
+- [MyCPT 데이터베이스 설계 문서](#mycpt-데이터베이스-설계-문서)
+  - [변경 이력](#변경-이력)
+  - [목차](#목차)
+  - [1. 개요](#1-개요)
+    - [1.1 테이블 목록](#11-테이블-목록)
+    - [1.2 설계 원칙](#12-설계-원칙)
+  - [2. ERD](#2-erd)
+  - [3. 테이블 명세 (DBML)](#3-테이블-명세-dbml)
+  - [4. 인덱스 전략](#4-인덱스-전략)
+  - [5. 배치 작업](#5-배치-작업)
 
 ---
 
@@ -154,7 +158,8 @@ erDiagram
     BIGINT    requester_id FK  "발행자"
     BIGINT    partner_id   FK  "대상자"
     VARCHAR20 test_type        "DISC/MBTI/BIG5 등"
-    TEXT      report           "Markdown 보고서 전문. 이름 미포함"
+    VARCHAR20 status           "GENERATING / READY / ERROR"
+    TEXT      report           "Markdown 보고서 전문. NULL=발행 중 또는 실패"
     DATETIME  created_at
   }
 
@@ -217,6 +222,12 @@ Enum coin_reason_enum {
   SIGNUP           [note: '가입 시 초기 지급']
   RECHARGE         [note: '24시간 주기 온디맨드 충전']
   CHEMISTRY_REPORT [note: '케미 보고서 발행 차감']
+}
+
+Enum chemistry_report_status_enum {
+  GENERATING [note: 'LLM 호출 중. report = NULL']
+  READY      [note: '발행 완료. report = TEXT']
+  ERROR      [note: 'LLM 실패. report = NULL. 코인 환불됨']
 }
 
 // ============================================================
@@ -339,7 +350,8 @@ Table chemistry_reports [note: '케미 보고서. Markdown 단일 TEXT로 검사
   requester_id BIGINT      [not null,      note: 'FK → users.id. 보고서 발행자']
   partner_id   BIGINT      [not null,      note: 'FK → users.id. 보고서 대상자']
   test_type    VARCHAR(20) [not null,      note: '검사 유형 (DISC / MBTI / BIG5 등)']
-  report       TEXT        [not null,      note: 'Markdown 형식 케미 보고서 전문. 이름 미포함. 렌더링 시 발행자/상대 이름 삽입']
+  status       VARCHAR(20) [not null,      note: 'GENERATING / READY / ERROR. 발행 상태']
+  report       TEXT        [null,          note: 'Markdown 형식 케미 보고서 전문. NULL=발행 중 또는 실패. 이름 미포함. 렌더링 시 발행자/상대 이름 삽입']
   created_at   DATETIME    [not null,      note: '발행 시각']
 
   indexes {
