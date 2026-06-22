@@ -26,7 +26,7 @@ import java.io.IOException;
 // - 버전 변경 시 AuthV0Controller implements AuthApi 구문으로 스펙 재사용 가능
 // - 스펙 변경 시 인터페이스만 수정하면 모든 버전 구현체에서 컴파일 오류로 즉시 감지 가능
 @Tag(
-        name = "Auth",
+        name = "인증",
         description = "카카오 OAuth2 로그인/로그아웃 및 현재 사용자 조회 API"
 )
 public interface AuthApi {

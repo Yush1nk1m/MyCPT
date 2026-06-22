@@ -12,7 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
 
-@Tag(name = "User", description = "회원 프로필 수정 API")
+@Tag(name = "회원", description = "회원 프로필 수정 API")
 public interface UserApi {
 
     @Operation(

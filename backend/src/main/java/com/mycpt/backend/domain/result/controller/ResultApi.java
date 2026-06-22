@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * Swagger 문서화 애너테이션을 구현체(ResultV1Controller)와 분리하여 컨트롤러 코드가 순수 구현 로직에만 집중하도록 함
  * AuthApi와 동일한 Interface + V1Controller 컨벤션 준수
  */
-@Tag(name = "Result", description = "DISC 채점 및 결과 저장/조회 API")
+@Tag(name = "채점/결과", description = "DISC 채점 및 결과 저장/조회 API")
 public interface ResultApi {
 
     @Operation(

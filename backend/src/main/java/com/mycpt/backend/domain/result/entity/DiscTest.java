@@ -2,10 +2,7 @@ package com.mycpt.backend.domain.result.entity;
 
 import com.mycpt.backend.domain.result.enums.RaterType;
 import com.mycpt.backend.domain.user.entity.User;
-import jakarta.persistence.Column;
-import jakarta.persistence.DiscriminatorValue;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,6 +20,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "disc_tests")
 @DiscriminatorValue("DISC")
+@PrimaryKeyJoinColumn(name = "test_id")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DiscTest extends Test {
