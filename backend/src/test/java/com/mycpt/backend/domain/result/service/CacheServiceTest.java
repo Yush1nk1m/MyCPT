@@ -1,5 +1,6 @@
 package com.mycpt.backend.domain.result.service;
 
+import com.mycpt.backend.common.llm.AnthropicLlmClient;
 import com.mycpt.backend.domain.result.entity.DiscCache;
 import com.mycpt.backend.domain.result.entity.DiscCacheId;
 import com.mycpt.backend.domain.result.repository.DiscCacheRepository;
@@ -22,13 +23,13 @@ import static org.mockito.BDDMockito.*;
 class CacheServiceTest {
 
     @Mock private DiscCacheRepository discCacheRepository;
-    @Mock private LlmService llmService;
+    @Mock private AnthropicLlmClient llmClient;
 
     // @InjectMocks 미사용 이유:
     //  - CacheService 생성자의 세 번째 인자 ttlDays는 @Value 주입 값이라 @InjectMocks가 처리하지 못함
     //  - 케이스별로 ttlDays를 명시해 생성하면 의도가 더 명확해짐
     private CacheService sut(long ttlDays) {
-        return new CacheService(discCacheRepository, llmService, ttlDays);
+        return new CacheService(discCacheRepository, llmClient, ttlDays);
     }
 
     // ── 공통 픽스처 ───────────────────────────────────────────────────────────
@@ -63,7 +64,7 @@ class CacheServiceTest {
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("disc_cache 행 누락");
 
-            verify(llmService, never()).generateReport(any());
+            verify(llmClient, never()).complete(any());
         }
     }
 
@@ -78,7 +79,7 @@ class CacheServiceTest {
         void 보고서생성_미생성() {
             // given: 사전 삽입된 행이지만 아직 LLM 보고서가 생성되지 않은 상태
             given(discCacheRepository.findById(ID)).willReturn(Optional.of(unseeded()));
-            given(llmService.generateReport(ID)).willReturn(REPORT);
+            given(llmClient.complete(any())).willReturn(REPORT);
             given(discCacheRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
             // when
@@ -86,7 +87,7 @@ class CacheServiceTest {
 
             // then
             assertThat(result).isEqualTo(REPORT);
-            verify(llmService, times(1)).generateReport(ID);    // LLM 1회 호출
+            verify(llmClient, times(1)).complete(any());    // LLM 1회 호출
             verify(discCacheRepository, times(1)).save(any());  // UPDATE 1회
         }
     }
@@ -109,7 +110,7 @@ class CacheServiceTest {
 
             // then
             assertThat(result).isEqualTo(REPORT);
-            verify(llmService, never()).generateReport(any());  // LLM 미호출
+            verify(llmClient, never()).complete(any());  // LLM 미호출
             verify(discCacheRepository, never()).save(any());   // save 없음
         }
 
@@ -128,7 +129,7 @@ class CacheServiceTest {
 
             // then: 경계는 유효 처리 -> LLM 미호출
             assertThat(result).isEqualTo(REPORT);
-            verify(llmService, never()).generateReport(any());
+            verify(llmClient, never()).complete(any());
         }
     }
 
@@ -144,7 +145,7 @@ class CacheServiceTest {
             // given: 366일 전 생성 -> ttl 365일 초과이므로 만료
             DiscCache expired = new DiscCache(ID, REPORT, LocalDateTime.now().minusDays(366));
             given(discCacheRepository.findById(ID)).willReturn(Optional.of(expired));
-            given(llmService.generateReport(ID)).willReturn(NEW_REPORT);
+            given(llmClient.complete(any())).willReturn(NEW_REPORT);
             given(discCacheRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
             // when
@@ -152,7 +153,7 @@ class CacheServiceTest {
 
             // then
             assertThat(result).isEqualTo(NEW_REPORT);   // 새 보고서 반환
-            verify(llmService, times(1)).generateReport(ID);    // LLM 1회 호출
+            verify(llmClient, times(1)).complete(any());    // LLM 1회 호출
             verify(discCacheRepository, times(1)).save(expired);    // 동일 객체를 save (UPDATE)
         }
     }
