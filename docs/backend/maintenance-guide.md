@@ -19,6 +19,19 @@
 - V1 구현체: {도메인}V1Controller.java (예: AuthV1Controller.java)
 - V2 추가 시: {도메인}V2Controller implements {도메인}Api
 
+### @RequestMapping 클래스 레벨 prefix 규칙
+
+컨트롤러가 다루는 리소스가 **단일 prefix로 묶이는지 여부**에 따라 클래스 레벨 `@RequestMapping`을 다르게 잡는다.
+
+- **단일 리소스 도메인** — 컨트롤러가 다루는 엔드포인트가 전부 같은 prefix 아래 있을 때, 클래스 레벨에 전체 경로를 명시하고 메서드에는 나머지 경로만 작성한다.
+  - 예: `AssessmentV1Controller` → `@RequestMapping("/api/v1/assessments")`, 메서드는 `@PostMapping`, `@GetMapping("/{token}")` 등
+  - 예: `CoinV1Controller` → `@RequestMapping("/api/v1/coins")`, 메서드는 `@GetMapping`, `@GetMapping("/history")`
+
+- **다중 리소스 도메인** — 한 컨트롤러가 서로 다른 prefix를 가진 리소스 여러 개를 함께 다룰 때(예: `/peer-code`와 `/colleagues`처럼 별개 리소스), 클래스 레벨은 `@RequestMapping("/api/v1")`까지만 잡고 메서드마다 풀 경로를 직접 명시한다.
+  - 예: `ColleagueV1Controller` → `@RequestMapping("/api/v1")`, 메서드는 `@GetMapping("/peer-code")`, `@PostMapping("/colleagues")`, `@GetMapping("/colleagues/{colleagueId}")` 등
+
+판단 기준: 새 컨트롤러 작성 시, 그 컨트롤러의 모든 엔드포인트가 공통 prefix 하나로 묶이면 단일 리소스, 둘 이상의 서로 다른 리소스 명사를 다루면 다중 리소스로 본다.
+
 ### OAuth2 로그인 후 리다이렉트 화이트리스트
 
 로그인 완료 후 이동 경로는 `SecurityConfig`의 `ALLOWED_REDIRECTS` Set으로 관리한다.

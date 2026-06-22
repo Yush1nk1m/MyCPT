@@ -66,7 +66,7 @@ class ScoringServiceTest {
     class Normalize {
 
         @Test
-        @DisplayName("[UT-ScoringService-버킷정규화-성공]")
+        @DisplayName("[UT-ScoringSvc-버킷정규화-성공]")
         void 버킷정규화_성공() {
             // given: D=32(High), I=10(Mid), S=-4(Mid), C=-14(Low)
             DiscScoreRequest request = request(32, 10, -4, -14);
@@ -82,7 +82,7 @@ class ScoringServiceTest {
         }
 
         @Test
-        @DisplayName("[UT-ScoringService-버킷정규화-최솟값최댓값혼합]")
+        @DisplayName("[UT-ScoringSvc-버킷정규화-최솟값최댓값혼합]")
         void 버킷정규화_최솟값최댓값혼합() {
             // given: D=-24(Low 하한), C=48(High 상한), I+S=0 합계 맞춤
             DiscScoreRequest request = request(-24, 0, 0, 48);
@@ -105,7 +105,7 @@ class ScoringServiceTest {
     class Validate {
 
         @Test
-        @DisplayName("[UT-ScoringService-합계검증-실패]")
+        @DisplayName("[UT-ScoringSvc-합계검증-실패]")
         void 합계검증_실패() {
             // given
             DiscScoreRequest request = request(10, 10, 10, -5);
@@ -122,7 +122,7 @@ class ScoringServiceTest {
         }
 
         @Test
-        @DisplayName("[UT-ScoringService-범위초과-상한]")
+        @DisplayName("[UT-ScoringSvc-범위초과-상한]")
         void 범위초과_상한() {
             // given
             DiscScoreRequest request = request(49, 0, 0, 0);
@@ -139,7 +139,7 @@ class ScoringServiceTest {
         }
 
         @Test
-        @DisplayName("[UT-ScoringService-범위초과-하한")
+        @DisplayName("[UT-ScoringSvc-범위초과-하한")
         void 범위초과_하한() {
             // given
             DiscScoreRequest request = request(0, -25, 0, 0);

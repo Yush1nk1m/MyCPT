@@ -2,6 +2,7 @@ package com.mycpt.backend.domain.auth.service;
 
 import com.mycpt.backend.domain.auth.dto.KakaoUserInfo;
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
+import com.mycpt.backend.domain.coin.service.CoinService;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
+    private final CoinService coinService;
 
     // 신규 회원 저장과 기존 회원 조회를 동일 트랜잭션 내에서 처리하여 중복 가입 방지
     @Override
@@ -47,16 +49,18 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     @Transactional
     User findOrCreateUser(KakaoUserInfo kakaoUserInfo) {
-        // TODO: 신규 가입 시 코인 3개 초기 지급 결과를 coin_transactions 테이블에 INSERT 필요.
-        //       CoinService 구현 후 save() 블록 안에 추가
         return userRepository.findByKakaoId(kakaoUserInfo.getId())
-                .orElseGet(() -> userRepository.save(
-                        User.create(
-                                kakaoUserInfo.getId(),
-                                kakaoUserInfo.getNickname(),
-                                toHttps(kakaoUserInfo.getProfileImageUrl())
-                        )
-                ));
+                .orElseGet(() -> {
+                    User user = userRepository.save(
+                            User.create(
+                                    kakaoUserInfo.getId(),
+                                    kakaoUserInfo.getNickname(),
+                                    toHttps(kakaoUserInfo.getProfileImageUrl())
+                            )
+                    );
+                    coinService.recordSignupBonus(user);
+                    return user;
+                });
     }
 
     // ── private helpers ───────────────────────────────────────────────────────

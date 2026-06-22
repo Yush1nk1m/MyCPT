@@ -186,14 +186,14 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 [[Test Code](../backend/src/test/java/com/mycpt/backend/domain/result/service/ScoringServiceTest.java)]
 
-| Test ID                                       | 행위                            | 상황                                                              |
-| --------------------------------------------- | ------------------------------- | ----------------------------------------------------------------- |
-| UT-ScoringService-버킷정규화-성공             | 정상 원점수 입력 시 버킷값 반환 | D=32, I=10, S=-4, C=-14 → 버킷 3,2,2,1 검증                       |
-| UT-ScoringService-버킷정규화-최솟값최댓값혼합 | 최솟값/최댓값 경계 혼합 입력    | D=-24(버킷1), C=48(버킷3) 검증                                    |
-| UT-ScoringService-합계검증-실패               | D+I+S+C ≠ 24                    | `BusinessException(INVALID_SCORE)`, 메시지에 "합계는 24여야" 포함 |
-| UT-ScoringService-범위초과-상한               | 개별 원점수 48 초과             | `BusinessException(INVALID_SCORE)`, 메시지에 "49" 포함            |
-| UT-ScoringService-범위초과-하한               | 개별 원점수 -24 미만            | `BusinessException(INVALID_SCORE)`, 메시지에 "-25" 포함           |
-| UT-ScoringService-toBucket-경계값             | 버킷 전환점 전수 검증           | 3구간 하한/상한 6개 케이스 (-24→1, -5→1, -4→2, 11→2, 12→3, 48→3)  |
+| Test ID                                   | 행위                            | 상황                                                              |
+| ----------------------------------------- | ------------------------------- | ----------------------------------------------------------------- |
+| UT-ScoringSvc-버킷정규화-성공             | 정상 원점수 입력 시 버킷값 반환 | D=32, I=10, S=-4, C=-14 → 버킷 3,2,2,1 검증                       |
+| UT-ScoringSvc-버킷정규화-최솟값최댓값혼합 | 최솟값/최댓값 경계 혼합 입력    | D=-24(버킷1), C=48(버킷3) 검증                                    |
+| UT-ScoringSvc-합계검증-실패               | D+I+S+C ≠ 24                    | `BusinessException(INVALID_SCORE)`, 메시지에 "합계는 24여야" 포함 |
+| UT-ScoringSvc-범위초과-상한               | 개별 원점수 48 초과             | `BusinessException(INVALID_SCORE)`, 메시지에 "49" 포함            |
+| UT-ScoringSvc-범위초과-하한               | 개별 원점수 -24 미만            | `BusinessException(INVALID_SCORE)`, 메시지에 "-25" 포함           |
+| UT-ScoringSvc-toBucket-경계값             | 버킷 전환점 전수 검증           | 3구간 하한/상한 6개 케이스 (-24→1, -5→1, -4→2, 11→2, 12→3, 48→3)  |
 
 ### CacheService (UT)
 
@@ -387,7 +387,40 @@ _4주차 구현 시 작성_
 
 ## 12. Coin 도메인
 
-_4주차 구현 시 작성_
+### CoinService (UT)
+
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/coin/service/CoinServiceTest.java)]
+
+| Test ID                                   | 행위                              | 상황                                                      |
+| ----------------------------------------- | --------------------------------- | --------------------------------------------------------- |
+| `UT-CoinSvc-가입보너스-성공`              | recordSignupBonus 호출            | coin_transactions에 SIGNUP +3 기록, balanceAfter=3        |
+| `UT-CoinSvc-잔액조회-충전없음`            | nextCoinAt이 미래 시각            | 충전 미발생, 기존 coins 그대로 반환                       |
+| `UT-CoinSvc-잔액조회-충전대기없음`        | nextCoinAt = null                 | 충전 로직 스킵, 기존 coins 그대로 반환                    |
+| `UT-CoinSvc-잔액조회-온디맨드충전-1회`    | nextCoinAt이 1일 전 도래, coins=1 | coins=2로 충전, nextCoinAt이 1일 뒤로 이동(시분초 보존)   |
+| `UT-CoinSvc-잔액조회-온디맨드충전-캡적용` | nextCoinAt이 5일 전 도래, coins=1 | chargeable=5지만 캡 적용되어 coins=3, nextCoinAt=null     |
+| `UT-CoinSvc-차감-3미만최초설정`           | coins=3 → 차감 후 coins=2         | nextCoinAt이 null에서 now+24h로 세팅                      |
+| `UT-CoinSvc-차감-타이머기설정`            | coins=2, nextCoinAt 이미 세팅됨   | 추가 차감해도 기존 nextCoinAt 값 변경 없음                |
+| `UT-CoinSvc-차감-3이상유지시미세팅`       | coins=5(이벤트 보유) → 차감 후 4  | 여전히 3 이상이므로 nextCoinAt 세팅 안 됨                 |
+| `UT-CoinSvc-차감-잔액부족`                | coins=0                           | `BusinessException(INSUFFICIENT_COINS)`, 차감/이력 미발생 |
+| `UT-CoinSvc-이력조회-성공`                | 이력 5건 중 size=3 요청           | 3건 반환, hasNext=true, nextCursor=4번째 항목 id          |
+| `UT-CoinSvc-이력조회-마지막페이지`        | 남은 이력이 size보다 적음         | hasNext=false, nextCursor=null                            |
+
+---
+
+### CoinV1Controller (ST)
+
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/coin/controller/CoinV1ControllerTest.java)]
+
+> `@WebMvcTest(CoinV1Controller.class)` 슬라이스 테스트. `MvcTestSupport` 상속.
+> `CoinService`는 `@MockitoBean`으로 대체.
+> 비즈니스 로직 분기는 `CoinServiceTest`(UT)에서 전담 검증. ST는 인증 분기만 다룬다.
+
+| Test ID                       | 행위                             | 상황                                      |
+| ----------------------------- | -------------------------------- | ----------------------------------------- |
+| `ST-CoinCtrl-잔액조회-성공`   | 인증된 사용자 GET /coins         | 200 + 응답 바디 `coins`/`nextCoinAt` 검증 |
+| `ST-CoinCtrl-잔액조회-미인증` | 미인증 GET /coins                | 401                                       |
+| `ST-CoinCtrl-이력조회-성공`   | 인증된 사용자 GET /coins/history | 200 + 응답 바디 `history` 배열 검증       |
+| `ST-CoinCtrl-이력조회-미인증` | 미인증 GET /coins/history        | 401                                       |
 
 ---
 

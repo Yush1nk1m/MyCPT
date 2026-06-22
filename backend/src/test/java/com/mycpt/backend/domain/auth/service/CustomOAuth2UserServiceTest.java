@@ -1,6 +1,7 @@
 package com.mycpt.backend.domain.auth.service;
 
 import com.mycpt.backend.domain.auth.dto.KakaoUserInfo;
+import com.mycpt.backend.domain.coin.service.CoinService;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,9 @@ class CustomOAuth2UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private CoinService coinService;
 
     @InjectMocks
     private CustomOAuth2UserService customOAuth2UserService;

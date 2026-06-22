@@ -89,4 +89,34 @@ public class User {
     public void updateProfileImageUrl(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
     }
+
+    /**
+     * 코인 증가 — 사유 무관(가입 지급, 온디맨드 충전, 이벤트 보너스 등) 공통 처리
+     *
+     * nextCoinAt 갱신 규칙:
+     *  - 증가 후 coins >= 3 → nextCoinAt = null (충전 대기 해제)
+     *  - 증가 후 coins < 3  → nextCoinAt이 세팅되어 있었다면 amount일만큼 다음날로 이동 (시:분:초 보존)
+     *                         (온디맨드 충전이 amount번 일어났다는 것은 nextCoinAt이 amount번 도래했다는 뜻이므로
+     *                          그만큼 다음 충전 예정 시각도 같이 전진해야 함)
+     */
+    public void increaseCoins(int amount) {
+        this.coins += amount;
+        if (this.coins >= 3) {
+            this.nextCoinAt = null;
+        } else if (this.nextCoinAt != null) {
+            this.nextCoinAt = this.nextCoinAt.plusDays(amount);
+        }
+    }
+
+    /**
+     * 코인 차감 (케미 보고서 발행 시)
+     * 차감 결과 coins < 3이 되고, nextCoinAt이 아직 세팅 안 되어 있으면 새로 세팅
+     * 이미 세팅되어 있다면(예: 5→4→3 식으로 여러 번 차감) 기존 next_coin_at 유지
+     */
+    public void deductCoin(LocalDateTime now) {
+        this.coins -= 1;
+        if (this.coins < 3 && this.nextCoinAt == null) {
+            this.nextCoinAt = now.plusHours(24);
+        }
+    }
 }

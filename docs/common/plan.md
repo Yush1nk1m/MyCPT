@@ -282,9 +282,9 @@
 
 ### 실행 기록
 
-| 날짜        | 내용 | 산출물 |
-| ----------- | ---- | ------ |
-| (진행 예정) |      |        |
+| 날짜       | 내용                                                                                                                                                                                                                                                                                | 산출물                                                                                                                                                   |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 06.22 (월) | CoinReason enum, CoinTransaction 엔티티, CoinTransactionRepository, CoinService(가입보너스/온디맨드충전/차감/이력조회), CoinApi, CoinV1Controller 구현. EntityTestSupport(구 EntityIdSetter) setField() 추가. CoinServiceTest(UT 11케이스) + CoinV1ControllerTest(ST 4케이스) 통과. | CoinReason, CoinTransaction, CoinTransactionRepository, CoinService, CoinApi, CoinV1Controller, EntityTestSupport, CoinServiceTest, CoinV1ControllerTest |
 
 ### 완료 확인 체크리스트
 
