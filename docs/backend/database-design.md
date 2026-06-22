@@ -110,7 +110,7 @@ erDiagram
   }
 
   disc_tests {
-    BIGINT  test_id   PK_FK  "→ tests.id"
+    BIGINT  test_id   PK, FK  "→ tests.id"
     TINYINT d_score          "원점수 (-24 ~ +48)"
     TINYINT i_score
     TINYINT s_score
@@ -187,12 +187,12 @@ erDiagram
   }
 
   colleague_notifications {
-    BIGINT id            PK_FK  "→ notifications.id"
+    BIGINT id            PK, FK  "→ notifications.id"
     BIGINT colleague_id  FK     "→ colleagues.id"
   }
 
   chemistry_notifications {
-    BIGINT id                  PK_FK  "→ notifications.id"
+    BIGINT id                  PK, FK  "→ notifications.id"
     BIGINT chemistry_report_id FK     "→ chemistry_reports.id"
   }
 

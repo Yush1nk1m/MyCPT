@@ -116,7 +116,6 @@ com.mycpt.backend
 │   │   ├── service/
 │   │   │   ├── ScoringService.java          # 원점수 검증 + 버킷 정규화 (1~3)
 │   │   │   ├── CacheService.java            # disc_cache Lazy Caching
-│   │   │   ├── LlmService.java              # Claude API 호출 + 응답 파싱
 │   │   │   └── ResultService.java           # 결과 저장 + 이력/상세 조회
 │   │   ├── repository/
 │   │   │   ├── TestRepository.java
@@ -213,11 +212,14 @@ com.mycpt.backend
 │   │   │   └── ChemistryV1Controller.java   # POST /chemistry-reports, GET /chemistry-reports, GET /chemistry-reports/{id}
 │   │   ├── service/
 │   │   │   ├── ChemistryService.java        # 202 즉시 반환 + @Async LLM 호출 트리거
-│   │   │   └── ChemistryLlmService.java     # 케미 프롬프트 설계 + 보고서 저장
+│   │   │   ├── ChemistryReportProcessor.java   # @Async LLM 호출, 캐시 조회/저장, 알림
+│   │   │   └── ChemistryCacheService.java      # chemistry_cache 히트/미스/만료 분기
 │   │   ├── repository/
-│   │   │   └── ChemistryReportRepository.java
+│   │   │   ├── ChemistryReportRepository.java
+│   │   │   └── ChemistryCacheRepository.java
 │   │   └── entity/
-│   │       └── ChemistryReport.java
+│   │       ├── ChemistryReport.java
+│   │       └── ChemistryCache.java
 │   │
 │   ├── notification/                # 인앱 알림 + SSE
 │   │   ├── controller/
@@ -252,6 +254,8 @@ com.mycpt.backend
 │   ├── exception/
 │   │   ├── BusinessException.java           # 서비스 전체 비즈니스 예외 베이스
 │   │   └── ErrorCode.java                   # HTTP 상태 + 기본 메시지 열거형 (INVALID_SCORE, EXPIRED_CODE, TOKEN_USED, FORBIDDEN, NOT_FOUND, ALREADY_COLLEAGUE, SELF_INVITE, INSUFFICIENT_COINS, INVALID_REQUEST)
+│   ├── llm/
+│   │   └── AnthropicLlmClient.java         # SDK 기반 공용 LLM 클라이언트
 │   ├── response/
 │   │   └── ErrorResponse.java               # { code, message } 공통 응답 DTO
 │   └── storage/
