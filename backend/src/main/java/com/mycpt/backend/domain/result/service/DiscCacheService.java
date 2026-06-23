@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 /**
  * disc_cache Lazy Caching 서비스
@@ -32,13 +31,13 @@ import java.util.Optional;
  *  cache.disc.ttl-days=365  (기본값 365일)
  */
 @Service
-public class CacheService {
+public class DiscCacheService {
 
     private final DiscCacheRepository discCacheRepository;
     private final AnthropicLlmClient llmClient;
     private final long ttlDays;
 
-    public CacheService(
+    public DiscCacheService(
             DiscCacheRepository discCacheRepository,
             AnthropicLlmClient llmClient,
             @Value("${cache.disc.ttl-days:365}") long ttlDays

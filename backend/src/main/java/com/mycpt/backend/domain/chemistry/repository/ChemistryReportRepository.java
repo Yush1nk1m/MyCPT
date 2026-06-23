@@ -16,7 +16,7 @@ public interface ChemistryReportRepository extends JpaRepository<ChemistryReport
      * 케미 보고서 이력 조회 - 커서 기반 페이지네이션
      *
      * - ERROR 상태는 목록에서 제외 (사용자에게 미노출)
-     * - colleagueId(상대방 userId) 필터: null이면 전체
+     * - partnerId(상대방 userId) 필터: null이면 전체
      * - cursor: null이면 최신부터
      */
     @Query("""

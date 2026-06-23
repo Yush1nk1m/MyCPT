@@ -10,10 +10,10 @@ import com.mycpt.backend.domain.coin.enums.CoinReason;
 import com.mycpt.backend.domain.coin.repository.CoinTransactionRepository;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;

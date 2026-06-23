@@ -148,7 +148,7 @@ class ColleagueV1ControllerTest extends MvcTestSupport {
                             .content(objectMapper.writeValueAsString(request)))
                     // then
                     .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.colleagueId").value(15));
+                    .andExpect(jsonPath("$.partnerId").value(15));
         }
 
         @Test
@@ -185,7 +185,7 @@ class ColleagueV1ControllerTest extends MvcTestSupport {
                             .with(authenticated(testUser())))
                     // then
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.colleagues[0].colleagueId").value(15));
+                    .andExpect(jsonPath("$.colleagues[0].partnerId").value(15));
         }
 
         @Test
@@ -198,10 +198,10 @@ class ColleagueV1ControllerTest extends MvcTestSupport {
         }
     }
 
-    // ── GET /colleagues/{colleagueId} ────────────────────────────────────────
+    // ── GET /colleagues/{partnerId} ────────────────────────────────────────
 
     @Nested
-    @DisplayName("GET /api/v1/colleagues/{colleagueId}")
+    @DisplayName("GET /api/v1/colleagues/{partnerId}")
     class Get {
 
         @Test
@@ -212,34 +212,34 @@ class ColleagueV1ControllerTest extends MvcTestSupport {
                     .willReturn(new ColleagueResponse(15L, "유신", null, LocalDateTime.now()));
 
             // then
-            mockMvc.perform(get("/api/v1/colleagues/{colleagueId}", 15L)
+            mockMvc.perform(get("/api/v1/colleagues/{partnerId}", 15L)
                             .with(authenticated(testUser())))
                     // then
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.colleagueId").value(15));
+                    .andExpect(jsonPath("$.partnerId").value(15));
         }
 
         @Test
         @DisplayName("[ST-ColleagueCtrl-프로필조회-미인증]")
         void 프로필조회_미인증() throws Exception {
             // when
-            mockMvc.perform(get("/api/v1/colleagues/{colleagueId}", 15L))
+            mockMvc.perform(get("/api/v1/colleagues/{partnerId}", 15L))
                     // then
                     .andExpect(status().isUnauthorized());
         }
     }
 
-    // ── DELETE /colleagues/{colleagueId} ─────────────────────────────────────
+    // ── DELETE /colleagues/{partnerId} ─────────────────────────────────────
 
     @Nested
-    @DisplayName("DELETE /api/v1/colleagues/{colleagueId}")
+    @DisplayName("DELETE /api/v1/colleagues/{partnerId}")
     class Delete {
 
         @Test
         @DisplayName("[ST-ColleagueCtrl-삭제-성공]")
         void 삭제_성공() throws Exception {
             // when
-            mockMvc.perform(delete("/api/v1/colleagues/{colleagueId}", 15L)
+            mockMvc.perform(delete("/api/v1/colleagues/{partnerId}", 15L)
                             .with(authenticated(testUser())))
                     // then
                     .andExpect(status().isOk());
@@ -249,7 +249,7 @@ class ColleagueV1ControllerTest extends MvcTestSupport {
         @DisplayName("[ST-ColleagueCtrl-삭제-미인증]")
         void 삭제_미인증() throws Exception {
             // when
-            mockMvc.perform(delete("/api/v1/colleagues/{colleagueId}", 15L))
+            mockMvc.perform(delete("/api/v1/colleagues/{partnerId}", 15L))
                     // then
                     .andExpect(status().isUnauthorized());
         }

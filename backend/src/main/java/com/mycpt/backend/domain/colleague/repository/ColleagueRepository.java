@@ -21,20 +21,6 @@ public interface ColleagueRepository extends JpaRepository<Colleague, Long> {
     """)
     List<Colleague> findAllByUserId(@Param("userId") Long userId);
 
-    // 특정 동료 관계 조회 (권한 검증용 - 내가 포함된 관계인지)
-    // user_a_id < user_b_id 정렬 없이 OR 조건으로 조회
-    @Query("""
-        SELECT c FROM Colleague c
-        JOIN FETCH c.userA
-        JOIN FETCH c.userB
-        WHERE c.id = :colleagueId
-            AND (c.userA.id = :userId OR c.userB.id = :userId)
-    """)
-    Optional<Colleague> findByIdAndUserId(
-            @Param("colleagueId") Long colleagueId,
-            @Param("userId") Long userId
-    );
-
     @Query("""
         SELECT c FROM Colleague c
         JOIN FETCH c.userA

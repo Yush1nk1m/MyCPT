@@ -4,9 +4,9 @@ import com.mycpt.backend.domain.colleague.entity.Colleague;
 
 import java.time.LocalDateTime;
 
-// POST /colleagues 201, GET /colleagues 아이템, GET /colleagues/{colleagueId} 응답 공용
+// POST /colleagues 201, GET /colleagues 아이템, GET /colleagues/{partnerId} 응답 공용
 public record ColleagueResponse(
-        Long colleagueId,
+        Long partnerId,
         String nickname,
         String profileImageUrl,
         LocalDateTime connectedAt

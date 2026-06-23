@@ -68,24 +68,24 @@ public class ColleagueV1Controller implements ColleagueApi {
         return ResponseEntity.ok(colleagueService.list(principal.getUser().getId()));
     }
 
-    @GetMapping("/colleagues/{colleagueId}")
+    @GetMapping("/colleagues/{partnerId}")
     @Override
     public ResponseEntity<ColleagueResponse> get(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long colleagueId
+            @PathVariable Long partnerId
     ) {
         return ResponseEntity.ok(
-                colleagueService.get(colleagueId, principal.getUser().getId())
+                colleagueService.get(partnerId, principal.getUser().getId())
         );
     }
 
-    @DeleteMapping("/colleagues/{colleagueId}")
+    @DeleteMapping("/colleagues/{partnerId}")
     @Override
     public ResponseEntity<Void> delete(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long colleagueId
+            @PathVariable Long partnerId
     ) {
-        colleagueService.delete(colleagueId, principal.getUser().getId());
+        colleagueService.delete(partnerId, principal.getUser().getId());
         return ResponseEntity.ok().build();
     }
 }

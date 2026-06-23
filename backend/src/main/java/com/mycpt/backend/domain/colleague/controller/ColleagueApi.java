@@ -42,12 +42,12 @@ public interface ColleagueApi {
     @Operation(summary = "동료 프로필 조회")
     ResponseEntity<ColleagueResponse> get(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long colleagueId
+            @PathVariable Long partnerId
     );
 
     @Operation(summary = "동료 삭제")
     ResponseEntity<Void> delete(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long colleagueId
+            @PathVariable Long partnerId
     );
 }

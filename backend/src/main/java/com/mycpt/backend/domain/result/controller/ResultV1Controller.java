@@ -3,7 +3,7 @@ package com.mycpt.backend.domain.result.controller;
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
 import com.mycpt.backend.domain.result.dto.*;
 import com.mycpt.backend.domain.result.enums.RaterType;
-import com.mycpt.backend.domain.result.service.CacheService;
+import com.mycpt.backend.domain.result.service.DiscCacheService;
 import com.mycpt.backend.domain.result.service.ResultService;
 import com.mycpt.backend.domain.result.service.ScoringService;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 public class ResultV1Controller implements ResultApi {
 
     private final ScoringService scoringService;
-    private final CacheService cacheService;
+    private final DiscCacheService discCacheService;
     private final ResultService resultService;
 
     // POST /api/v1/results/score
@@ -38,7 +38,7 @@ public class ResultV1Controller implements ResultApi {
         DiscScoreRequest.Scores s = request.scores();
 
         // CacheService가 HIT/MISS/만료를 판단하고 보고서를 반환
-        String report = cacheService.getReport(buckets);
+        String report = discCacheService.getReport(buckets);
 
         return ResponseEntity.ok(new DiscScoreResponse(
                 new DiscScores(s.d(), s.i(), s.s(), s.c()),

@@ -31,12 +31,12 @@ import static org.mockito.BDDMockito.*;
 class ResultServiceTest {
 
     @Mock private ScoringService scoringService;
-    @Mock private CacheService cacheService;
+    @Mock private DiscCacheService discCacheService;
     @Mock private DiscTestRepository discTestRepository;
     @Mock private UserRepository userRepository;
 
     private ResultService sut() {
-        return new ResultService(scoringService, cacheService, discTestRepository, userRepository);
+        return new ResultService(scoringService, discCacheService, discTestRepository, userRepository);
     }
 
     // ── 공통 픽스처 ───────────────────────────────────────────────────────────
@@ -211,7 +211,7 @@ class ResultServiceTest {
             // given: userId=1L 본인 결과 조회
             DiscTest dt = stubDiscTest(1L, RaterType.SELF);
             given(discTestRepository.findByTestIdWithDetail(10L)).willReturn(Optional.of(dt));
-            given(cacheService.getReport(any())).willReturn(REPORT);
+            given(discCacheService.getReport(any())).willReturn(REPORT);
 
             // when
             ResultDetailResponse response = sut().detail(1L, 10L);
@@ -236,7 +236,7 @@ class ResultServiceTest {
                     .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                             .isEqualTo(ErrorCode.FORBIDDEN));
 
-            verify(cacheService, never()).getReport(any());
+            verify(discCacheService, never()).getReport(any());
         }
 
         @Test

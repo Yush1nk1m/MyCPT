@@ -686,7 +686,7 @@ Spring Security JWT 기반.
 
 ```json
 {
-  "colleagueId": 15,
+  "partnerId": 15,
   "nickname": "유신",
   "profileImageUrl": "https://..."
 }
@@ -716,7 +716,7 @@ Spring Security JWT 기반.
 {
   "colleagues": [
     {
-      "colleagueId": 15,
+      "partnerId": 15,
       "nickname": "유신",
       "profileImageUrl": "https://...",
       "connectedAt": "2026-05-24T14:30:00"
@@ -732,22 +732,22 @@ Spring Security JWT 기반.
 
 ---
 
-### `GET /colleagues/{colleagueId}` — 동료 프로필 조회
+### `GET /colleagues/{partnerId}` — 동료 프로필 조회
 
 - 인증: 회원 전용
 - 설명: 특정 동료의 프로필 정보를 반환한다. 동료 관계가 아닌 사용자는 조회 불가.
 
 **경로 파라미터**
 
-| 파라미터      | 타입   | 설명                 |
-| ------------- | ------ | -------------------- |
-| `colleagueId` | number | 조회할 동료의 userId |
+| 파라미터    | 타입   | 설명                 |
+| ----------- | ------ | -------------------- |
+| `partnerId` | number | 조회할 동료의 userId |
 
 **응답 바디 (200)**
 
 ```json
 {
-  "colleagueId": 15,
+  "partnerId": 15,
   "nickname": "유신",
   "profileImageUrl": "https://...",
   "connectedAt": "2026-05-24T14:30:00"
@@ -763,7 +763,7 @@ Spring Security JWT 기반.
 
 ---
 
-### `DELETE /colleagues/{colleagueId}` — 동료 삭제
+### `DELETE /colleagues/{partnerId}` — 동료 삭제
 
 - 인증: 회원 전용
 - 설명: 동료 관계를 삭제한다. 양방향 관계가 단일 행으로 저장되어 있으므로 행 하나를 DELETE하면 양쪽 모두 관계가 해제된다.
@@ -824,12 +824,12 @@ Spring Security JWT 기반.
 
 **요청 파라미터**
 
-| 파라미터      | 타입   | 필수     | 설명                                           |
-| ------------- | ------ | -------- | ---------------------------------------------- |
-| `colleagueId` | number | optional | 특정 동료 필터. 미입력 시 전체 이력            |
-| `testType`    | string | optional | 검사 유형 필터. 미입력 시 전체                 |
-| `size`        | number | optional | 페이지 크기. 기본값 5                          |
-| `cursor`      | number | optional | 마지막으로 받은 `reportId`. 미입력 시 최신부터 |
+| 파라미터    | 타입   | 필수     | 설명                                           |
+| ----------- | ------ | -------- | ---------------------------------------------- |
+| `partnerId` | number | optional | 특정 동료 필터. 미입력 시 전체 이력            |
+| `testType`  | string | optional | 검사 유형 필터. 미입력 시 전체                 |
+| `size`      | number | optional | 페이지 크기. 기본값 5                          |
+| `cursor`    | number | optional | 마지막으로 받은 `reportId`. 미입력 시 최신부터 |
 
 **응답 바디 (200)**
 
@@ -925,7 +925,7 @@ data: { "reportId": 7, "message": "케미 보고서가 발행되었습니다." }
 
 event: COLLEAGUE_REGISTERED
 id: 43
-data: { "colleagueId": 15, "message": "유신님이 동료로 등록되었습니다." }
+data: { "partnerId": 15, "message": "유신님이 동료로 등록되었습니다." }
 ```
 
 | 응답 코드 | 설명               |
@@ -1084,8 +1084,8 @@ data: { "colleagueId": 15, "message": "유신님이 동료로 등록되었습니
 | 19  | GET    | `/colleagues/invite/{code}`   | 회원        | 초대 코드 유효성 확인    |
 | 20  | POST   | `/colleagues`                 | 회원        | 동료 등록                |
 | 21  | GET    | `/colleagues`                 | 회원        | 동료 목록 조회           |
-| 22  | GET    | `/colleagues/{colleagueId}`   | 회원        | 동료 프로필 조회         |
-| 23  | DELETE | `/colleagues/{colleagueId}`   | 회원        | 동료 삭제                |
+| 22  | GET    | `/colleagues/{partnerId}`     | 회원        | 동료 프로필 조회         |
+| 23  | DELETE | `/colleagues/{partnerId}`     | 회원        | 동료 삭제                |
 | 24  | POST   | `/chemistry-reports`          | 회원        | 케미 보고서 발행         |
 | 25  | GET    | `/chemistry-reports`          | 회원        | 케미 보고서 이력 조회    |
 | 26  | GET    | `/chemistry-reports/{id}`     | 회원        | 케미 보고서 상세 조회    |

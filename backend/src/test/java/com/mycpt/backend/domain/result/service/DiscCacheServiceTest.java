@@ -20,7 +20,7 @@ import static org.mockito.BDDMockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CacheService 단위 테스트")
-class CacheServiceTest {
+class DiscCacheServiceTest {
 
     @Mock private DiscCacheRepository discCacheRepository;
     @Mock private AnthropicLlmClient llmClient;
@@ -28,8 +28,8 @@ class CacheServiceTest {
     // @InjectMocks 미사용 이유:
     //  - CacheService 생성자의 세 번째 인자 ttlDays는 @Value 주입 값이라 @InjectMocks가 처리하지 못함
     //  - 케이스별로 ttlDays를 명시해 생성하면 의도가 더 명확해짐
-    private CacheService sut(long ttlDays) {
-        return new CacheService(discCacheRepository, llmClient, ttlDays);
+    private DiscCacheService sut(long ttlDays) {
+        return new DiscCacheService(discCacheRepository, llmClient, ttlDays);
     }
 
     // ── 공통 픽스처 ───────────────────────────────────────────────────────────

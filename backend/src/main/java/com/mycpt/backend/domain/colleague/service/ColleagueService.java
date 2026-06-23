@@ -12,11 +12,13 @@ import com.mycpt.backend.domain.notification.service.NotificationService;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ColleagueService {
@@ -108,24 +110,27 @@ public class ColleagueService {
                 .map(c -> ColleagueResponse.from(c, myUserId))
                 .toList();
 
+        for (ColleagueResponse cr : result)
+            log.info("Colleague's nickname: " + cr.nickname());
+
         return new ColleagueListResponse(result);
     }
 
     /**
-     * GET /colleagues/{colleagueId} - 동료 프로필 조회
+     * GET /colleagues/{partnerId} - 동료 프로필 조회
      * <p>
-     * colleagueId는 colleagues.id가 아닌 상대방의 userId
-     * (API 명세: colleagueId = 조회할 동료의 userId)
+     * partnerId는 colleagues.id가 아닌 상대방의 userId
+     * (API 명세: partnerId = 조회할 동료의 userId)
      */
     @Transactional(readOnly = true)
-    public ColleagueResponse get(Long colleagueUserId, Long myUserId) {
+    public ColleagueResponse get(Long partnerId, Long myUserId) {
         // 상대방이 존재하는지 확인
-        userRepository.findById(colleagueUserId)
+        userRepository.findById(partnerId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         // 동료 관계 확인 (권한 검증)
-        Long idA = Math.min(myUserId, colleagueUserId);
-        Long idB = Math.max(myUserId, colleagueUserId);
+        Long idA = Math.min(myUserId, partnerId);
+        Long idB = Math.max(myUserId, partnerId);
 
         Colleague colleague = colleagueRepository.findByPair(idA, idB)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN));
@@ -134,18 +139,18 @@ public class ColleagueService {
     }
 
     /**
-     * DELETE /colleagues/{colleagueId} - 동료 삭제
+     * DELETE /colleagues/{partnerId} - 동료 삭제
      * <p>
-     * colleagueId는 상대방 userId
+     * partnerId는 상대방 userId
      */
     @Transactional
-    public void delete(Long colleagueUserId, Long myUserId) {
+    public void delete(Long partnerId, Long myUserId) {
         // 상대방 존재 확인
-        userRepository.findById(colleagueUserId)
+        userRepository.findById(partnerId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
-        Long idA = Math.min(myUserId, colleagueUserId);
-        Long idB = Math.max(myUserId, colleagueUserId);
+        Long idA = Math.min(myUserId, partnerId);
+        Long idB = Math.max(myUserId, partnerId);
 
         Colleague colleague = colleagueRepository.findByPair(idA, idB)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN));

@@ -34,7 +34,7 @@ import java.util.List;
 public class ResultService {
 
     private final ScoringService scoringService;
-    private final CacheService cacheService;
+    private final DiscCacheService discCacheService;
     private final DiscTestRepository discTestRepository;
     private final UserRepository userRepository;
 
@@ -115,7 +115,7 @@ public class ResultService {
         ScoringService.Buckets buckets = new ScoringService.Buckets(
                 dt.getDBucket(), dt.getIBucket(), dt.getSBucket(), dt.getCBucket()
         );
-        String report = cacheService.getReport(buckets);
+        String report = discCacheService.getReport(buckets);
 
         return new ResultDetailResponse(
                 dt.getId(),
