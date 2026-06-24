@@ -31,6 +31,16 @@ public class ChemistryService {
     private final CoinService coinService;
     private final ChemistryReportProcessor chemistryReportProcessor;
 
+    /**
+     * 케미 보고서 발행 요청.
+     *
+     * chemistry_reports INSERT는 chemistry_cache 락 획득 이후
+     * ChemistryReportProcessor 내부에서 수행.
+     * 여기서는 동료 검증 + 코인 차감 + @Async 트리거만 담당.
+     *
+     * @Async는 트랜잭션 커밋 후 실행되므로 코인 차감이 롤백되는 경우
+     * processor가 트리거되지 않음이 보장됨.
+     */
     @Transactional
     public void issue(Long requesterId, Long partnerId) {
         Long idA = Math.min(requesterId, partnerId);
@@ -41,6 +51,8 @@ public class ChemistryService {
 
         coinService.deduct(requesterId, CoinReason.CHEMISTRY_REPORT);
 
+        // chemistry_reports INSERT - FK 컬럼(버킷 값)은 READY 시 세팅되므로
+        // 이 시점에서는 NULL. seeding으로 chemistry_cache 전 행이 존재하므로 FK 무결성 보장
         User requester = userRepository.getReferenceById(requesterId);
         User partner = userRepository.getReferenceById(partnerId);
         ChemistryReport report = ChemistryReport.create(requester, partner, TestType.DISC);

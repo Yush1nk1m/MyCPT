@@ -348,11 +348,11 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 [[Test Code](../backend/src/test/java/com/mycpt/backend/domain/chemistry/entity/ChemistryReportTest.java)]
 
-| Test ID                                | 행위                     | 상황                                                 |
-| -------------------------------------- | ------------------------ | ---------------------------------------------------- |
-| `UT-ChemistryReport-상태전이-create`   | `create()` 호출          | `status=GENERATING`, `report=null`, `createdAt` 세팅 |
-| `UT-ChemistryReport-상태전이-complete` | `complete(content)` 호출 | `status=READY`, `report=content`                     |
-| `UT-ChemistryReport-상태전이-fail`     | `fail()` 호출            | `status=ERROR`, `report=null` 유지                   |
+| Test ID                                | 행위                     | 상황                                                  |
+| -------------------------------------- | ------------------------ | ----------------------------------------------------- |
+| `UT-ChemistryReport-상태전이-create`   | `create()` 호출          | `status=GENERATING`, `cacheId=null`, `createdAt` 세팅 |
+| `UT-ChemistryReport-상태전이-complete` | `complete(cacheId)` 호출 | `status=READY`, `cacheId` 세팅                        |
+| `UT-ChemistryReport-상태전이-fail`     | `fail()` 호출            | `status=ERROR`, `report=null` 유지                    |
 
 ### ChemistryCacheId (UT)
 
@@ -367,14 +367,15 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 [[Test Code](../backend/src/test/java/com/mycpt/backend/domain/chemistry/entity/ChemistryCacheTest.java)]
 
-| Test ID                     | 행위                           | 상황                             |
-| --------------------------- | ------------------------------ | -------------------------------- |
-| `UT-ChemistryCache-create`  | `create()` 호출                | `id`, `report`, `createdAt` 세팅 |
-| `UT-ChemistryCache-refresh` | `refresh(newReport, now)` 호출 | `report`, `createdAt` 갱신       |
+| Test ID                                      | 행위                           | 상황                                            |
+| -------------------------------------------- | ------------------------------ | ----------------------------------------------- |
+| `UT-ChemistryCache-상태전이-startGenerating` | `startGenerating()` 호출       | `status=GENERATING`                             |
+| `UT-ChemistryCache-상태전이-complete`        | `complete(report, now)` 호출   | `status=READY`, `report` 세팅, `createdAt` 세팅 |
+| `UT-ChemistryCache-상태전이-refresh`         | `refresh(newReport, now)` 호출 | `status=GENERATING`으로 리셋, `report` 교체     |
 
-> **`ChemistryCacheService` / `ChemistryReportProcessor` UT 제외 이유**
-> `ChemistryCacheService`는 `AnthropicLlmClient` mock이 필수이며, 히트/미스/만료 분기의 핵심은 DB 조회 결과에 있어 IT로 검증이 더 정확하다.
-> `ChemistryReportProcessor`는 `@Async` + `@Retryable` 조합이 통합 환경에서만 의미 있어 mock 기반 UT는 구현 검증에 그친다.
+> `ChemistryCacheService` / `ChemistryReportProcessor` UT 제외 이유
+> `ChemistryCacheService`는 `AnthropicLlmClient` mock이 필수이며, 락 획득 → 발행자/구독자 분기 → Pub/Sub 발행까지의 흐름은 실제 MySQL 락 + Redis가 있는 IT 환경에서만 의미 있게 검증 가능하다.
+> `ChemistryReportProcessor`는 `@Async` + `@Retryable` 조합, 트랜잭션 분리, Pub/Sub 수신 후 SSE push까지의 전체 흐름이 통합 환경에서만 의미 있어 mock 기반 UT는 구현 검증에 그친다.
 
 ### ChemistryV1Controller (ST)
 
@@ -393,13 +394,15 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 [[Test Code](../backend/src/test/java/com/mycpt/backend/domain/chemistry/repository/ChemistryRepositoryTest.java)]
 
-| Test ID                                     | 행위                       | 상황                                                        |
-| ------------------------------------------- | -------------------------- | ----------------------------------------------------------- |
-| `IT-ChemistryCacheRepo-조회-미스`           | `findById()`               | 해당 버킷 조합 없음 → `Optional.empty()`                    |
-| `IT-ChemistryCacheRepo-조회-히트`           | `findById()`               | 해당 버킷 조합 존재 → `report` 값 반환                      |
-| `IT-ChemistryReportRepo-커서-ERROR필터`     | `findByUserIdWithCursor()` | READY + ERROR 혼재 → ERROR 제외, READY만 반환               |
-| `IT-ChemistryReportRepo-커서-partnerId필터` | `findByUserIdWithCursor()` | A↔B, A↔C 보고서 혼재 → `partnerId=B` 필터 시 B 관련만 반환  |
-| `IT-ChemistryReportRepo-커서-페이지네이션`  | `findByUserIdWithCursor()` | 3건 삽입 후 중간 ID를 cursor로 → `id < cursor` 인 행만 반환 |
+| Test ID                                     | 행위                       | 상황                                                                         |
+| ------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------- |
+| `IT-ChemistryCacheRepo-락-발행자확정`       | `findByIdWithLock()`       | status=NULL 행 조회 → 발행자 스레드 확정, status=GENERATING 업데이트 후 커밋 |
+| `IT-ChemistryCacheRepo-락-구독자확정`       | `findByIdWithLock()`       | status=GENERATING 행 조회 → 구독자로 분기 (lock 해제 후 반환값 확인)         |
+| `IT-ChemistryCacheRepo-조회-READY히트`      | `findByIdWithLock()`       | status=READY 행 조회 → report 즉시 반환                                      |
+| `IT-ChemistryCacheRepo-조회-히트`           | `findById()`               | 해당 버킷 조합 존재 → `report` 값 반환                                       |
+| `IT-ChemistryReportRepo-커서-ERROR필터`     | `findByUserIdWithCursor()` | READY + ERROR 혼재 → ERROR 제외, READY만 반환                                |
+| `IT-ChemistryReportRepo-커서-partnerId필터` | `findByUserIdWithCursor()` | A↔B, A↔C 보고서 혼재 → `partnerId=B` 필터 시 B 관련만 반환                   |
+| `IT-ChemistryReportRepo-커서-페이지네이션`  | `findByUserIdWithCursor()` | 3건 삽입 후 중간 ID를 cursor로 → `id < cursor` 인 행만 반환                  |
 
 ---
 

@@ -8,6 +8,7 @@ import com.mycpt.backend.domain.result.enums.RaterType;
 import com.mycpt.backend.domain.statistics.dto.LatestBuckets;
 import com.mycpt.backend.domain.statistics.repository.StatisticsRepository;
 import com.mycpt.backend.domain.user.entity.User;
+import com.mycpt.backend.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -16,6 +17,7 @@ import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -23,17 +25,18 @@ import java.util.List;
 /**
  * 케미 보고서 비동기 생성 프로세서.
  *
- * ChemistryService가 202 반환 직후 트리거.
- * @Async로 별도 스레드에서 실행 — 호출자 트랜잭션과 분리됨.
+ * ChemistryService.issue() 트랜잭션 커밋 후 @Async 별도 스레드에서 실행.
  *
  * 처리 흐름:
  *   1. reportId로 ChemistryReport 조회 (requester, partner JOIN FETCH)
  *   2. 두 사람 최신 자기 평정 버킷 조회
- *   3. ChemistryCacheService로 보고서 조회 (히트/미스/만료 분기)
- *   4. report.complete() → 알림 전송
+ *   3. ChemistryCacheService.getOrGenerate() — 발행자/구독자 분기, 보고서 반환
+ *   4. report.complete(cacheId) → chemistry_reports READY 업데이트
+ *   5. 알림 전송
  *
- * @Retryable: 최대 3회, 2초→4초→8초 지수 백오프
- * 소진 시 @Recover → report.fail() 처리
+ * @Retryable 범위:
+ *   - IllegalStateException(검사 결과 없음, 행 없음 등 재시도 불가 케이스) 제외
+ *   - LLM 호출 실패 등 일시적 오류만 재시도
  */
 @Slf4j
 @Service
@@ -55,7 +58,7 @@ public class ChemistryReportProcessor {
     @Transactional
     public void process(Long reportId) {
         ChemistryReport report = chemistryReportRepository.findByIdWithUsers(reportId)
-                .orElseThrow(() -> new IllegalStateException("ChemistryReport Not Found: " + reportId));
+                .orElseThrow(() -> new IllegalStateException("ChemistryReport 없음: " + reportId));
 
         User requester = report.getRequester();
         User partner = report.getPartner();
@@ -66,24 +69,33 @@ public class ChemistryReportProcessor {
                 partner.getId(), RaterType.SELF, PageRequest.of(0, 1));
 
         if (requesterBuckets.isEmpty() || partnerBuckets.isEmpty()) {
-            // 검사 결과 없음 -> 실패 처리
-            // TODO: 코인 환불 로직 구
-            handleFailure(report, new IllegalStateException("검사 결과 없음"));
-            return;
+            throw new IllegalStateException("검사 결과 없음. reportId=" + reportId);
         }
 
-        // 캐시 조회 - 히트 시 즉시 반환, 미스/만료 시 LLM 호출
-        String generatedReport = chemistryCacheService.getReport(
-                requesterBuckets.get(0),
-                partnerBuckets.get(0)
+        LatestBuckets rb = requesterBuckets.get(0);
+        LatestBuckets pb = partnerBuckets.get(0);
+
+        ChemistryCacheId cacheId = new ChemistryCacheId(
+                rb.dBucket(), rb.iBucket(), rb.sBucket(), rb.cBucket(),
+                pb.dBucket(), pb.iBucket(), pb.sBucket(), pb.cBucket()
         );
 
-        ChemistryCacheId cacheId = new ChemistryCacheId()
-        report.complete(generatedReport);
+        // 발행자/구독자 분기 - 보고서 텍스트 반환 (캐시 히트 or LLM 생성 or 구독 대기)
+        chemistryCacheService.getOrGenerate(cacheId, requester.getId(), reportId, rb, pb);
 
-        // 상대방에게 알림 전송
-        // TODO: SSE 푸시 구현
+        // chemistry_reports READY 업데이트
+        completeReport(reportId, cacheId);
+
+        // 상대방에게 인앱 알림 전송
+        // SSE push는 ChemistryEventSubscriber가 Pub/Sub 수신 후 처리
         notificationService.sendChemistryNotification(partner, report, requester);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void completeReport(Long reportId, ChemistryCacheId cacheId) {
+        chemistryReportRepository.findById(reportId)
+                .orElseThrow(() -> new IllegalStateException("ChemistryReport 없음: " + reportId))
+                .complete(cacheId);
     }
 
     @Recover
@@ -91,13 +103,11 @@ public class ChemistryReportProcessor {
     public void recover(Exception e, Long reportId) {
         log.error("케미 보고서 생성 최종 실패. reportId={}", reportId, e);
         chemistryReportRepository.findById(reportId)
-                .ifPresent(r -> handleFailure(r, e));
-    }
-
-    private void handleFailure(ChemistryReport report, Exception e) {
-        report.fail();
-        // TODO: 코인 환불 로직 구현
-        log.warn("케미 보고서 실패 처리. reportId={}, requesterId={}",
-                report.getId(), report.getRequester().getId());
+                .ifPresent(r -> {
+                    r.fail();
+                    // TODO: 코인 환불 로직 구현
+                    log.warn("케미 보고서 실패 처리 완료. reportId={}, requesterId={}",
+                            r.getId(), r.getRequester().getId());
+                });
     }
 }

@@ -1,23 +1,24 @@
 # MyCPT 시스템 아키텍처 설계
 
-**문서 버전**: v0.9
-**작성일**: '26.06.16.
+**문서 버전**: v0.10
+**작성일**: '26.06.24.
 **작성자**: 김유신
 
 ---
 
 ## 변경 이력
 
-| 버전 | 변경 내용                                                                                                                                                                                                                                                                                           | 날짜       |
-| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| v0.2 | 패키지 루트 com.mycpt.backend로 수정. 컨트롤러 Interface+V1 네이밍 구조 반영. Swagger UI 추가.                                                                                                                                                                                                      | '26.05.26. |
-| v0.3 | JWT 인증 방식으로 변경에 따른 아키텍처 및 Redis 명세 수정                                                                                                                                                                                                                                           | '26.05.27. |
-| v0.4 | Next.js 컴포넌트 역할 추가                                                                                                                                                                                                                                                                          | '26.05.28. |
-| v0.5 | 타인 평정 흐름 시퀀스 다이어그램 추가                                                                                                                                                                                                                                                               | '26.06.05. |
-| v0.6 | result 도메인 패키지 구조 실제 구현 반영. RaterType enums 분리. DTO 패키지 추가. ForbiddenException 추가. EntityNotFoundException 핸들러 전역 이동.                                                                                                                                                 | '26.06.09. |
-| v0.7 | 예외 처리 체계 통합 (BusinessException/ErrorCode/ErrorResponse). 개별 예외 클래스 제거. 응답 DTO Map → record 교체 반영 (MeResponse, UpdateProfileResponse, UpdateProfileImageResponse, CreateTokenResponse, SubjectInfoResponse, SubmitResponse).                                                  | '26.06.13. |
-| v0.8 | `DiscResult` → `DiscTest`, `DiscResultRepository` → `DiscTestRepository` 이름 변경. `Test` 엔티티 추상 클래스 전환 (`@Inheritance(JOINED)`). notification 도메인 CTI 적용 (`Notification` 추상화, `ColleagueNotification` / `ChemistryNotification` 서브클래스 추가). MySQL 테이블 수 12 → 13 반영. | '26.06.15. |
-| v0.9 | ScoreRequest → DiscScoreRequest, ScoreResponse → DiscScoreResponse 이름 변경. common/enums/TestType.java 추가 (ChemistryReport 전용). TestType을 DTO에 사용하지 않는 설계 근거 반영.                                                                                                                | '26.06.16. |
+| 버전  | 변경 내용                                                                                                                                                                                                                                                                                           | 날짜       |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| v0.2  | 패키지 루트 com.mycpt.backend로 수정. 컨트롤러 Interface+V1 네이밍 구조 반영. Swagger UI 추가.                                                                                                                                                                                                      | '26.05.26. |
+| v0.3  | JWT 인증 방식으로 변경에 따른 아키텍처 및 Redis 명세 수정                                                                                                                                                                                                                                           | '26.05.27. |
+| v0.4  | Next.js 컴포넌트 역할 추가                                                                                                                                                                                                                                                                          | '26.05.28. |
+| v0.5  | 타인 평정 흐름 시퀀스 다이어그램 추가                                                                                                                                                                                                                                                               | '26.06.05. |
+| v0.6  | result 도메인 패키지 구조 실제 구현 반영. RaterType enums 분리. DTO 패키지 추가. ForbiddenException 추가. EntityNotFoundException 핸들러 전역 이동.                                                                                                                                                 | '26.06.09. |
+| v0.7  | 예외 처리 체계 통합 (BusinessException/ErrorCode/ErrorResponse). 개별 예외 클래스 제거. 응답 DTO Map → record 교체 반영 (MeResponse, UpdateProfileResponse, UpdateProfileImageResponse, CreateTokenResponse, SubjectInfoResponse, SubmitResponse).                                                  | '26.06.13. |
+| v0.8  | `DiscResult` → `DiscTest`, `DiscResultRepository` → `DiscTestRepository` 이름 변경. `Test` 엔티티 추상 클래스 전환 (`@Inheritance(JOINED)`). notification 도메인 CTI 적용 (`Notification` 추상화, `ColleagueNotification` / `ChemistryNotification` 서브클래스 추가). MySQL 테이블 수 12 → 13 반영. | '26.06.15. |
+| v0.9  | ScoreRequest → DiscScoreRequest, ScoreResponse → DiscScoreResponse 이름 변경. common/enums/TestType.java 추가 (ChemistryReport 전용). TestType을 DTO에 사용하지 않는 설계 근거 반영.                                                                                                                | '26.06.16. |
+| v0.10 | chemistry 도메인: ChemistryCache.status 필드 추가, chemistry/event 패키지 신규 (ChemistryEventPublisher / ChemistryEventSubscriber). RedisConfig 추가. Redis 용도 Pub/Sub 브로커 역할 추가.                                                                                                         | '26.06.24. |
 
 ---
 
@@ -64,14 +65,14 @@
 
 ### 2.3 외부 시스템
 
-| 시스템               | 용도                                                   |
-| -------------------- | ------------------------------------------------------ |
-| MySQL                | 메인 데이터 저장소 (13개 테이블)                       |
-| Redis                | disc_cache @Cacheable (운영 환경)                      |
-| Anthropic Claude API | DISC 분석 보고서 생성, 케미 보고서 생성                |
-| AWS S3               | 프로필 이미지 저장 (운영 환경. 개발은 로컬 파일시스템) |
-| Kakao OAuth          | 소셜 로그인                                            |
-| Swagger UI           | API 문서화 및 수동 테스트 (`/swagger-ui`)              |
+| 시스템               | 용도                                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------------------- |
+| MySQL                | 메인 데이터 저장소 (13개 테이블)                                                               |
+| Redis                | disc_cache @Cacheable L2 캐시 (운영 환경). chemistry_cache 중복 LLM 호출 방지용 Pub/Sub 브로커 |
+| Anthropic Claude API | DISC 분석 보고서 생성, 케미 보고서 생성                                                        |
+| AWS S3               | 프로필 이미지 저장 (운영 환경. 개발은 로컬 파일시스템)                                         |
+| Kakao OAuth          | 소셜 로그인                                                                                    |
+| Swagger UI           | API 문서화 및 수동 테스트 (`/swagger-ui`)                                                      |
 
 ---
 
@@ -101,101 +102,109 @@
 com.mycpt.backend
 ├── BackendApplication.java
 │
-├── config/                          # 설정 클래스
-│   ├── SecurityConfig.java          # Spring Security + Kakao OAuth
-│   ├── RedisConfig.java             # Redis 연결 및 @Cacheable 설정
-│   ├── AsyncConfig.java             # @Async ThreadPoolTaskExecutor
-│   ├── BatchConfig.java             # Spring Batch Job/Step 정의
-│   └── StorageConfig.java           # 로컬/S3 스토리지 전환 설정
+├── config/                              # 전역 설정 클래스
+│   ├── SecurityConfig.java              # Spring Security + Kakao OAuth2
+│   ├── RedisConfig.java                 # RedisTemplate, RedisMessageListenerContainer (Pub/Sub)
+│   ├── AsyncConfig.java                 # @Async ThreadPoolTaskExecutor
+│   ├── BatchConfig.java                 # Spring Batch Job/Step 정의
+│   └── StorageConfig.java               # 로컬/S3 스토리지 전환 설정
+│
+├── common/
+│   ├── enums/
+│   │   └── TestType.java                # DISC / MBTI / BIG5 등 (ChemistryReport 전용)
+│   ├── exception/
+│   │   ├── BusinessException.java       # 도메인 예외 공통 클래스
+│   │   └── ErrorCode.java               # 에러 코드 enum (HTTP 상태 + 메시지)
+│   └── llm/
+│       └── AnthropicLlmClient.java      # Anthropic Java SDK 래퍼. 전역 1개 인스턴스
 │
 ├── domain/
-│   ├── result/                      # 채점, 결과 저장/이력/상세
-│   │   ├── controller/
-│   │   │   ├── ResultApi.java               # Swagger 문서 + API 계약 인터페이스
-│   │   │   └── ResultV1Controller.java      # POST /results/score, POST /results, GET /results, GET /results/{id}
-│   │   ├── service/
-│   │   │   ├── ScoringService.java          # 원점수 검증 + 버킷 정규화 (1~3)
-│   │   │   ├── CacheService.java            # disc_cache Lazy Caching
-│   │   │   └── ResultService.java           # 결과 저장 + 이력/상세 조회
-│   │   ├── repository/
-│   │   │   ├── TestRepository.java
-│   │   │   ├── DiscTestRepository.java      # disc_tests 테이블 (JOINED 상속 자식)
-│   │   │   └── DiscCacheRepository.java
-│   │   ├── entity/
-│   │   │   ├── Test.java                    # tests 테이블. @Inheritance(JOINED) 추상 부모
-│   │   │   ├── DiscTest.java                # disc_tests 테이블. Test 상속 자식 (DISC 전용)
-│   │   │   ├── DiscCache.java               # disc_cache 테이블
-│   │   │   └── DiscCacheId.java             # disc_cache 복합 PK @Embeddable
-│   │   ├── enums/
-│   │   │   └── RaterType.java               # SELF / OTHER
-│   │   └── dto/
-│   │       ├── DiscScoreRequest.java        # POST /results/score 요청
-│   │       ├── DiscScoreResponse.java       # POST /results/score 응답
-│   │       ├── SaveResponse.java            # POST /results 응답
-│   │       ├── ResultListResponse.java      # GET /results 응답
-│   │       ├── ResultSummaryResponse.java   # GET /results 목록 항목
-│   │       ├── ResultDetailResponse.java    # GET /results/{id} 응답
-│   │       ├── DiscScores.java              # 원점수 공용 record
-│   │       └── DiscBuckets.java             # 버킷값 공용 record
-│   │
-│   ├── auth/                        # 인증
+│   ├── auth/                            # 인증
 │   │   ├── controller/
 │   │   │   ├── AuthApi.java
-│   │   │   └── AuthV1Controller.java        # GET /auth/kakao, GET /auth/me, POST /auth/logout
+│   │   │   └── AuthV1Controller.java    # GET /auth/kakao, GET /auth/me, POST /auth/logout
 │   │   ├── service/
-│   │   │   └── CustomOAuth2UserService.java # 카카오 사용자 조회/신규 가입
+│   │   │   └── CustomOAuth2UserService.java  # 카카오 사용자 조회/신규 가입
 │   │   ├── dto/
 │   │   │   ├── MeResponse.java
-│   │   │   └── UserPrincipal.java           # Spring Security Principal
+│   │   │   └── UserPrincipal.java       # Spring Security Principal
 │   │   └── handler/
 │   │       └── OAuth2SuccessHandler.java    # 로그인 성공 후 JWT 발급
 │   │
-│   ├── user/                        # 프로필
+│   ├── user/                            # 프로필
 │   │   ├── controller/
 │   │   │   ├── UserApi.java
-│   │   │   └── UserV1Controller.java        # PATCH /users/me, POST /users/me/profile-image
+│   │   │   └── UserV1Controller.java    # PATCH /users/me, POST /users/me/profile-image
 │   │   ├── service/
 │   │   │   └── UserService.java
 │   │   ├── repository/
 │   │   │   └── UserRepository.java
 │   │   ├── entity/
 │   │   │   └── User.java
-│   │   ├── enums/
-│   │   │   └── Gender.java
 │   │   └── dto/
 │   │       ├── UpdateProfileRequest.java
-│   │       ├── UpdateProfileResponse.java
-│   │       └── UpdateProfileImageResponse.java
+│   │       └── UpdateProfileResponse.java
 │   │
-│   ├── assessment/                  # 타인 평정
+│   ├── result/                          # 채점, LLM 캐시, 결과 저장/이력/상세
+│   │   ├── controller/
+│   │   │   ├── ResultApi.java           # Swagger 문서 + API 계약 인터페이스
+│   │   │   └── ResultV1Controller.java  # POST /results/score, POST /results, GET /results, GET /results/{id}
+│   │   ├── service/
+│   │   │   ├── ScoringService.java      # 원점수 검증 + 버킷 정규화 (1~3)
+│   │   │   ├── CacheService.java        # disc_cache Lazy Caching (히트/미스/만료)
+│   │   │   └── ResultService.java       # 결과 저장 + 이력/상세 조회
+│   │   ├── repository/
+│   │   │   ├── DiscTestRepository.java  # disc_tests 테이블 (JOINED 상속 자식)
+│   │   │   └── DiscCacheRepository.java
+│   │   ├── entity/
+│   │   │   ├── Test.java                # tests 테이블. @Inheritance(JOINED) 추상 부모
+│   │   │   ├── DiscTest.java            # disc_tests 테이블. Test 상속 자식 (DISC 전용)
+│   │   │   ├── DiscCache.java           # disc_cache 테이블
+│   │   │   └── DiscCacheId.java         # disc_cache 복합 PK @Embeddable
+│   │   ├── enums/
+│   │   │   └── RaterType.java           # SELF / OTHER
+│   │   └── dto/
+│   │       ├── DiscScoreRequest.java    # POST /results/score 요청
+│   │       ├── DiscScoreResponse.java   # POST /results/score 응답
+│   │       ├── SaveResponse.java        # POST /results 응답
+│   │       ├── ResultListResponse.java  # GET /results 응답
+│   │       ├── ResultSummaryResponse.java
+│   │       ├── ResultDetailResponse.java
+│   │       ├── DiscScores.java          # 원점수 공용 record
+│   │       └── DiscBuckets.java         # 버킷값 공용 record
+│   │
+│   ├── assessment/                      # 타인 평정 (링크 생성 → 응시 → 제출)
 │   │   ├── controller/
 │   │   │   ├── AssessmentApi.java
-│   │   │   └── AssessmentV1Controller.java  # POST /assessments, GET /assessments/{token}, POST /assessments/{token}/submit
+│   │   │   └── AssessmentV1Controller.java  # POST /assessment-tokens, GET /assessment-tokens/{token}, POST /assessment-tokens/{token}/submit
 │   │   ├── service/
-│   │   │   └── AssessmentService.java       # 일회용 토큰 생성/검증/used 처리
+│   │   │   └── AssessmentService.java
 │   │   ├── repository/
 │   │   │   └── AssessmentTokenRepository.java
 │   │   ├── entity/
 │   │   │   └── AssessmentToken.java
 │   │   └── dto/
-│   │       ├── CreateTokenRequest.java
 │   │       ├── CreateTokenResponse.java
 │   │       ├── SubjectInfoResponse.java
-│   │       └── SubmitResponse.java
+│   │       └── SubmitRequest.java
 │   │
-│   ├── statistics/                  # 통계 집계
+│   ├── statistics/                      # 통계 비교 (직접 집계 쿼리)
 │   │   ├── controller/
 │   │   │   ├── StatisticsApi.java
 │   │   │   └── StatisticsV1Controller.java  # GET /statistics/comparison, GET /statistics/trend
 │   │   ├── service/
-│   │   │   └── StatisticsService.java       # 나이대/성별 집계, 변화 추이
-│   │   └── repository/
-│   │       └── StatisticsRepository.java    # DiscTest 대상 집계 쿼리 (JOINED 상속 활용)
+│   │   │   └── StatisticsService.java
+│   │   ├── repository/
+│   │   │   └── StatisticsRepository.java    # 집계 전용 @Query (네이티브 또는 JPQL)
+│   │   └── dto/
+│   │       ├── ComparisonResponse.java
+│   │       ├── TrendResponse.java
+│   │       └── LatestBuckets.java           # ChemistryReportProcessor에서도 사용
 │   │
-│   ├── colleague/                   # 동료 관계
+│   ├── colleague/                       # 동료 초대/등록/조회/삭제
 │   │   ├── controller/
 │   │   │   ├── ColleagueApi.java
-│   │   │   └── ColleagueV1Controller.java   # GET /peer-code, POST /peer-code/refresh, GET /colleagues/invite/{code}, POST /colleagues, GET /colleagues, DELETE /colleagues/{id}
+│   │   │   └── ColleagueV1Controller.java   # GET /peer-code, GET /colleagues/invite/{code}, POST /colleagues, GET /colleagues, GET /colleagues/{id}, DELETE /colleagues/{id}
 │   │   ├── service/
 │   │   │   ├── PeerCodeService.java         # 동료 코드 생성/갱신 (7일 만료, 온디맨드 리프레시)
 │   │   │   └── ColleagueService.java        # 동료 등록/조회/삭제
@@ -206,66 +215,60 @@ com.mycpt.backend
 │   │       ├── PeerCode.java
 │   │       └── Colleague.java
 │   │
-│   ├── chemistry/                   # 케미 보고서
+│   ├── chemistry/                       # 케미 보고서
 │   │   ├── controller/
 │   │   │   ├── ChemistryApi.java
 │   │   │   └── ChemistryV1Controller.java   # POST /chemistry-reports, GET /chemistry-reports, GET /chemistry-reports/{id}
 │   │   ├── service/
-│   │   │   ├── ChemistryService.java        # 202 즉시 반환 + @Async LLM 호출 트리거
-│   │   │   ├── ChemistryReportProcessor.java   # @Async LLM 호출, 캐시 조회/저장, 알림
-│   │   │   └── ChemistryCacheService.java      # chemistry_cache 히트/미스/만료 분기
+│   │   │   ├── ChemistryService.java        # 동료 검증 + 코인 차감 + 202 즉시 반환 + @Async 트리거
+│   │   │   ├── ChemistryReportProcessor.java   # @Async. 버킷 조회 → 캐시 락 → 발행자/구독자 분기 → 알림
+│   │   │   └── ChemistryCacheService.java      # chemistry_cache SELECT FOR UPDATE. 발행자/구독자 결정. 대기자 맵 소유
 │   │   ├── repository/
 │   │   │   ├── ChemistryReportRepository.java
-│   │   │   └── ChemistryCacheRepository.java
-│   │   └── entity/
-│   │       ├── ChemistryReport.java
-│   │       └── ChemistryCache.java
+│   │   │   └── ChemistryCacheRepository.java   # findByIdWithLock() — @Lock(PESSIMISTIC_WRITE)
+│   │   ├── entity/
+│   │   │   ├── ChemistryReport.java            # chemistry_reports 테이블. 사용자별 발행 요청 이력
+│   │   │   ├── ChemistryCache.java             # chemistry_cache 테이블. status 컬럼으로 락 라이프사이클 관리
+│   │   │   └── ChemistryCacheId.java           # chemistry_cache 복합 PK @Embeddable (requester 4축 + partner 4축)
+│   │   ├── enums/
+│   │   │   └── ChemistryReportStatus.java      # GENERATING / READY / ERROR (chemistry_reports 전용)
+│   │   ├── event/
+│   │   │   ├── ChemistryEventPublisher.java    # Redis Pub/Sub 발행 — 보고서 완료/실패 이벤트
+│   │   │   └── ChemistryEventSubscriber.java   # Redis Pub/Sub 수신 → 대기자 맵 조회 → SSE push
+│   │   └── dto/
+│   │       ├── ChemistryReportRequest.java     # POST /chemistry-reports 요청
+│   │       ├── ChemistryReportListResponse.java
+│   │       ├── ChemistryReportSummary.java
+│   │       └── ChemistryReportDetail.java
 │   │
-│   ├── notification/                # 인앱 알림 + SSE
+│   ├── notification/                    # 인앱 알림 + SSE
 │   │   ├── controller/
 │   │   │   ├── NotificationApi.java
-│   │   │   └── NotificationV1Controller.java # GET /notifications/stream, GET /notifications, DELETE /notifications/{id}
+│   │   │   └── NotificationV1Controller.java   # GET /notifications/stream, GET /notifications, DELETE /notifications/{id}
 │   │   ├── service/
-│   │   │   ├── NotificationService.java     # 알림 생성/조회/삭제
-│   │   │   └── SseService.java              # SseEmitter 관리, Last-Event-ID 재전송
+│   │   │   ├── NotificationService.java        # 알림 생성/조회/삭제
+│   │   │   └── SseService.java                 # Map<userId, SseEmitter> 소유. 연결 관리 + Last-Event-ID 재전송
 │   │   ├── repository/
-│   │   │   └── NotificationRepository.java  # 부모 타입으로 다형 조회 (JOINED 전략)
+│   │   │   └── NotificationRepository.java     # 부모 타입으로 다형 조회 (JOINED 전략)
 │   │   └── entity/
-│   │       ├── Notification.java            # notifications 테이블. @Inheritance(JOINED) 추상 부모
-│   │       ├── ColleagueNotification.java   # colleague_notifications 테이블. 동료 등록 알림
-│   │       └── ChemistryNotification.java   # chemistry_notifications 테이블. 케미 보고서 알림
+│   │       ├── Notification.java               # notifications 테이블. @Inheritance(JOINED) 추상 부모
+│   │       ├── ColleagueNotification.java      # colleague_notifications 테이블. 동료 등록 알림
+│   │       └── ChemistryNotification.java      # chemistry_notifications 테이블. 케미 보고서 알림
 │   │
-│   └── coin/                        # 코인
+│   └── coin/                            # 코인
 │       ├── controller/
 │       │   ├── CoinApi.java
-│       │   └── CoinV1Controller.java        # GET /coins, GET /coins/history
+│       │   └── CoinV1Controller.java    # GET /coins, GET /coins/history
 │       ├── service/
-│       │   └── CoinService.java             # 온디맨드 충전 (next_coin_at 기반), 차감
+│       │   └── CoinService.java         # 온디맨드 충전 (next_coin_at 기반), 차감
 │       ├── repository/
 │       │   └── CoinTransactionRepository.java
 │       └── entity/
 │           └── CoinTransaction.java
 │
-├── global/                          # 전역 공통
-│   └── exception/
-│       └── GlobalExceptionHandler.java      # @RestControllerAdvice. BusinessException → HTTP 응답 변환
-│
-├── common/                          # 공통 유틸
-│   ├── exception/
-│   │   ├── BusinessException.java           # 서비스 전체 비즈니스 예외 베이스
-│   │   └── ErrorCode.java                   # HTTP 상태 + 기본 메시지 열거형 (INVALID_SCORE, EXPIRED_CODE, TOKEN_USED, FORBIDDEN, NOT_FOUND, ALREADY_COLLEAGUE, SELF_INVITE, INSUFFICIENT_COINS, INVALID_REQUEST)
-│   ├── llm/
-│   │   └── AnthropicLlmClient.java         # SDK 기반 공용 LLM 클라이언트
-│   ├── response/
-│   │   └── ErrorResponse.java               # { code, message } 공통 응답 DTO
-│   └── storage/
-│   │   ├── StorageService.java              # 인터페이스
-│   │   ├── LocalStorageService.java         # 개발 환경 (@Profile("local"))
-│   │   └── S3StorageService.java            # 운영 환경 (@Profile("prod"))
-│   └── enums/
-│       └── TestType.java
-└── batch/
-    └── ExpiredDataCleanupBatch.java         # 만료 동료 코드 + 만료 평정 토큰 통합 삭제 (매일 새벽)
+└── global/                              # 전역 공통
+    └── exception/
+        └── GlobalExceptionHandler.java  # @RestControllerAdvice. BusinessException → ErrorResponse 변환
 ```
 
 ---

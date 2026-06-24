@@ -10,6 +10,17 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * chemistry_reports 테이블 엔티티.
+ *
+ * 사용자별 발행 요청 이력을 추적한다. API 응답에 노출되는 status가 여기 있음.
+ * chemistry_cache.status(락 라이프사이클)와 별개 관심사.
+ *
+ * 상태 전이:
+ *   create()         → status=GENERATING (chemistry_cache 락 이후 INSERT)
+ *   complete(cacheId)→ status=READY, cacheId 세팅
+ *   fail()           → status=ERROR
+ */
 @Entity
 @Table(name = "chemistry_reports")
 @Getter
@@ -32,7 +43,8 @@ public class ChemistryReport {
     @Column(nullable = false, length = 20)
     private TestType testType;
 
-    // GENERATING / READY / ERROR
+    // 사용자별 발행 요청 상태. API 응답에 노출.
+    // chemistry_cache.status(락 라이프사이클)와 별개.
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ChemistryReportStatus status;
@@ -68,8 +80,7 @@ public class ChemistryReport {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    // POST /chemistry-reports 202 반환 직전 호출
-    // status = GENERATING, report = null로 행 선점
+    // chemistry_cache 락 이후 INSERT. status=GENERATING으로 시작
     public static ChemistryReport create(User requester, User partner, TestType testType) {
         ChemistryReport cr = new ChemistryReport();
         cr.requester = requester;
@@ -81,13 +92,13 @@ public class ChemistryReport {
         return cr;
     }
 
-    // LLM 보고서 생성 완료 후 ChemistryLlmService에서 호출
+    // LLM 보고서 생성 완료 후 호출. cacheId 세팅으로 chemistry_cache FK 연
     public void complete(ChemistryCacheId cacheId) {
         this.status = ChemistryReportStatus.READY;
         this.cacheId = cacheId;
     }
 
-    // LLM 실패(@Retryable 소진) 후 ChemistryLlmService에서 호출
+    // LLM 실패(@Retryable 소진) 또는 검사 결과 없음 시 호출
     public void fail() {
         this.status = ChemistryReportStatus.ERROR;
     }

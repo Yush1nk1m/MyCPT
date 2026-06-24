@@ -41,7 +41,10 @@ CREATE TABLE disc_cache (
     PRIMARY KEY (d, i, s, c)
 ) COMMENT = 'DISC 버킷 기반 보고서 캐시. 최대 3^4=81 행. 행 삭제 없이 UPDATE 갱신. Markdown 단일 TEXT';
 
--- 81개 사전 삽입 (d, i, s, c 각 1~3 전체 조합)
+-- ============================================================
+-- disc_cache 초기화 시드 (81행 = 3^4)
+-- d, i, s, c 각 1~3의 전체 조합. report=NULL, created_at=NULL로 사전 삽입
+-- ============================================================
 INSERT INTO disc_cache (d, i, s, c, report, created_at) VALUES
 (1,1,1,1,NULL,NULL),(1,1,1,2,NULL,NULL),(1,1,1,3,NULL,NULL),
 (1,1,2,1,NULL,NULL),(1,1,2,2,NULL,NULL),(1,1,2,3,NULL,NULL),
@@ -225,7 +228,7 @@ CREATE TABLE chemistry_reports (
     requester_id    BIGINT      NOT NULL                           COMMENT 'FK → users.id. 보고서 발행자',
     partner_id      BIGINT      NOT NULL                           COMMENT 'FK → users.id. 보고서 대상자',
     test_type       VARCHAR(20) NOT NULL DEFAULT 'DISC'            COMMENT '검사 유형 (DISC / MBTI / BIG5 등)',
-    status          VARCHAR(20) NOT NULL DEFAULT 'GENERATING'      COMMENT '발행 상태. NULL(발행 전) / (GENERATING(발행 중) / READY(완료) / ERROR(실패)',
+    status          VARCHAR(20) NOT NULL DEFAULT 'NULL'      COMMENT '발행 상태. NULL(발행 전) / (GENERATING(발행 중) / READY(완료) / ERROR(실패)',
     requester_d     TINYINT     NULL      COMMENT 'requester D 버킷. READY 상태에서만 세팅',
     requester_i     TINYINT     NULL,
     requester_s     TINYINT     NULL,
@@ -320,21 +323,49 @@ CREATE TABLE chemistry_notifications (
 -- 13. chemistry_cache
 --     케미 보고서 Lazy Cache.
 --     복합 PK (requester 4축 + partner 4축) — 최대 81×81=6,561행.
---     disc_cache와 달리 사전 삽입 없음 — 미스 시 INSERT, 히트 시 UPDATE.
+--     6,561행(81×81) 사전 삽입. disc_cache와 동일하게 UPDATE-only.
+-- status 컬럼이 락 라이프사이클을 담당:
+--   NULL       — 미생성. SELECT FOR UPDATE 후 이 값을 발견한 스레드가 발행자.
+--   GENERATING — 발행자가 LLM 호출 중. 이 값을 발견한 스레드는 구독자 → Redis Pub/Sub 대기.
+--   READY      — 보고서 생성 완료. 이 값을 발견한 스레드는 즉시 report 반환.
 --     A/B 순서 미정규화 — requester/partner 주어가 다른 보고서이므로 별도 캐시.
 -- ============================================================
 CREATE TABLE chemistry_cache (
-    requester_d  TINYINT   NOT NULL  COMMENT 'requester D 버킷 (1~3)',
-    requester_i  TINYINT   NOT NULL  COMMENT 'requester I 버킷 (1~3)',
-    requester_s  TINYINT   NOT NULL  COMMENT 'requester S 버킷 (1~3)',
-    requester_c  TINYINT   NOT NULL  COMMENT 'requester C 버킷 (1~3)',
-    partner_d    TINYINT   NOT NULL  COMMENT 'partner D 버킷 (1~3)',
-    partner_i    TINYINT   NOT NULL  COMMENT 'partner I 버킷 (1~3)',
-    partner_s    TINYINT   NOT NULL  COMMENT 'partner S 버킷 (1~3)',
-    partner_c    TINYINT   NOT NULL  COMMENT 'partner C 버킷 (1~3)',
-    report       TEXT      NULL      COMMENT 'Markdown 케미 보고서. NULL=미생성. 이름 미포함',
-    created_at   DATETIME  NULL      COMMENT '캐시 생성/갱신 시각. NULL=미생성. 온디맨드 만료 판단 기준',
+    requester_d  TINYINT      NOT NULL  COMMENT 'requester D 버킷 (1~3)',
+    requester_i  TINYINT      NOT NULL  COMMENT 'requester I 버킷 (1~3)',
+    requester_s  TINYINT      NOT NULL  COMMENT 'requester S 버킷 (1~3)',
+    requester_c  TINYINT      NOT NULL  COMMENT 'requester C 버킷 (1~3)',
+    partner_d    TINYINT      NOT NULL  COMMENT 'partner D 버킷 (1~3)',
+    partner_i    TINYINT      NOT NULL  COMMENT 'partner I 버킷 (1~3)',
+    partner_s    TINYINT      NOT NULL  COMMENT 'partner S 버킷 (1~3)',
+    partner_c    TINYINT      NOT NULL  COMMENT 'partner C 버킷 (1~3)',
+    status       VARCHAR(20)  NOT NULL  DEFAULT 'NULL'  COMMENT '락 라이프사이클. NULL(미생성)/GENERATING(LLM 호출 중)/READY(완료)',
+    report       TEXT         NULL      COMMENT 'Markdown 케미 보고서. NULL=미생성 또는 생성 중. 이름 미포함',
+    created_at   DATETIME     NULL      COMMENT '캐시 생성/갱신 시각. NULL=미생성 또는 생성 중. 온디맨드 만료 판단 기준',
 
     PRIMARY KEY (requester_d, requester_i, requester_s, requester_c,
                  partner_d,   partner_i,   partner_s,   partner_c)
-) COMMENT = '케미 보고서 Lazy Cache. 복합 PK 8축. 사전 삽입 없음. 최대 6,561행';
+) COMMENT = '케미 보고서 캐시. 복합 PK 8축. 6,561행 사전 삽입. status 컬럼으로 중복 LLM 호출 방지';
+
+-- ============================================================
+-- chemistry_cache 초기화 시드 (6,561행 = 81 × 81)
+-- requester/partner 각 4축이 1~3 범위의 모든 조합
+-- status='NULL', report=NULL, created_at=NULL 으로 사전 삽입
+-- ============================================================
+INSERT INTO chemistry_cache
+    (requester_d, requester_i, requester_s, requester_c,
+     partner_d,   partner_i,   partner_s,   partner_c,
+     status, report, created_at)
+SELECT
+    rd, ri, rs, rc,
+    pd, pi, ps, pc,
+    'NULL', NULL, NULL
+FROM
+    (SELECT 1 AS rd UNION SELECT 2 UNION SELECT 3) r_d,
+    (SELECT 1 AS ri UNION SELECT 2 UNION SELECT 3) r_i,
+    (SELECT 1 AS rs UNION SELECT 2 UNION SELECT 3) r_s,
+    (SELECT 1 AS rc UNION SELECT 2 UNION SELECT 3) r_c,
+    (SELECT 1 AS pd UNION SELECT 2 UNION SELECT 3) p_d,
+    (SELECT 1 AS pi UNION SELECT 2 UNION SELECT 3) p_i,
+    (SELECT 1 AS ps UNION SELECT 2 UNION SELECT 3) p_s,
+    (SELECT 1 AS pc UNION SELECT 2 UNION SELECT 3) p_c;

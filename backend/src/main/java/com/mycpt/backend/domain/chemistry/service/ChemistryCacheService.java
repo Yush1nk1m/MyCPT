@@ -3,85 +3,208 @@ package com.mycpt.backend.domain.chemistry.service;
 import com.mycpt.backend.common.llm.AnthropicLlmClient;
 import com.mycpt.backend.domain.chemistry.entity.ChemistryCache;
 import com.mycpt.backend.domain.chemistry.entity.ChemistryCacheId;
+import com.mycpt.backend.domain.chemistry.enums.ChemistryCacheStatus;
 import com.mycpt.backend.domain.chemistry.repository.ChemistryCacheRepository;
 import com.mycpt.backend.domain.statistics.dto.LatestBuckets;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 
 /**
- * chemistry_cache Lazy Caching 서비스.
+ * chemistry_cache 락 기반 중복 LLM 호출 방지 서비스.
  *
- * disc_cache(CacheService)와 동일한 히트/미스/만료 분기.
- * 차이점:
- *   - 사전 삽입 없음 → 미스 시 INSERT (disc_cache는 UPDATE만)
- *   - 복합 PK 8축 (requester 4 + partner 4)
+ * 발행자/구독자 분기:
+ *   [NULL]       → 발행자: GENERATING으로 변경 후 즉시 커밋(락 해제) → LLM 호출 → 완료 커밋 → Pub/Sub
+ *   [GENERATING] → 구독자: 대기자 맵 등록 후 CountDownLatch로 완료 대기
+ *   [READY+유효] → 즉시 캐시 반환
+ *   [READY+만료] → 발행자 경로 재진입 (refresh() 후 재생성)
  *
- * 분기:
- *   [미스] findById() empty → LLM 호출 → INSERT → 반환
- *   [히트 + 유효] created_at >= expireLine → 즉시 반환
- *   [히트 + 만료] created_at < expireLine → LLM 호출 → UPDATE → 반환
+ * 인메모리 맵:
+ *   waitingMap: Map<ChemistryCacheId, List<WaitingEntry>> — 버킷 조합별 대기자 목록
+ *   SseEmitter 맵은 SseService가 별도 소유 (관심사 분리)
  */
+@Slf4j
 @Service
 public class ChemistryCacheService {
 
     private final ChemistryCacheRepository chemistryCacheRepository;
     private final AnthropicLlmClient llmClient;
+    private final ChemistryEventPublisher eventPublisher;
     private final long ttlDays;
+
+    // 버킷 조합 -> 대기 중인 (userId, reportId, latch) 목록
+    private final Map<ChemistryCacheId, List<WaitingEntry>> waitingMap = new ConcurrentHashMap<>();
 
     public ChemistryCacheService(
             ChemistryCacheRepository chemistryCacheRepository,
             AnthropicLlmClient llmClient,
+            ChemistryEventPublisher eventPublisher,
             @Value("${cache.chemistry.ttl-days:365}") long ttlDays
     ) {
         this.chemistryCacheRepository = chemistryCacheRepository;
         this.llmClient = llmClient;
+        this.eventPublisher = eventPublisher;
         this.ttlDays = ttlDays;
     }
 
     /**
-     * 두 사람의 버킷값 조합에 해당하는 케미 보고서를 반환.
-     * 캐시 미스/만료 시 LLM 호출 후 저장.
+     * 케미 보고서 요청 진입점
      *
-     * @param requester requester의 버킷값
-     * @param partner   partner의 버킷값
-     * @return Markdown 형식 케미 보고서
+     * @return 완성된 보고서 텍스트
      */
-    @Transactional
-    public String getReport(LatestBuckets requester, LatestBuckets partner) {
-        ChemistryCacheId id = new ChemistryCacheId(
-                requester.dBucket(), requester.iBucket(),
-                requester.sBucket(), requester.cBucket(),
-                partner.dBucket(), partner.iBucket(),
-                partner.sBucket(), partner.cBucket()
-        );
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime expireLine = now.minusDays(ttlDays);
+    public String getOrGenerate(
+            ChemistryCacheId cacheId,
+            Long userId,
+            Long reportId,
+            LatestBuckets requesterBuckets,
+            LatestBuckets partnerBuckets
+    ) {
+        // 1. 락 트랜잭션: SELECT FOR UPDATE -> 역할 결정 -> 즉시 커밋
+        ChemistryCacheStatus status = acquireLockAndDecideRole(cacheId, userId, reportId);
 
-        Optional<ChemistryCache> cached = chemistryCacheRepository.findById(id);
+        return switch (status) {
+            case NULL -> generateAsPublisher(cacheId, requesterBuckets, partnerBuckets);
+            case GENERATING -> waitAsSubscriber(cacheId, userId, reportId);
+            case READY -> chemistryCacheRepository.findById(cacheId)
+                    .map(ChemistryCache::getReport)
+                    .orElseThrow(() -> new IllegalStateException("READY 상태이지만 캐시 행 없음: " + cacheId));
+        };
+    }
 
-        // 미스: INSERT
-        if (cached.isEmpty()) {
-            String report = llmClient.complete(buildPrompt(requester, partner));
-            chemistryCacheRepository.save(ChemistryCache.create(id, report, now));
-            return report;
+    /**
+     * 1. 락 트랜잭션 - REQUIRES_NEW로 독립 실행
+     * SELECT FOR UPDATE -> status 확인 -> 발행자면 GENERATING 업데이트 -> 커밋(락 해제)
+     * 구독자라면 대기자 맵에 등록만 하고 커밋
+     *
+     * @return 이 스레드가 진입한 시점의 status (역할 결정 기준)
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public ChemistryCacheStatus acquireLockAndDecideRole(
+            ChemistryCacheId cacheId, Long userId, Long reportId
+    ) {
+        ChemistryCache cache = chemistryCacheRepository.findByIdWithLock(cacheId)
+                .orElseThrow(() -> new IllegalStateException("chemistry_cache 행 없음: " + cacheId));
+
+        ChemistryCacheStatus currentStatus = cache.getStatus();
+
+        if (currentStatus == ChemistryCacheStatus.NULL) {
+            // 발행자: GENERATING으로 전환 후 커밋 -> 이후 스레드는 구독자로 분기
+            cache.startGenerating();
+            // dirty checking으로 UPDATE - 명시적 save 불필요
+        } else if (currentStatus == ChemistryCacheStatus.GENERATING) {
+            // 구독자: 대기자 맵에 등록 (락 트랜잭션 내에서 등록해야 발행자 완료 전에 확실히 등록됨)
+            registerWaiter(cacheId, userId, reportId);
+        } else if (currentStatus == ChemistryCacheStatus.READY) {
+            LocalDateTime expireLine = LocalDateTime.now().minusDays(ttlDays);
+            if (cache.getCreatedAt() != null && cache.getCreatedAt().isBefore(expireLine)) {
+                // 만료: 재생성 시작 (발행자 경로 재진입)
+                cache.refresh();
+                return ChemistryCacheStatus.NULL;   // 발행자로 처리하도록 NULL 빤환
+            }
+            // 유효 히트: 그대로 반환
         }
 
-        ChemistryCache cache = cached.get();
+        return currentStatus;
+    }
 
-        // 히트 + 유효
-        if (!cache.getCreatedAt().isBefore(expireLine)) {
-            return cache.getReport();
-        }
+    /**
+     * 2. 발행자 경로 - LLM 호출 -> 완료 커밋 -> Pub/Sub 발행
+     */
+    private String generateAsPublisher(
+            ChemistryCacheId cacheId,
+            LatestBuckets requesterBuckets,
+            LatestBuckets partnerBuckets
+    ) {
+        String prompt = buildPrompt(requesterBuckets, partnerBuckets);
+        String report = llmClient.complete(prompt);
 
-        // 히트 + 만료: UPDATE
-        String report = llmClient.complete(buildPrompt(requester, partner));
-        cache.refresh(report, now);
-        chemistryCacheRepository.save(cache);
+        saveCompletedCache(cacheId, report);
+        eventPublisher.publishReady(cacheId, report);
+
         return report;
+    }
+
+    /**
+     * 2. 완료 커밋 트랜잭션 - REQUIRES_NEW로 독립 실행
+     * READY 업데이트 먼저 커밋 -> 이후 Pub/Sub 발행
+     * 새 요청은 이 커밋 이후 READY를 보고 즉시 캐시 반환
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void saveCompletedCache(ChemistryCacheId cacheId, String report) {
+        ChemistryCache cache = chemistryCacheRepository.findByIdWithLock(cacheId)
+                .orElseThrow(() -> new IllegalStateException("chemistry_cache 행 없음: " + cacheId));
+        cache.complete(report, LocalDateTime.now());
+    }
+
+    /**
+     * 3. 구독자 경로 - CountDownLatch로 대기
+     * 발행자가 Pub/Sub 이벤트를 발행하면 ChemistryEventSubscriber가 releaseWaiters()를 호출
+     */
+    private String waitAsSubscriber(ChemistryCacheId cacheId, Long userId, Long reportId) {
+        CountDownLatch latch = getLatchForWaiter(cacheId, userId);
+        if (latch == null) {
+            // 등록된 대기자를 못 찾은 경우 (극히 드문 타이밍 이슈) - 캐시 직접 조회로 폴백
+            log.warn("대기자 latch 없음. 캐시 직접 조회로 폴백. userId={}, cacheId={}", userId, cacheId);
+            return chemistryCacheRepository.findById(cacheId)
+                    .map(ChemistryCache::getReport)
+                    .orElse(null);
+        }
+
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("구독자 대기 중 인터럽트. userId=" + userId);
+        }
+
+        // latch 해제 후 캐시에서 report 읽기
+        return chemistryCacheRepository.findById(cacheId)
+                .map(ChemistryCache::getReport)
+                .orElseThrow(() -> new IllegalStateException("latch 해제 후 캐시 report 없음: " + cacheId));
+    }
+
+    /**
+     * 대기자 맵에 등록. acquireLockAndDecideRole() 내(락 트랜잭션 내)에서 호출
+     */
+    private void registerWaiter(ChemistryCacheId cacheId, Long userId, Long reportId) {
+        waitingMap.computeIfAbsent(cacheId, k -> new ArrayList<>())
+                .add(new WaitingEntry(userId, reportId, new CountDownLatch(1)));
+    }
+
+    /**
+     * 등록된 대기자의 latch 반환
+     */
+    private CountDownLatch getLatchForWaiter(ChemistryCacheId cacheId, Long userId) {
+        List<WaitingEntry> entries = waitingMap.get(cacheId);
+        if (entries == null) return null;
+        return entries.stream()
+                .filter(e -> e.userId().equals(userId))
+                .map(WaitingEntry::latch)
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Pub/Sub 수신 후 ChemistryEventSubscriber가 호출
+     * 해당 버킷 조합의 모든 대기자 latch를 해제하고 맵에서 제거
+     *
+     * @return 알림 대상 (userId, reportId) 목록 - SSE push에 사용
+     */
+    public List<WaitingEntry> releaseWaiters(ChemistryCacheId cacheId) {
+        List<WaitingEntry> entries = waitingMap.remove(cacheId);
+        if (entries == null) return List.of();
+        entries.forEach(e -> e.latch().countDown());
+        return entries;
     }
 
     private String buildPrompt(LatestBuckets a, LatestBuckets b) {
@@ -119,4 +242,9 @@ public class ChemistryCacheService {
                 b.dBucket(), b.iBucket(), b.sBucket(), b.cBucket()
         );
     }
+
+    /**
+     * 대기자 정보 record. ChemistryEventSubscriber에서 SSE push 대상 식별에 사용
+     */
+    public record WaitingEntry(Long userId, Long reportId, CountDownLatch latch) {}
 }

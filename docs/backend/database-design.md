@@ -1,26 +1,27 @@
 # MyCPT 데이터베이스 설계 문서
 
-**문서 버전**: v0.11
-**작성일**: '26.06.22.
+**문서 버전**: v0.12
+**작성일**: '26.06.24.
 **작성자**: 김유신
 
 ---
 
 ## 변경 이력
 
-| 버전  | 변경 내용                                                                                                                                                                                                                      | 날짜       |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| v0.1  | 초안 작성 (9개 테이블)                                                                                                                                                                                                         | '26.05.23. |
-| v0.2  | `test_results`에 `rater_type`, `label` 컬럼 추가. `assessment_tokens` 테이블 신규 추가 (10개 테이블). 배치 작업에 만료 토큰 삭제 통합. 통계 집계 기준 명시.                                                                    | '26.05.24. |
-| v0.3  | `chemistry_reports` DISC 버킷 스냅샷 컬럼 제거. `test_type VARCHAR(20)` 컬럼 추가로 다중 검사 유형 확장성 확보.                                                                                                                | '26.05.24. |
-| v0.4  | `disc_cache` 섹션별 TEXT 6개 → `report TEXT` 단일화 (Markdown). `chemistry_reports` 동일 적용. `statistics` 테이블 제거 (MVP에서 직접 집계 쿼리로 대체).                                                                       | '26.05.24. |
-| v0.5  | `test_results` → `tests` (헤더) + `disc_results` (DISC 전용) 로 분리. Class Table Inheritance 패턴 적용으로 검사 유형 확장성 확보. 테이블 수 9 → 10.                                                                           | '26.05.25. |
-| v0.6  | `users.profile_image_key` → `profile_image_url` 변경. Full URL 저장 방식으로 통일.                                                                                                                                             | '26.05.26. |
-| v0.7  | 검사 결과 버킷을 9단계에서 3단계로 수정.                                                                                                                                                                                       | '26.06.01. |
-| v0.8  | `disc_cache` 초기화 시드 스크립트 추가 (81개 행 사전 삽입).                                                                                                                                                                    | '26.06.03. |
-| v0.9  | `disc_results` → `disc_tests` 이름 변경. `tests.test_type` 제거 → `dtype` 추가 (JPA `@DiscriminatorColumn`). `notifications` CTI 적용 (`colleague_notifications`, `chemistry_notifications` 서브타입 분리). 테이블 수 10 → 12. | '26.06.15. |
-| v0.10 | `chemistry_reports.report` NOT NULL → NULL 변경. `status ENUM('GENERATING','READY','ERROR')` 컬럼 추가.                                                                                                                        | '26.06.22. |
-| v0.11 | `chemistry_cache` 테이블 추가 (케미 보고서 Lazy Caching. 복합 PK 8개 버킷값).                                                                                                                                                  | '26.06.22. |
+| 버전  | 변경 내용                                                                                                                                                                                                                            | 날짜       |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| v0.1  | 초안 작성 (9개 테이블)                                                                                                                                                                                                               | '26.05.23. |
+| v0.2  | `test_results`에 `rater_type`, `label` 컬럼 추가. `assessment_tokens` 테이블 신규 추가 (10개 테이블). 배치 작업에 만료 토큰 삭제 통합. 통계 집계 기준 명시.                                                                          | '26.05.24. |
+| v0.3  | `chemistry_reports` DISC 버킷 스냅샷 컬럼 제거. `test_type VARCHAR(20)` 컬럼 추가로 다중 검사 유형 확장성 확보.                                                                                                                      | '26.05.24. |
+| v0.4  | `disc_cache` 섹션별 TEXT 6개 → `report TEXT` 단일화 (Markdown). `chemistry_reports` 동일 적용. `statistics` 테이블 제거 (MVP에서 직접 집계 쿼리로 대체).                                                                             | '26.05.24. |
+| v0.5  | `test_results` → `tests` (헤더) + `disc_results` (DISC 전용) 로 분리. Class Table Inheritance 패턴 적용으로 검사 유형 확장성 확보. 테이블 수 9 → 10.                                                                                 | '26.05.25. |
+| v0.6  | `users.profile_image_key` → `profile_image_url` 변경. Full URL 저장 방식으로 통일.                                                                                                                                                   | '26.05.26. |
+| v0.7  | 검사 결과 버킷을 9단계에서 3단계로 수정.                                                                                                                                                                                             | '26.06.01. |
+| v0.8  | `disc_cache` 초기화 시드 스크립트 추가 (81개 행 사전 삽입).                                                                                                                                                                          | '26.06.03. |
+| v0.9  | `disc_results` → `disc_tests` 이름 변경. `tests.test_type` 제거 → `dtype` 추가 (JPA `@DiscriminatorColumn`). `notifications` CTI 적용 (`colleague_notifications`, `chemistry_notifications` 서브타입 분리). 테이블 수 10 → 12.       | '26.06.15. |
+| v0.10 | `chemistry_reports.report` NOT NULL → NULL 변경. `status ENUM('GENERATING','READY','ERROR')` 컬럼 추가.                                                                                                                              | '26.06.22. |
+| v0.11 | `chemistry_cache` 테이블 추가 (케미 보고서 Lazy Caching. 복합 PK 8개 버킷값).                                                                                                                                                        | '26.06.22. |
+| v0.12 | `chemistry_cache` 사전 삽입 방침 변경 (6,561행 seeding). `status VARCHAR(20)` 컬럼 추가 (NULL→GENERATING→READY 락 라이프사이클). `chemistry_reports.status` 초기값 GENERATING → NULL 로 변경 (chemistry_cache 락 이후 INSERT되므로). | '26.06.24. |
 
 ---
 
@@ -160,22 +161,30 @@ erDiagram
     BIGINT    requester_id FK  "발행자"
     BIGINT    partner_id   FK  "대상자"
     VARCHAR20 test_type        "DISC/MBTI/BIG5 등"
-    VARCHAR20 status           "NULL" / "GENERATING / READY / ERROR"
-    TEXT      report           "Markdown 보고서 전문. NULL=발행 중 또는 실패"
+    VARCHAR20 status           "GENERATING / READY / ERROR. API 노출"
+    TINYINT   requester_d  FK  "chemistry_cache 복합 FK. READY 시 세팅"
+    TINYINT   requester_i  FK
+    TINYINT   requester_s  FK
+    TINYINT   requester_c  FK
+    TINYINT   partner_d    FK  "chemistry_cache 복합 FK. READY 시 세팅"
+    TINYINT   partner_i    FK
+    TINYINT   partner_s    FK
+    TINYINT   partner_c    FK
     DATETIME  created_at
   }
 
   chemistry_cache {
-    TINYINT requester_d  PK
-    TINYINT requester_i  PK
-    TINYINT requester_s  PK
-    TINYINT requester_c  PK
-    TINYINT partner_d    PK
-    TINYINT partner_i    PK
-    TINYINT partner_s    PK
-    TINYINT partner_c    PK
-    TEXT    report           "NULL=미생성"
-    DATETIME created_at      "NULL=미생성"
+    TINYINT   requester_d  PK
+    TINYINT   requester_i  PK
+    TINYINT   requester_s  PK
+    TINYINT   requester_c  PK
+    TINYINT   partner_d    PK
+    TINYINT   partner_i    PK
+    TINYINT   partner_s    PK
+    TINYINT   partner_c    PK
+    VARCHAR20 status           "NULL(미생성)/GENERATING(생성 중)/READY(완료). 락 라이프사이클"
+    TEXT      report           "NULL=미생성 또는 생성 중"
+    DATETIME  created_at       "NULL=미생성 또는 생성 중"
   }
 
   notifications {
@@ -211,6 +220,7 @@ erDiagram
   notifications       ||--o| chemistry_notifications   : "JOINED 상속"
   colleagues          ||--o{ colleague_notifications   : "알림 트리거"
   chemistry_reports   ||--o{ chemistry_notifications   : "알림 트리거"
+  chemistry_reports   }o--||  chemistry_cache          : "캐시 참조 (복합 FK. READY 시 세팅)"
 ```
 
 ---
@@ -246,7 +256,11 @@ Enum chemistry_report_status_enum {
 }
 
 // chemistry_cache: 복합 PK (requester 4축 + partner 4축) 기반 Lazy Caching
-// disc_cache와 달리 사전 삽입 없음 — 미스 시 INSERT, 히트 시 UPDATE
+//6,561행(81×81) 사전 삽입. disc_cache와 동일하게 UPDATE-only.
+//status 컬럼이 락 라이프사이클을 담당:
+//  NULL       — 미생성. SELECT FOR UPDATE 후 이 값을 발견한 스레드가 발행자.
+//  GENERATING — 발행자가 LLM 호출 중. 이 값을 발견한 스레드는 구독자 → Redis Pub/Sub 대기.
+//  READY      — 보고서 생성 완료. 이 값을 발견한 스레드는 즉시 report 반환.
 // A/B 순서 미정규화 — requester/partner 주어가 다른 보고서이므로 별도 캐시
 
 // ============================================================
@@ -369,8 +383,15 @@ Table chemistry_reports [note: '케미 보고서. Markdown 단일 TEXT로 검사
   requester_id BIGINT      [not null,      note: 'FK → users.id. 보고서 발행자']
   partner_id   BIGINT      [not null,      note: 'FK → users.id. 보고서 대상자']
   test_type    VARCHAR(20) [not null,      note: '검사 유형 (DISC / MBTI / BIG5 등)']
-  status       VARCHAR(20) [not null,      note: 'GENERATING / READY / ERROR. 발행 상태']
-  report       TEXT        [null,          note: 'Markdown 형식 케미 보고서 전문. NULL=발행 중 또는 실패. 이름 미포함. 렌더링 시 발행자/상대 이름 삽입']
+  status       VARCHAR(20) [not null,      note: 'GENERATING / READY / ERROR. 사용자별 발행 요청 추적. chemistry_cache.status와 별개 관심사 — 이쪽은 API 응답에 노출됨']
+  requester_d  TINYINT     [null,          note: 'FK → chemistry_cache.requester_d. READY 상태에서만 세팅']
+  requester_i  TINYINT     [null]
+  requester_s  TINYINT     [null]
+  requester_c  TINYINT     [null]
+  partner_d    TINYINT     [null,          note: 'FK → chemistry_cache.partner_d. READY 상태에서만 세팅']
+  partner_i    TINYINT     [null]
+  partner_s    TINYINT     [null]
+  partner_c    TINYINT     [null]
   created_at   DATETIME    [not null,      note: '발행 시각']
 
   indexes {
@@ -380,22 +401,18 @@ Table chemistry_reports [note: '케미 보고서. Markdown 단일 TEXT로 검사
   }
 }
 
-Table chemistry_cache [note: '케미 보고서 Lazy Cache. 복합 PK 8축. 사전 삽입 없음. 최대 6,561행'] {
-  requester_d TINYINT  [not null, note: 'requester D 버킷 (1~3)']
-  requester_i TINYINT  [not null, note: 'requester I 버킷 (1~3)']
-  requester_s TINYINT  [not null, note: 'requester S 버킷 (1~3)']
-  requester_c TINYINT  [not null, note: 'requester C 버킷 (1~3)']
-  partner_d   TINYINT  [not null, note: 'partner D 버킷 (1~3)']
-  partner_i   TINYINT  [not null, note: 'partner I 버킷 (1~3)']
-  partner_s   TINYINT  [not null, note: 'partner S 버킷 (1~3)']
-  partner_c   TINYINT  [not null, note: 'partner C 버킷 (1~3)']
-  report      TEXT     [null,     note: 'Markdown 케미 보고서. NULL=미생성. 이름 미포함']
-  created_at  DATETIME [null,     note: '캐시 생성/갱신 시각. NULL=미생성. 온디맨드 만료 판단 기준']
-
-  indexes {
-    (requester_d, requester_i, requester_s, requester_c,
-     partner_d, partner_i, partner_s, partner_c) [pk]
-  }
+Table chemistry_cache [note: '케미 보고서 캐시. 복합 PK 8축. 6,561행 사전 삽입. status 컬럼으로 중복 LLM 호출 방지'] {
+  requester_d  TINYINT     [pk, not null,  note: 'requester D 버킷 (1~3)']
+  requester_i  TINYINT     [pk, not null]
+  requester_s  TINYINT     [pk, not null]
+  requester_c  TINYINT     [pk, not null]
+  partner_d    TINYINT     [pk, not null,  note: 'partner D 버킷 (1~3)']
+  partner_i    TINYINT     [pk, not null]
+  partner_s    TINYINT     [pk, not null]
+  partner_c    TINYINT     [pk, not null]
+  status       VARCHAR(20) [not null,      note: '락 라이프사이클. NULL(미생성)/GENERATING(LLM 호출 중)/READY(완료)']
+  report       TEXT        [null,          note: 'Markdown 케미 보고서. NULL=미생성 또는 생성 중. 이름 미포함']
+  created_at   DATETIME    [null,          note: '캐시 생성/갱신 시각. NULL=미생성 또는 생성 중. 온디맨드 만료 판단 기준']
 }
 
 Table notifications [note: '인앱 알림 공통 헤더. JPA @Inheritance(JOINED) 부모 테이블. 클릭 시 즉시 DELETE'] {
@@ -451,7 +468,7 @@ Ref: colleague_notifications.id                                 - notifications.
 Ref: colleague_notifications.colleague_id                       > colleagues.id
 Ref: chemistry_notifications.id                                 - notifications.id
 Ref: chemistry_notifications.chemistry_report_id                > chemistry_reports.id
-// chemistry_cache는 외부 FK 없음 — 버킷값 조합이 PK이며 독립 테이블
+Ref: chemistry_reports.(requester_d, requester_i, requester_s, requester_c, partner_d, partner_i, partner_s, partner_c) > chemistry_cache.(requester_d, requester_i, requester_s, requester_c, partner_d, partner_i, partner_s, partner_c)
 ```
 
 ---

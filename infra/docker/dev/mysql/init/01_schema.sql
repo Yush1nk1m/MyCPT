@@ -225,7 +225,7 @@ CREATE TABLE chemistry_reports (
     requester_id    BIGINT      NOT NULL                           COMMENT 'FK → users.id. 보고서 발행자',
     partner_id      BIGINT      NOT NULL                           COMMENT 'FK → users.id. 보고서 대상자',
     test_type       VARCHAR(20) NOT NULL DEFAULT 'DISC'            COMMENT '검사 유형 (DISC / MBTI / BIG5 등)',
-    status          VARCHAR(20) NOT NULL DEFAULT 'GENERATING'      COMMENT '발행 상태. NULL(발행 전) / (GENERATING(발행 중) / READY(완료) / ERROR(실패)',
+    status          VARCHAR(20) NOT NULL DEFAULT 'NULL'      COMMENT '발행 상태. NULL(발행 전) / (GENERATING(발행 중) / READY(완료) / ERROR(실패)',
     requester_d     TINYINT     NULL      COMMENT 'requester D 버킷. READY 상태에서만 세팅',
     requester_i     TINYINT     NULL,
     requester_s     TINYINT     NULL,
@@ -338,3 +338,26 @@ CREATE TABLE chemistry_cache (
     PRIMARY KEY (requester_d, requester_i, requester_s, requester_c,
                  partner_d,   partner_i,   partner_s,   partner_c)
 ) COMMENT = '케미 보고서 Lazy Cache. 복합 PK 8축. 사전 삽입 없음. 최대 6,561행';
+
+-- ============================================================
+-- chemistry_cache 초기화 시드 (6,561행 = 81 × 81)
+-- requester/partner 각 4축이 1~3 범위의 모든 조합
+-- status='NULL', report=NULL, created_at=NULL 으로 사전 삽입
+-- ============================================================
+INSERT INTO chemistry_cache
+    (requester_d, requester_i, requester_s, requester_c,
+     partner_d,   partner_i,   partner_s,   partner_c,
+     status, report, created_at)
+SELECT
+    rd, ri, rs, rc,
+    pd, pi, ps, pc,
+    'NULL', NULL, NULL
+FROM
+    (SELECT 1 AS rd UNION SELECT 2 UNION SELECT 3) r_d,
+    (SELECT 1 AS ri UNION SELECT 2 UNION SELECT 3) r_i,
+    (SELECT 1 AS rs UNION SELECT 2 UNION SELECT 3) r_s,
+    (SELECT 1 AS rc UNION SELECT 2 UNION SELECT 3) r_c,
+    (SELECT 1 AS pd UNION SELECT 2 UNION SELECT 3) p_d,
+    (SELECT 1 AS pi UNION SELECT 2 UNION SELECT 3) p_i,
+    (SELECT 1 AS ps UNION SELECT 2 UNION SELECT 3) p_s,
+    (SELECT 1 AS pc UNION SELECT 2 UNION SELECT 3) p_c;
