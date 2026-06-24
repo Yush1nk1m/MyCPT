@@ -37,9 +37,33 @@ public class ChemistryReport {
     @Column(nullable = false, length = 20)
     private ChemistryReportStatus status;
 
-    // nullable: @Async 발행 중 null, LLM 완료 후 UPDATE
-    @Column(columnDefinition = "TEXT")
-    private String report;
+    // chemistry_cache 복합 FK - ChemistryCacheId의 8개 컬럼이 DDL에 매핑
+    // NULL/GENERATING/ERROR 상태에서는 null (캐시 조회 전)
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "requesterD", column = @Column(name = "requester_d", columnDefinition = "TINYINT")),
+            @AttributeOverride(name = "requesterI", column = @Column(name = "requester_i", columnDefinition = "TINYINT")),
+            @AttributeOverride(name = "requesterS", column = @Column(name = "requester_s", columnDefinition = "TINYINT")),
+            @AttributeOverride(name = "requesterC", column = @Column(name = "requester_c", columnDefinition = "TINYINT")),
+            @AttributeOverride(name = "partnerD", column = @Column(name = "partner_d", columnDefinition = "TINYINT")),
+            @AttributeOverride(name = "partnerI", column = @Column(name = "partner_i", columnDefinition = "TINYINT")),
+            @AttributeOverride(name = "partnerS", column = @Column(name = "partner_s", columnDefinition = "TINYINT")),
+            @AttributeOverride(name = "partnerC", column = @Column(name = "partner_c", columnDefinition = "TINYINT"))
+    })
+    private ChemistryCacheId cacheId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumns({
+            @JoinColumn(name = "requester_d", referencedColumnName = "requester_d", insertable = false, updatable = false),
+            @JoinColumn(name = "requester_i", referencedColumnName = "requester_i", insertable = false, updatable = false),
+            @JoinColumn(name = "requester_s", referencedColumnName = "requester_s", insertable = false, updatable = false),
+            @JoinColumn(name = "requester_c", referencedColumnName = "requester_c", insertable = false, updatable = false),
+            @JoinColumn(name = "partner_d", referencedColumnName = "partner_d", insertable = false, updatable = false),
+            @JoinColumn(name = "partner_i", referencedColumnName = "partner_i", insertable = false, updatable = false),
+            @JoinColumn(name = "partner_s", referencedColumnName = "partner_s", insertable = false, updatable = false),
+            @JoinColumn(name = "partner_c", referencedColumnName = "partner_c", insertable = false, updatable = false)
+    })
+    private ChemistryCache chemistryCache;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -52,15 +76,15 @@ public class ChemistryReport {
         cr.partner = partner;
         cr.testType = testType;
         cr.status = ChemistryReportStatus.GENERATING;
-        cr.report = null;
+        cr.cacheId = null;
         cr.createdAt = LocalDateTime.now();
         return cr;
     }
 
     // LLM 보고서 생성 완료 후 ChemistryLlmService에서 호출
-    public void complete(String report) {
+    public void complete(ChemistryCacheId cacheId) {
         this.status = ChemistryReportStatus.READY;
-        this.report = report;
+        this.cacheId = cacheId;
     }
 
     // LLM 실패(@Retryable 소진) 후 ChemistryLlmService에서 호출

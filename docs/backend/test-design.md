@@ -1,7 +1,7 @@
 # MyCPT 테스트 설계 문서
 
-**문서 버전**: v0.5
-**작성일**: '26.06.13.
+**문서 버전**: v0.6
+**작성일**: '26.06.24.
 **작성자**: 김유신
 
 ---
@@ -15,6 +15,7 @@
 | v0.3 | 예외 처리 체계 통합 반영 (BusinessException/ErrorCode). ScoringService 경계값 케이스 보강.                                                                                                                                                                         | '26.06.13. |
 | v0.4 | `DiscResultRepository` → `DiscTestRepository` 이름 변경. Test ID `ST-DiscResultRepo-*` → `ST-DiscTestRepo-*` 전면 변경. `ResultService` 저장 행위 설명 `disc_results` → `disc_tests` 수정. `AssessmentService` 평정 제출 상황 설명 `DiscResult` → `DiscTest` 수정. | '26.06.15. |
 | v0.5 | §8~§11 누락된 Test Code 링크 4건 추가(Statistics/PeerCode/Colleague/Notification Service). `ColleagueV1Controller` ST 테스트 미작성 상태 명시(TODO).                                                                                                               | '26.06.20. |
+| v0.6 | §10 Chemistry 도메인 테스트 케이스 추가 (UT 7건, ST 6건, IT 5건).                                                                                                                                                                                                  | '26.06.24. |
 
 ---
 
@@ -195,17 +196,17 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 | UT-ScoringSvc-범위초과-하한               | 개별 원점수 -24 미만            | `BusinessException(INVALID_SCORE)`, 메시지에 "-25" 포함           |
 | UT-ScoringSvc-toBucket-경계값             | 버킷 전환점 전수 검증           | 3구간 하한/상한 6개 케이스 (-24→1, -5→1, -4→2, 11→2, 12→3, 48→3)  |
 
-### CacheService (UT)
+### DiscCacheService (UT)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/result/service/CacheServiceTest.java)]
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/result/service/DiscCacheServiceTest.java)]
 
 | Test ID                                          | 행위                               | 상황                                                                        |
 | ------------------------------------------------ | ---------------------------------- | --------------------------------------------------------------------------- |
-| UT-CacheService-보고서생성-행누락예외            | 초기화 스크립트 미실행으로 행 없음 | `findById` empty → `IllegalStateException`, LLM 미호출                      |
-| UT-CacheService-보고서생성-미생성                | 사전 삽입 행이지만 report=NULL     | LLM 1회 호출 → `save` 1회 → 보고서 반환                                     |
-| UT-CacheService-보고서생성-캐시HIT유효           | DB에 유효한 캐시 존재              | `created_at` 10일 전, ttl=365일 → LLM 미호출, `save` 없음, 기존 보고서 반환 |
-| UT-CacheService-보고서생성-캐시HIT유효경계값분석 | TTL 당일 만료 경계 검증            | `created_at` 364일 전, ttl=365일 → 유효 처리, LLM 미호출                    |
-| UT-CacheService-보고서생성-캐시HIT만료           | DB에 만료된 캐시 존재              | `created_at` 366일 전, ttl=365일 → LLM 1회 호출, `save` 1회, 새 보고서 반환 |
+| UT-DiscCacheSvc-보고서생성-행누락예외            | 초기화 스크립트 미실행으로 행 없음 | `findById` empty → `IllegalStateException`, LLM 미호출                      |
+| UT-DiscCacheSvc-보고서생성-미생성                | 사전 삽입 행이지만 report=NULL     | LLM 1회 호출 → `save` 1회 → 보고서 반환                                     |
+| UT-DiscCacheSvc-보고서생성-캐시HIT유효           | DB에 유효한 캐시 존재              | `created_at` 10일 전, ttl=365일 → LLM 미호출, `save` 없음, 기존 보고서 반환 |
+| UT-DiscCacheSvc-보고서생성-캐시HIT유효경계값분석 | TTL 당일 만료 경계 검증            | `created_at` 364일 전, ttl=365일 → 유효 처리, LLM 미호출                    |
+| UT-DiscCacheSvc-보고서생성-캐시HIT만료           | DB에 만료된 캐시 존재              | `created_at` 366일 전, ttl=365일 → LLM 1회 호출, `save` 1회, 새 보고서 반환 |
 
 ### ResultService (UT)
 
@@ -266,23 +267,16 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 [[Test Code](../backend/src/test/java/com/mycpt/backend/domain/statistics/service/StatisticsServiceTest.java)]
 
-#### comparison()
-
-| Test ID                                | 행위                                    | 상황                                            |
-| -------------------------------------- | --------------------------------------- | ----------------------------------------------- |
-| `UT-StatisticsSvc-비교조회-검사없음`   | 본인 SELF 검사 이력 없음                | `my.buckets = null`, `average` 집계는 계속 진행 |
-| `UT-StatisticsSvc-비교조회-생년미입력` | `birthYear = null`                      | `average = null` 즉시 반환                      |
-| `UT-StatisticsSvc-비교조회-성별미입력` | `gender = null`                         | `average = null` 즉시 반환                      |
-| `UT-StatisticsSvc-비교조회-성별N`      | `gender = N`                            | `average = null` 즉시 반환                      |
-| `UT-StatisticsSvc-비교조회-샘플없음`   | 나이대/성별 집계 결과 `sampleCount = 0` | `average = null` 반환                           |
-| `UT-StatisticsSvc-비교조회-성공`       | 모든 조건 충족                          | `average.ageGroupLabel`, `sampleCount > 0` 검증 |
-
-#### trend()
-
-| Test ID                              | 행위                          | 상황                                                        |
-| ------------------------------------ | ----------------------------- | ----------------------------------------------------------- |
-| `UT-StatisticsSvc-추이조회-결과없음` | `days` 기간 내 SELF 검사 없음 | `summary.count = 0`, `summary.average = null`, `trend = []` |
-| `UT-StatisticsSvc-추이조회-성공`     | 검사 이력 있음                | `entries` 수 일치, `summary.average` 산술 평균 정확성       |
+| Test ID                                | 행위                                    | 상황                                                        |
+| -------------------------------------- | --------------------------------------- | ----------------------------------------------------------- |
+| `UT-StatisticsSvc-비교조회-검사없음`   | 본인 SELF 검사 이력 없음                | `my.buckets = null`, `average` 집계는 계속 진행             |
+| `UT-StatisticsSvc-비교조회-생년미입력` | `birthYear = null`                      | `average = null` 즉시 반환                                  |
+| `UT-StatisticsSvc-비교조회-성별미입력` | `gender = null`                         | `average = null` 즉시 반환                                  |
+| `UT-StatisticsSvc-비교조회-성별N`      | `gender = N`                            | `average = null` 즉시 반환                                  |
+| `UT-StatisticsSvc-비교조회-샘플없음`   | 나이대/성별 집계 결과 `sampleCount = 0` | `average = null` 반환                                       |
+| `UT-StatisticsSvc-비교조회-성공`       | 모든 조건 충족                          | `average.ageGroupLabel`, `sampleCount > 0` 검증             |
+| `UT-StatisticsSvc-추이조회-결과없음`   | `days` 기간 내 SELF 검사 없음           | `summary.count = 0`, `summary.average = null`, `trend = []` |
+| `UT-StatisticsSvc-추이조회-성공`       | 검사 이력 있음                          | `entries` 수 일치, `summary.average` 산술 평균 정확성       |
 
 ---
 
@@ -350,7 +344,62 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ## 10. Chemistry 도메인
 
-_4주차 구현 시 작성_
+### ChemistryReport 엔티티 (UT)
+
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/chemistry/entity/ChemistryReportTest.java)]
+
+| Test ID                                | 행위                     | 상황                                                 |
+| -------------------------------------- | ------------------------ | ---------------------------------------------------- |
+| `UT-ChemistryReport-상태전이-create`   | `create()` 호출          | `status=GENERATING`, `report=null`, `createdAt` 세팅 |
+| `UT-ChemistryReport-상태전이-complete` | `complete(content)` 호출 | `status=READY`, `report=content`                     |
+| `UT-ChemistryReport-상태전이-fail`     | `fail()` 호출            | `status=ERROR`, `report=null` 유지                   |
+
+### ChemistryCacheId (UT)
+
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/chemistry/entity/ChemistryCacheIdTest.java)]
+
+| Test ID                               | 행위                                   | 상황                                |
+| ------------------------------------- | -------------------------------------- | ----------------------------------- |
+| `UT-ChemistryCacheId-동등성-동일버킷` | 8축 값 동일 시 `equals()`/`hashCode()` | 동등                                |
+| `UT-ChemistryCacheId-동등성-다른버킷` | requester/partner 순서 다름            | 불일치 — A→B와 B→A는 별도 캐시 항목 |
+
+### ChemistryCache 엔티티 (UT)
+
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/chemistry/entity/ChemistryCacheTest.java)]
+
+| Test ID                     | 행위                           | 상황                             |
+| --------------------------- | ------------------------------ | -------------------------------- |
+| `UT-ChemistryCache-create`  | `create()` 호출                | `id`, `report`, `createdAt` 세팅 |
+| `UT-ChemistryCache-refresh` | `refresh(newReport, now)` 호출 | `report`, `createdAt` 갱신       |
+
+> **`ChemistryCacheService` / `ChemistryReportProcessor` UT 제외 이유**
+> `ChemistryCacheService`는 `AnthropicLlmClient` mock이 필수이며, 히트/미스/만료 분기의 핵심은 DB 조회 결과에 있어 IT로 검증이 더 정확하다.
+> `ChemistryReportProcessor`는 `@Async` + `@Retryable` 조합이 통합 환경에서만 의미 있어 mock 기반 UT는 구현 검증에 그친다.
+
+### ChemistryV1Controller (ST)
+
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/chemistry/controller/ChemistryV1ControllerTest.java)]
+
+| Test ID                            | 행위                          | 상황                                       |
+| ---------------------------------- | ----------------------------- | ------------------------------------------ |
+| `ST-ChemistryCtrl-발행-성공`       | `POST /chemistry-reports`     | 인증됨 → `202 Accepted`                    |
+| `ST-ChemistryCtrl-발행-미인증`     | `POST /chemistry-reports`     | 미인증 → `401`                             |
+| `ST-ChemistryCtrl-목록조회-성공`   | `GET /chemistry-reports`      | 인증됨 → `200` + `reports` 배열 반환       |
+| `ST-ChemistryCtrl-목록조회-미인증` | `GET /chemistry-reports`      | 미인증 → `401`                             |
+| `ST-ChemistryCtrl-상세조회-성공`   | `GET /chemistry-reports/{id}` | 인증됨 → `200` + `reportId`, `status` 반환 |
+| `ST-ChemistryCtrl-상세조회-미인증` | `GET /chemistry-reports/{id}` | 미인증 → `401`                             |
+
+### ChemistryCacheRepository / ChemistryReportRepository (IT)
+
+[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/chemistry/repository/ChemistryRepositoryTest.java)]
+
+| Test ID                                     | 행위                       | 상황                                                        |
+| ------------------------------------------- | -------------------------- | ----------------------------------------------------------- |
+| `IT-ChemistryCacheRepo-조회-미스`           | `findById()`               | 해당 버킷 조합 없음 → `Optional.empty()`                    |
+| `IT-ChemistryCacheRepo-조회-히트`           | `findById()`               | 해당 버킷 조합 존재 → `report` 값 반환                      |
+| `IT-ChemistryReportRepo-커서-ERROR필터`     | `findByUserIdWithCursor()` | READY + ERROR 혼재 → ERROR 제외, READY만 반환               |
+| `IT-ChemistryReportRepo-커서-partnerId필터` | `findByUserIdWithCursor()` | A↔B, A↔C 보고서 혼재 → `partnerId=B` 필터 시 B 관련만 반환  |
+| `IT-ChemistryReportRepo-커서-페이지네이션`  | `findByUserIdWithCursor()` | 3건 삽입 후 중간 ID를 cursor로 → `id < cursor` 인 행만 반환 |
 
 ---
 

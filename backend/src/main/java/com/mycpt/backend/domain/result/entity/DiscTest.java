@@ -36,14 +36,14 @@ public class DiscTest extends Test {
     private int cScore;
 
     // 버킷값 (1~3) — disc_cache 복합 FK 구성
-    @Column(nullable = false, columnDefinition = "TINYINT")
-    private int dBucket;
-    @Column(nullable = false, columnDefinition = "TINYINT")
-    private int iBucket;
-    @Column(nullable = false, columnDefinition = "TINYINT")
-    private int sBucket;
-    @Column(nullable = false, columnDefinition = "TINYINT")
-    private int cBucket;
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "d", column = @Column(name = "d_bucket", nullable = false, columnDefinition = "TINYINT")),
+            @AttributeOverride(name = "i", column = @Column(name = "i_bucket", nullable = false, columnDefinition = "TINYINT")),
+            @AttributeOverride(name = "s", column = @Column(name = "s_bucket", nullable = false, columnDefinition = "TINYINT")),
+            @AttributeOverride(name = "c", column = @Column(name = "c_bucket", nullable = false, columnDefinition = "TINYINT")),
+    })
+    private DiscCacheId cacheId;
 
     private DiscTest(User user, RaterType raterType, String label,
                      int dScore, int iScore, int sScore, int cScore,
@@ -53,10 +53,7 @@ public class DiscTest extends Test {
         this.iScore = iScore;
         this.sScore = sScore;
         this.cScore = cScore;
-        this.dBucket = dBucket;
-        this.iBucket = iBucket;
-        this.sBucket = sBucket;
-        this.cBucket = cBucket;
+        this.cacheId = new DiscCacheId(dBucket, iBucket, sBucket, cBucket);
     }
 
     /**

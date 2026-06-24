@@ -160,7 +160,7 @@ erDiagram
     BIGINT    requester_id FK  "발행자"
     BIGINT    partner_id   FK  "대상자"
     VARCHAR20 test_type        "DISC/MBTI/BIG5 등"
-    VARCHAR20 status           "GENERATING / READY / ERROR"
+    VARCHAR20 status           "NULL" / "GENERATING / READY / ERROR"
     TEXT      report           "Markdown 보고서 전문. NULL=발행 중 또는 실패"
     DATETIME  created_at
   }

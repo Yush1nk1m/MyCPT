@@ -53,7 +53,7 @@ class DiscCacheServiceTest {
     class RowMissing {
 
         @Test
-        @DisplayName("[UT-CacheService-보고서생성-행누락예외]")
+        @DisplayName("[UT-DiscCacheSvc-보고서생성-행누락예외]")
         void 보고서생성_행누락예외() {
             // given: 초기화 스크립트가 실행되지 않아 행 자체가 없음
             given(discCacheRepository.findById(ID)).willReturn(Optional.empty());
@@ -75,7 +75,7 @@ class DiscCacheServiceTest {
     class Unseeded {
 
         @Test
-        @DisplayName("[UT-CacheService-보고서생성-미생성]")
+        @DisplayName("[UT-DiscCacheSvc-보고서생성-미생성]")
         void 보고서생성_미생성() {
             // given: 사전 삽입된 행이지만 아직 LLM 보고서가 생성되지 않은 상태
             given(discCacheRepository.findById(ID)).willReturn(Optional.of(unseeded()));
@@ -99,7 +99,7 @@ class DiscCacheServiceTest {
     class HitValid {
 
         @Test
-        @DisplayName("[UT-CacheService-보고서생성-캐시HIT유효]")
+        @DisplayName("[UT-DiscCacheSvc-보고서생성-캐시HIT유효]")
         void 보고서생성_캐시HIT유효() {
             // given: 10일 전 생성 -> ttl 365일 이내이므로 유효
             DiscCache fresh = new DiscCache(ID, REPORT, LocalDateTime.now().minusDays(10));
@@ -115,7 +115,7 @@ class DiscCacheServiceTest {
         }
 
         @Test
-        @DisplayName("[UT-CacheService-보고서생성-캐시HIT유효경계값분석]")
+        @DisplayName("[UT-DiscCacheSvc-보고서생성-캐시HIT유효경계값분석]")
         void 보고서생성_캐시HIT유효경계값분석() {
             // given: 364일 전 생성
             //  expiredLine = now - 365일
@@ -140,7 +140,7 @@ class DiscCacheServiceTest {
     class HitExpired {
 
         @Test
-        @DisplayName("[UT-CacheService-보고서생성-캐시HIT만료]")
+        @DisplayName("[UT-DiscCacheSvc-보고서생성-캐시HIT만료]")
         void 보고서생성_캐시HIT만료() {
             // given: 366일 전 생성 -> ttl 365일 초과이므로 만료
             DiscCache expired = new DiscCache(ID, REPORT, LocalDateTime.now().minusDays(366));

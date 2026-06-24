@@ -1,5 +1,6 @@
 package com.mycpt.backend.domain.chemistry.service;
 
+import com.mycpt.backend.domain.chemistry.entity.ChemistryCacheId;
 import com.mycpt.backend.domain.chemistry.entity.ChemistryReport;
 import com.mycpt.backend.domain.chemistry.repository.ChemistryReportRepository;
 import com.mycpt.backend.domain.notification.service.NotificationService;
@@ -77,6 +78,7 @@ public class ChemistryReportProcessor {
                 partnerBuckets.get(0)
         );
 
+        ChemistryCacheId cacheId = new ChemistryCacheId()
         report.complete(generatedReport);
 
         // 상대방에게 알림 전송
