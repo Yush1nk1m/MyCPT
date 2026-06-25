@@ -3,26 +3,27 @@
 > **My ComPeTency**
 > DISC 이론 기반 직무 역량 성향 분석 서비스
 
-**문서 버전**: v0.10
-**작성일**: '26.05.24.
+**문서 버전**: v0.11
+**작성일**: '26.06.25.
 **작성자**: 김유신
 
 ---
 
 ## 변경 이력
 
-| 버전  | 변경 내용                                                                                                      | 날짜       |
-| ----- | -------------------------------------------------------------------------------------------------------------- | ---------- |
-| v0.1  | 초안 작성                                                                                                      | '26.05.22. |
-| v0.2  | 비회원 검사 횟수 제한 제거, 버킷 수 수정 (1,296 → 6,561)                                                       | '26.05.22. |
-| v0.3  | LLM 비용 정량 분석 추가, 버킷 정규화 9단계로 확정                                                              | '26.05.23. |
-| v0.4  | 케미 기능 상세화, 데이터 모델 전면 개정                                                                        | '26.05.23. |
-| v0.5  | disc_cache 온디맨드 만료, 알림 클릭 시 즉시 삭제, 8개 테이블 컬럼 수준 명세 완성                               | '26.05.23. |
-| v0.6  | 요구사항 섹션 → requirements-design.md 분리. 기술 스택 확정 (Next.js, Redis, AWS S3, SSE). 스토리지 전략 추가. | '26.05.24. |
-| v0.7  | 기술 스택 Java 25, Spring 3.5.14 버전 확정                                                                     |
-| v0.8  | 기술 스택에 SpringDoc OpenAPI (Swagger UI) 추가.                                                               | '26.05.26. |
-| v0.9  | JWT 인증 방식 사용에 따른 Redis 사용 목적 수정                                                                 | '26.05.27. |
-| v0.10 | 버킷 수 수정 (6,561 → 81)                                                                                      | '26.06.01  |
+| 버전  | 변경 내용                                                                                                                                                                                                                                                                                   | 날짜       |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| v0.1  | 초안 작성                                                                                                                                                                                                                                                                                   | '26.05.22. |
+| v0.2  | 비회원 검사 횟수 제한 제거, 버킷 수 수정 (1,296 → 6,561)                                                                                                                                                                                                                                    | '26.05.22. |
+| v0.3  | LLM 비용 정량 분석 추가, 버킷 정규화 9단계로 확정                                                                                                                                                                                                                                           | '26.05.23. |
+| v0.4  | 케미 기능 상세화, 데이터 모델 전면 개정                                                                                                                                                                                                                                                     | '26.05.23. |
+| v0.5  | disc_cache 온디맨드 만료, 알림 클릭 시 즉시 삭제, 8개 테이블 컬럼 수준 명세 완성                                                                                                                                                                                                            | '26.05.23. |
+| v0.6  | 요구사항 섹션 → requirements-design.md 분리. 기술 스택 확정 (Next.js, Redis, AWS S3, SSE). 스토리지 전략 추가.                                                                                                                                                                              | '26.05.24. |
+| v0.7  | 기술 스택 Java 25, Spring 3.5.14 버전 확정                                                                                                                                                                                                                                                  |
+| v0.8  | 기술 스택에 SpringDoc OpenAPI (Swagger UI) 추가.                                                                                                                                                                                                                                            | '26.05.26. |
+| v0.9  | JWT 인증 방식 사용에 따른 Redis 사용 목적 수정                                                                                                                                                                                                                                              | '26.05.27. |
+| v0.10 | 버킷 수 수정 (6,561 → 81)                                                                                                                                                                                                                                                                   | '26.06.01  |
+| v0.11 | §4.2 동료 케미 보고서 발행 전략 전면 개정. 매번 실시간 호출 → Lazy Caching + 중복 LLM 호출 방지로 변경. chemistry_cache 6,561행 사전 삽입, SELECT FOR UPDATE 기반 발행자/구독자 분기, Redis Pub/Sub + CountDownLatch 대기 구조, Self-invocation 해결을 위한 ChemistryCacheLockTx 분리 명시. | '26.06.25. |
 
 ---
 
@@ -166,38 +167,88 @@ DB SELECT WHERE d=? AND i=? AND s=? AND c=?
 - 만료 기준은 애플리케이션 설정값으로 외부화 (`cache.ttl-days=365` 등)
 - 보고서 원문에 이름을 포함하지 않고 저장 (렌더링 시 이름 삽입)
 
-### 4.2 동료 케미 보고서 발행 — 비동기 실시간 호출
+### 4.2 동료 케미 보고서 발행 — Lazy Caching + 중복 LLM 호출 방지
 
-동료 케미 보고서는 두 사람의 DISC 프로필 조합(3⁴ × 3⁴ = 6,561가지)으로 캐싱이 비효율적이며, 정확도가 서비스 신뢰도에 직결되므로 **매번 실시간 LLM 호출**을 원칙으로 한다.
+동료 케미 보고서는 두 사람의 DISC 버킷 조합(3⁴ × 3⁴ = 6,561가지)을 `chemistry_cache` 테이블에 사전 삽입하고, Lazy Caching 방식으로 LLM 호출을 최소화한다. 동시 요청이 몰릴 경우 중복 LLM 호출을 방지하기 위해 MySQL SELECT FOR UPDATE + Redis Pub/Sub 기반 발행자/구독자 패턴을 적용한다.
+
+#### 캐시 전략
+
+| chemistry_cache.status | 의미        | 처리                                                             |
+| ---------------------- | ----------- | ---------------------------------------------------------------- |
+| `NULL`                 | 미생성      | SELECT FOR UPDATE 후 발견한 스레드가 발행자 → LLM 호출           |
+| `GENERATING`           | LLM 호출 중 | SELECT FOR UPDATE 후 발견한 스레드가 구독자 → Redis Pub/Sub 대기 |
+| `READY` + 유효         | 캐시 히트   | 즉시 반환                                                        |
+| `READY` + 만료         | 캐시 만료   | 발행자로 재진입 → LLM 재호출                                     |
+
+#### 발행자/구독자 처리 흐름
+
+```
+[공통] ChemistryService.issue()
+→ 동료 검증 + 코인 차감
+→ chemistry_reports INSERT (status=GENERATING)
+→ ChemistryReportProcessor.process() @Async 트리거
+→ 202 즉시 반환
+
+[발행자 경로] chemistry_cache.status = NULL
+→ ChemistryCacheLockTx.acquireLockAndDecideRole()
+SELECT FOR UPDATE → status=GENERATING → COMMIT (락 즉시 해제)
+→ AnthropicLlmClient.complete() — LLM 호출
+→ ChemistryCacheLockTx.saveCompletedCache()
+SELECT FOR UPDATE → status=READY, report 저장 → COMMIT
+→ ChemistryEventPublisher.publishReady() — Redis Pub/Sub 발행
+
+[구독자 경로] chemistry_cache.status = GENERATING
+→ ChemistryCacheLockTx.acquireLockAndDecideRole()
+SELECT FOR UPDATE → registerWaiter() 콜백 실행 → COMMIT
+(waitingMap에 (userId, reportId, CountDownLatch) 등록)
+→ latch.await() 블로킹 — CPU 소비 없음 (park)
+→ ChemistryEventSubscriber.onMessage() 수신 시 latch.countDown()
+→ latch.await() 즉시 반환 (countDown이 await 이전에 발생해도 안전)
+
+[완료 공통]
+→ chemistry_reports UPDATE (status=READY, cacheId 세팅)
+→ SseService.pushChemistryReady() — 발행자/구독자 모두 SSE push
+→ NotificationService.sendChemistryNotification() — 상대방 인앱 알림
+```
+
+#### 동시성 방어 근거
+
+| 방어 포인트                | 수단                                         | 보장 내용                                   |
+| -------------------------- | -------------------------------------------- | ------------------------------------------- |
+| 중복 LLM 호출              | SELECT FOR UPDATE + `chemistry_cache.status` | 발행자 1개 스레드만 LLM 호출                |
+| registerWaiter 타이밍      | 락 트랜잭션 내부 콜백으로 실행               | 발행자 saveCompletedCache 진입 전 등록 보장 |
+| countDown vs await 순서    | CountDownLatch count=0 즉시 반환             | SSE push가 await 이전 도달해도 블로킹 없음  |
+| 다중 구독자 동시 add       | CopyOnWriteArrayList                         | 엔트리 유실 없음                            |
+| READY 커밋 vs Pub/Sub 순서 | saveCompletedCache COMMIT 후 publishReady    | 구독자가 깨어날 때 READY 상태 DB에 보장     |
+
+#### Self-invocation 해결
+
+`@Transactional(REQUIRES_NEW)` 메서드를 동일 클래스 내에서 자가 호출하면 Spring AOP 프록시가 인터셉트하지 못해 트랜잭션이 무시된다. 이를 해결하기 위해 락 트랜잭션 전담 빈 `ChemistryCacheLockTx`를 별도 클래스로 분리했다.
+
+#### 인메모리 맵 구조
+
+```
+SseService 소유:
+Map<Long userId, SseEmitter>
+→ SSE 연결 수립/해제 기준으로 관리. 케미 외 다른 알림도 재사용.
+
+ChemistryCacheService 소유:
+Map<ChemistryCacheId, List<WaitingEntry>>
+→ 버킷 조합별 대기자 목록. 보고서 완료/실패 시 제거.
+→ List 구현체: CopyOnWriteArrayList (다중 구독자 동시 add 안전)
+```
 
 - `@Async`로 비동기 처리 → 클라이언트 대기 시간 없음
-- 발행 완료 시 SSE로 발행자에게 실시간 푸시
 - 보고서를 Markdown 단일 TEXT로 저장 — 검사 유형(DISC/MBTI/BIG5) 추가 시 스키마 변경 없이 프롬프트만 수정
 - 보고서 원문에 이름 미포함 저장 (렌더링 시 발행자/상대 이름 삽입)
-- DISC 버킷 스냅샷 미저장 — 보고서 텍스트가 성향 정보를 충분히 포함
 - 사용량은 **코인 시스템**으로 통제
-
-| 항목      | 내용                  |
-| --------- | --------------------- |
-| 초기 지급 | 가입 시 코인 3개      |
-| 충전 주기 | 24시간마다 1개 충전   |
-| 최대 보유 | 3개                   |
-| 소모량    | 보고서 발행 1회당 1개 |
-
-코인 충전은 온디맨드 방식으로 처리한다. 코인 관련 요청 시 `next_coin_at <= NOW()`를 확인하여 그 자리에서 충전량을 계산 후 반영한다.
-
-```
-elapsed    = (NOW() - next_coin_at) / 24시간
-chargeable = Math.floor(elapsed) + 1
-amount     = Math.min(chargeable, 3 - current_coins)
-```
 
 ### 4.3 비용 절감 효과 요약
 
-| 기능                  | 전략                        | 예상 절감 효과                     |
-| --------------------- | --------------------------- | ---------------------------------- |
-| 개인 분석             | Lazy Caching (81 버킷)      | LLM 호출 약 99.9% 절감 (안정화 후) |
-| 동료 케미 보고서 발행 | 코인 시스템으로 사용량 통제 | 무제한 호출 대비 대폭 절감         |
+| 기능                  | 전략                                                     | 예상 절감 효과                        |
+| --------------------- | -------------------------------------------------------- | ------------------------------------- |
+| 개인 분석             | Lazy Caching (81 버킷)                                   | LLM 호출 약 99.9% 절감 (안정화 후)    |
+| 동료 케미 보고서 발행 | Lazy Caching (6,561 버킷) + 코인 시스템 + 중복 호출 방지 | 동일 버킷 조합 중복 LLM 호출 0건 보장 |
 
 ### 4.4 LLM 비용 정량 분석 (Claude Sonnet 4.6 기준)
 

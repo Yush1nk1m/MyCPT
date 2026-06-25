@@ -109,7 +109,7 @@ alt sessionStorage에 원점수 있음
 
   ResultCtrl -> ResultSvc : save(userId, rawScores)
   activate ResultSvc
-  ResultSvc -> ResultSvc : 버킷값 산출\n(원점수 → 9단계 정규화)
+  ResultSvc -> ResultSvc : 버킷값 산출\n(원점수 → 3단계 정규화)
   ResultSvc -> DB : INSERT disc_tests\n(userId, rater_type=SELF,\n원점수, 버킷값)
   DB --> ResultSvc : resultId
   ResultSvc --> ResultCtrl : resultId

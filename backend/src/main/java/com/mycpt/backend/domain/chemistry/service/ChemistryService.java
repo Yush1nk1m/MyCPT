@@ -6,15 +6,21 @@ import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.domain.chemistry.dto.ChemistryReportDetail;
 import com.mycpt.backend.domain.chemistry.dto.ChemistryReportListResponse;
 import com.mycpt.backend.domain.chemistry.dto.ChemistryReportSummary;
+import com.mycpt.backend.domain.chemistry.entity.ChemistryCacheId;
 import com.mycpt.backend.domain.chemistry.entity.ChemistryReport;
 import com.mycpt.backend.domain.chemistry.enums.ChemistryReportStatus;
+import com.mycpt.backend.domain.chemistry.event.ChemistryReportIssuedEvent;
 import com.mycpt.backend.domain.chemistry.repository.ChemistryReportRepository;
 import com.mycpt.backend.domain.coin.enums.CoinReason;
 import com.mycpt.backend.domain.coin.service.CoinService;
 import com.mycpt.backend.domain.colleague.repository.ColleagueRepository;
+import com.mycpt.backend.domain.result.enums.RaterType;
+import com.mycpt.backend.domain.statistics.dto.LatestBuckets;
+import com.mycpt.backend.domain.statistics.repository.StatisticsRepository;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +36,8 @@ public class ChemistryService {
     private final UserRepository userRepository;
     private final CoinService coinService;
     private final ChemistryReportProcessor chemistryReportProcessor;
+    private final StatisticsRepository statisticsRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 케미 보고서 발행 요청.
@@ -49,17 +57,36 @@ public class ChemistryService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
+        // 버킷 조회 - 없으면 202 이전에 즉시 4xx 반환
+        LatestBuckets requesterBuckets = statisticsRepository
+                .findLatestBuckets(requesterId, RaterType.SELF, PageRequest.of(0, 1))
+                .stream().findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.NO_RESULT));
+        LatestBuckets partnerBuckets = statisticsRepository
+                .findLatestBuckets(partnerId, RaterType.SELF, PageRequest.of(0, 1))
+                .stream().findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.NO_RESULT));
+
+        ChemistryCacheId cacheId = new ChemistryCacheId(
+                requesterBuckets.dBucket(), requesterBuckets.iBucket(),
+                requesterBuckets.sBucket(), requesterBuckets.sBucket(),
+                partnerBuckets.dBucket(), partnerBuckets.iBucket(),
+                partnerBuckets.sBucket(), partnerBuckets.cBucket()
+        );
+
         coinService.deduct(requesterId, CoinReason.CHEMISTRY_REPORT);
 
         // chemistry_reports INSERT - FK 컬럼(버킷 값)은 READY 시 세팅되므로
         // 이 시점에서는 NULL. seeding으로 chemistry_cache 전 행이 존재하므로 FK 무결성 보장
         User requester = userRepository.getReferenceById(requesterId);
         User partner = userRepository.getReferenceById(partnerId);
-        ChemistryReport report = ChemistryReport.create(requester, partner, TestType.DISC);
+        ChemistryReport report = ChemistryReport.create(requester, partner, TestType.DISC, cacheId);
         chemistryReportRepository.save(report);
 
         // @Async 트리거 - 트랜잭션 커밋 후 별도 스레드에서 실행
-        chemistryReportProcessor.process(report.getId());
+        applicationEventPublisher.publishEvent(
+                new ChemistryReportIssuedEvent(report.getId(), requesterBuckets, partnerBuckets)
+        );
     }
 
     @Transactional(readOnly = true)

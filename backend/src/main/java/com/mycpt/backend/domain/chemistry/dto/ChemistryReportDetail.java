@@ -29,7 +29,7 @@ public record ChemistryReportDetail(
                         cr.getPartner().getProfileImageUrl()
                 ),
                 cr.getStatus().name(),
-                cr.getReport(),
+                cr.getChemistryCache().getReport(),
                 cr.getCreatedAt()
         );
     }

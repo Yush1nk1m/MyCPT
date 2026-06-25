@@ -1,21 +1,23 @@
 # MyCPT 테스트 설계 문서
 
-**문서 버전**: v0.6
-**작성일**: '26.06.24.
+**문서 버전**: v0.8
+**작성일**: '26.06.25.
 **작성자**: 김유신
 
 ---
 
 ## 변경 이력
 
-| 버전 | 변경 내용                                                                                                                                                                                                                                                          | 날짜       |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| v0.1 | 초안 작성. 레이어별 전략, Auth/User 도메인 테스트 케이스 ID 체계 수립.                                                                                                                                                                                             | '26.05.26. |
-| v0.2 | Result/Assessment 도메인 테스트 케이스 추가. JpaTestSupport 기반 슬라이스 테스트 전략 확정.                                                                                                                                                                        | '26.06.09. |
-| v0.3 | 예외 처리 체계 통합 반영 (BusinessException/ErrorCode). ScoringService 경계값 케이스 보강.                                                                                                                                                                         | '26.06.13. |
-| v0.4 | `DiscResultRepository` → `DiscTestRepository` 이름 변경. Test ID `ST-DiscResultRepo-*` → `ST-DiscTestRepo-*` 전면 변경. `ResultService` 저장 행위 설명 `disc_results` → `disc_tests` 수정. `AssessmentService` 평정 제출 상황 설명 `DiscResult` → `DiscTest` 수정. | '26.06.15. |
-| v0.5 | §8~§11 누락된 Test Code 링크 4건 추가(Statistics/PeerCode/Colleague/Notification Service). `ColleagueV1Controller` ST 테스트 미작성 상태 명시(TODO).                                                                                                               | '26.06.20. |
-| v0.6 | §10 Chemistry 도메인 테스트 케이스 추가 (UT 7건, ST 6건, IT 5건).                                                                                                                                                                                                  | '26.06.24. |
+| 버전 | 변경 내용                                                                                                                                                                                                                                                                                                                      | 날짜       |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| v0.1 | 초안 작성. 레이어별 전략, Auth/User 도메인 테스트 케이스 ID 체계 수립.                                                                                                                                                                                                                                                         | '26.05.26. |
+| v0.2 | Result/Assessment 도메인 테스트 케이스 추가. JpaTestSupport 기반 슬라이스 테스트 전략 확정.                                                                                                                                                                                                                                    | '26.06.09. |
+| v0.3 | 예외 처리 체계 통합 반영 (BusinessException/ErrorCode). ScoringService 경계값 케이스 보강.                                                                                                                                                                                                                                     | '26.06.13. |
+| v0.4 | `DiscResultRepository` → `DiscTestRepository` 이름 변경. Test ID `ST-DiscResultRepo-*` → `ST-DiscTestRepo-*` 전면 변경. `ResultService` 저장 행위 설명 `disc_results` → `disc_tests` 수정. `AssessmentService` 평정 제출 상황 설명 `DiscResult` → `DiscTest` 수정.                                                             | '26.06.15. |
+| v0.5 | §8~§11 누락된 Test Code 링크 4건 추가(Statistics/PeerCode/Colleague/Notification Service). `ColleagueV1Controller` ST 테스트 미작성 상태 명시(TODO).                                                                                                                                                                           | '26.06.20. |
+| v0.6 | §10 Chemistry 도메인 테스트 케이스 추가 (UT 7건, ST 6건, IT 5건).                                                                                                                                                                                                                                                              | '26.06.24. |
+| v0.7 | §10 Chemistry 도메인 테스트 케이스 전면 재작성. ChemistryCacheLockTx 트랜잭션 격리 IT 추가 (Self-invocation 해결 검증). ChemistryCache 엔티티 UT 상태전이 케이스 교체 (create/refresh → startGenerating/complete/refresh). Lazy Caching IT 3건 + Duplication Defense IT 2건 추가. ChemistryCacheStatus 신규 enum UT 추가.      | '26.06.25. |
+| v0.8 | §10 Chemistry 도메인 전면 재작성. ChemistryTxHelper(구 ChemistryCacheLockTx) 네이밍 변경 반영. `ChemistryReport.create(cacheId)` 시그니처 변경 반영 (생성 시점 cacheId 주입). `completeReport()` ChemistryTxHelper 이관 반영. ChemistryTxHelper IT 케이스 3건으로 확장. Lazy Caching IT 3건 + Duplication Defense IT 2건 확정. | '26.06.25. |
 
 ---
 
@@ -142,7 +144,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### CustomOAuth2UserService (UT)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/auth/service/CustomOAuth2UserServiceTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/auth/service/CustomOAuth2UserServiceTest.java)]
 
 > `loadUser()`는 내부에서 `super.loadUser()`(카카오 HTTP 호출)를 수행하므로
 > 비즈니스 로직이 분리된 `findOrCreateUser()`를 직접 테스트한다.
@@ -155,7 +157,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### AuthV1Controller (ST)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/auth/controller/AuthV1ControllerTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/auth/controller/AuthV1ControllerTest.java)]
 
 > `@WebMvcTest` 슬라이스 테스트. `MvcTestSupport` 상속.
 
@@ -170,7 +172,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### UserV1Controller (ST)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/user/controller/UserV1ControllerTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/user/controller/UserV1ControllerTest.java)]
 
 > `@WebMvcTest` 슬라이스 테스트. `MvcTestSupport` 상속.
 
@@ -185,7 +187,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### ScoringService (UT)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/result/service/ScoringServiceTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/result/service/ScoringServiceTest.java)]
 
 | Test ID                                   | 행위                            | 상황                                                              |
 | ----------------------------------------- | ------------------------------- | ----------------------------------------------------------------- |
@@ -198,7 +200,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### DiscCacheService (UT)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/result/service/DiscCacheServiceTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/result/service/DiscCacheServiceTest.java)]
 
 | Test ID                                          | 행위                               | 상황                                                                        |
 | ------------------------------------------------ | ---------------------------------- | --------------------------------------------------------------------------- |
@@ -210,7 +212,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### ResultService (UT)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/result/service/ResultServiceTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/result/service/ResultServiceTest.java)]
 
 | Test ID                              | 행위                      | 상황                                                         |
 | ------------------------------------ | ------------------------- | ------------------------------------------------------------ |
@@ -226,7 +228,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### DiscTestRepository (ST)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/result/repository/DiscTestRepositoryTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/result/repository/DiscTestRepositoryTest.java)]
 
 > `@DataJpaTest` + Testcontainers MySQL (`JpaTestSupport` 상속).
 > `@Sql("/sql/disc_cache_seed.sql")` 로 disc_cache 복합 FK 제약 해소.
@@ -247,7 +249,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### AssessmentService (UT)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/assessment/service/AssessmentServiceTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/assessment/service/AssessmentServiceTest.java)]
 
 | Test ID                                  | 행위                       | 상황                                                    |
 | ---------------------------------------- | -------------------------- | ------------------------------------------------------- |
@@ -265,7 +267,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### StatisticsService (UT)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/statistics/service/StatisticsServiceTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/statistics/service/StatisticsServiceTest.java)]
 
 | Test ID                                | 행위                                    | 상황                                                        |
 | -------------------------------------- | --------------------------------------- | ----------------------------------------------------------- |
@@ -284,7 +286,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### PeerCodeService (UT)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/colleague/service/PeerCodeServiceTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/colleague/service/PeerCodeServiceTest.java)]
 
 | Test ID                          | 행위                          | 상황                                            |
 | -------------------------------- | ----------------------------- | ----------------------------------------------- |
@@ -296,7 +298,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### ColleagueService (UT)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/colleague/service/ColleagueServiceTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/colleague/service/ColleagueServiceTest.java)]
 
 | Test ID                                   | 행위                           | 상황                                                                            |
 | ----------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------- |
@@ -317,7 +319,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### ColleagueV1Controller (ST)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/colleague/controller/ColleagueV1ControllerTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/colleague/controller/ColleagueV1ControllerTest.java)]
 
 > `@WebMvcTest(ColleagueV1Controller.class)` 슬라이스 테스트. `MvcTestSupport` 상속.
 > `PeerCodeService`, `ColleagueService`는 `@MockitoBean`으로 대체.
@@ -346,40 +348,42 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### ChemistryReport 엔티티 (UT)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/chemistry/entity/ChemistryReportTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/entity/ChemistryReportTest.java)]
 
-| Test ID                                | 행위                     | 상황                                                  |
-| -------------------------------------- | ------------------------ | ----------------------------------------------------- |
-| `UT-ChemistryReport-상태전이-create`   | `create()` 호출          | `status=GENERATING`, `cacheId=null`, `createdAt` 세팅 |
-| `UT-ChemistryReport-상태전이-complete` | `complete(cacheId)` 호출 | `status=READY`, `cacheId` 세팅                        |
-| `UT-ChemistryReport-상태전이-fail`     | `fail()` 호출            | `status=ERROR`, `report=null` 유지                    |
+| Test ID                                | 행위                                                 | 상황                                                              |
+| -------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
+| `UT-ChemistryReport-상태전이-create`   | `create(requester, partner, testType, cacheId)` 호출 | `status=GENERATING`, `cacheId` 생성 시점에 세팅, `createdAt` 세팅 |
+| `UT-ChemistryReport-상태전이-complete` | `complete(cacheId)` 호출                             | `status=READY` 전이                                               |
+| `UT-ChemistryReport-상태전이-fail`     | `fail()` 호출                                        | `status=ERROR`                                                    |
 
 ### ChemistryCacheId (UT)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/chemistry/entity/ChemistryCacheIdTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/entity/ChemistryCacheIdTest.java)]
 
 | Test ID                               | 행위                                   | 상황                                |
 | ------------------------------------- | -------------------------------------- | ----------------------------------- |
 | `UT-ChemistryCacheId-동등성-동일버킷` | 8축 값 동일 시 `equals()`/`hashCode()` | 동등                                |
-| `UT-ChemistryCacheId-동등성-다른버킷` | requester/partner 순서 다름            | 불일치 — A→B와 B→A는 별도 캐시 항목 |
+| `UT-ChemistryCacheId-동등성-다른버킷` | requester/partner 축 순서 교환         | 불일치 — A→B와 B→A는 별도 캐시 항목 |
 
 ### ChemistryCache 엔티티 (UT)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/chemistry/entity/ChemistryCacheTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/entity/ChemistryCacheTest.java)]
 
-| Test ID                                      | 행위                           | 상황                                            |
-| -------------------------------------------- | ------------------------------ | ----------------------------------------------- |
-| `UT-ChemistryCache-상태전이-startGenerating` | `startGenerating()` 호출       | `status=GENERATING`                             |
-| `UT-ChemistryCache-상태전이-complete`        | `complete(report, now)` 호출   | `status=READY`, `report` 세팅, `createdAt` 세팅 |
-| `UT-ChemistryCache-상태전이-refresh`         | `refresh(newReport, now)` 호출 | `status=GENERATING`으로 리셋, `report` 교체     |
+| Test ID                                      | 행위                         | 상황                                                      |
+| -------------------------------------------- | ---------------------------- | --------------------------------------------------------- |
+| `UT-ChemistryCache-상태전이-startGenerating` | `startGenerating()` 호출     | `status=GENERATING`                                       |
+| `UT-ChemistryCache-상태전이-complete`        | `complete(report, now)` 호출 | `status=READY`, `report` 세팅, `createdAt` 세팅           |
+| `UT-ChemistryCache-상태전이-refresh`         | `refresh()` 호출             | `status=GENERATING` 리셋, `report=null`, `createdAt=null` |
 
-> `ChemistryCacheService` / `ChemistryReportProcessor` UT 제외 이유
-> `ChemistryCacheService`는 `AnthropicLlmClient` mock이 필수이며, 락 획득 → 발행자/구독자 분기 → Pub/Sub 발행까지의 흐름은 실제 MySQL 락 + Redis가 있는 IT 환경에서만 의미 있게 검증 가능하다.
-> `ChemistryReportProcessor`는 `@Async` + `@Retryable` 조합, 트랜잭션 분리, Pub/Sub 수신 후 SSE push까지의 전체 흐름이 통합 환경에서만 의미 있어 mock 기반 UT는 구현 검증에 그친다.
+> **`ChemistryCacheService` / `ChemistryReportProcessor` / `ChemistryTxHelper` UT 제외 이유**
+> 락 획득 → 발행자/구독자 분기 → Pub/Sub 발행 → SSE push까지의 흐름은 실제 MySQL 락 + Redis가 있는 IT 환경에서만 의미 있게 검증 가능하다.
+> Self-invocation 해결 여부(트랜잭션 격리)도 별도 트랜잭션이 실제 커밋됐는지를 외부 커넥션에서 확인해야 하므로 IT가 필수다.
 
 ### ChemistryV1Controller (ST)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/chemistry/controller/ChemistryV1ControllerTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/controller/ChemistryV1ControllerTest.java)]
+
+> `@WebMvcTest` 슬라이스 테스트. `MvcTestSupport` 상속.
 
 | Test ID                            | 행위                          | 상황                                       |
 | ---------------------------------- | ----------------------------- | ------------------------------------------ |
@@ -390,19 +394,61 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 | `ST-ChemistryCtrl-상세조회-성공`   | `GET /chemistry-reports/{id}` | 인증됨 → `200` + `reportId`, `status` 반환 |
 | `ST-ChemistryCtrl-상세조회-미인증` | `GET /chemistry-reports/{id}` | 미인증 → `401`                             |
 
-### ChemistryCacheRepository / ChemistryReportRepository (IT)
+### ChemistryCacheRepository / ChemistryReportRepository (ST)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/chemistry/repository/ChemistryRepositoryTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/repository/ChemistryRepositoryTest.java)]
 
-| Test ID                                     | 행위                       | 상황                                                                         |
-| ------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------- |
-| `IT-ChemistryCacheRepo-락-발행자확정`       | `findByIdWithLock()`       | status=NULL 행 조회 → 발행자 스레드 확정, status=GENERATING 업데이트 후 커밋 |
-| `IT-ChemistryCacheRepo-락-구독자확정`       | `findByIdWithLock()`       | status=GENERATING 행 조회 → 구독자로 분기 (lock 해제 후 반환값 확인)         |
-| `IT-ChemistryCacheRepo-조회-READY히트`      | `findByIdWithLock()`       | status=READY 행 조회 → report 즉시 반환                                      |
-| `IT-ChemistryCacheRepo-조회-히트`           | `findById()`               | 해당 버킷 조합 존재 → `report` 값 반환                                       |
-| `IT-ChemistryReportRepo-커서-ERROR필터`     | `findByUserIdWithCursor()` | READY + ERROR 혼재 → ERROR 제외, READY만 반환                                |
-| `IT-ChemistryReportRepo-커서-partnerId필터` | `findByUserIdWithCursor()` | A↔B, A↔C 보고서 혼재 → `partnerId=B` 필터 시 B 관련만 반환                   |
-| `IT-ChemistryReportRepo-커서-페이지네이션`  | `findByUserIdWithCursor()` | 3건 삽입 후 중간 ID를 cursor로 → `id < cursor` 인 행만 반환                  |
+> `@DataJpaTest` + Testcontainers MySQL (`JpaTestSupport` 상속).
+> `chemistry_cache` 6,561행 시드 `@Sql("/sql/chemistry_cache_seed.sql")`로 주입.
+
+| Test ID                                     | 행위                       | 상황                                                                      |
+| ------------------------------------------- | -------------------------- | ------------------------------------------------------------------------- |
+| `ST-ChemistryCacheRepo-락-획득`             | `findByIdWithLock()`       | `status=NULL` 행 → `PESSIMISTIC_WRITE` 락 획득, `status=NULL` 반환값 확인 |
+| `ST-ChemistryReportRepo-커서-ERROR필터`     | `findByUserIdWithCursor()` | READY + ERROR 혼재 → ERROR 제외, READY만 반환                             |
+| `ST-ChemistryReportRepo-커서-partnerId필터` | `findByUserIdWithCursor()` | A↔B, A↔C 보고서 혼재 → `partnerId=B` 필터 시 B 관련만 반환                |
+| `ST-ChemistryReportRepo-커서-페이지네이션`  | `findByUserIdWithCursor()` | 3건 삽입 후 중간 ID를 cursor로 → `id < cursor` 인 행만 반환               |
+
+### ChemistryTxHelper 트랜잭션 격리 (IT)
+
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/service/ChemistryTxHelperTest.java)]
+
+> `IntegrationTestSupport` 상속. `@SpringBootTest` + Testcontainers MySQL/Redis.
+> Self-invocation 문제를 `ChemistryTxHelper` 빈 분리로 해결했음을 검증.
+> 핵심: 메서드 반환 직후 **별도 트랜잭션(새 커넥션)**에서 변경이 즉시 보이는가.
+> 자가 호출이었다면 REQUIRES_NEW가 무시되어 외부 트랜잭션 커밋 전까지 변경이 보이지 않는다.
+
+| Test ID                                                      | 행위                                                                                      | 상황                                                                           |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `IT-ChemistryTxHelper-트랜잭션격리-발행자GENERATING즉시반영` | `TransactionTemplate` 외부 트랜잭션 내 `acquireLockAndDecideRole()` 호출 → 외부 강제 롤백 | 외부 롤백 후 DB 조회 시 `status=GENERATING` 유지 — REQUIRES_NEW 독립 커밋 증명 |
+| `IT-ChemistryTxHelper-트랜잭션격리-완료캐시READY즉시반영`    | `TransactionTemplate` 외부 트랜잭션 내 `saveCompletedCache()` 호출 → 외부 강제 롤백       | 외부 롤백 후 DB 조회 시 `chemistry_cache.status=READY` + `report` 유지         |
+| `IT-ChemistryTxHelper-트랜잭션격리-완료보고서READY즉시반영`  | `TransactionTemplate` 외부 트랜잭션 내 `completeReport()` 호출 → 외부 강제 롤백           | 외부 롤백 후 DB 조회 시 `chemistry_reports.status=READY` 유지                  |
+
+### ChemistryCacheService — Lazy Caching (IT)
+
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/service/ChemistryCacheServiceIntegrationTest.java)]
+
+> `IntegrationTestSupport` 상속.
+> `AnthropicLlmClient` `@MockitoBean` — 실제 LLM 호출 없이 고정 문자열 반환.
+> `chemistry_cache` 6,561행 시드 `@Sql("/sql/chemistry_cache_seed.sql")`로 주입.
+
+| Test ID                                        | 행위                        | 상황                                                                                                                       |
+| ---------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `IT-ChemistryCacheSvc-캐시미스-LLM호출후READY` | `process(reportId, rb, pb)` | `chemistry_cache.status=NULL` → LLM 1회 호출 → `chemistry_cache.status=READY`, `chemistry_reports.status=READY`            |
+| `IT-ChemistryCacheSvc-캐시히트유효-LLM미호출`  | `process(reportId, rb, pb)` | `chemistry_cache.status=READY` + `createdAt` 유효(10일 전) → LLM 0회 호출, `chemistry_reports.status=READY`                |
+| `IT-ChemistryCacheSvc-캐시만료-LLM재호출`      | `process(reportId, rb, pb)` | `chemistry_cache.status=READY` + `createdAt` 366일 전 → LLM 1회 호출, 캐시 `report` 갱신, `chemistry_reports.status=READY` |
+
+### ChemistryCacheService — Duplication Defense (IT)
+
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/service/ChemistryCacheServiceIntegrationTest.java)]
+
+> `IntegrationTestSupport` 상속.
+> `AnthropicLlmClient` `@MockitoBean` — `Thread.sleep(300)` 딜레이로 경쟁 구간 확보.
+> `CountDownLatch(1)`로 두 스레드 동시 출발.
+
+| Test ID                                             | 행위                             | 상황                                                                            |
+| --------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------- |
+| `IT-ChemistryCacheSvc-동시요청-LLM단일호출`         | `process()` 2개 스레드 동시 실행 | 동일 버킷 조합 → LLM 1회 호출, `chemistry_reports` 2건 모두 `status=READY`      |
+| `IT-ChemistryCacheSvc-다른버킷동시요청-LLM각각호출` | `process()` 2개 스레드 동시 실행 | 서로 다른 버킷 조합 → LLM 2회 호출, `chemistry_reports` 2건 모두 `status=READY` |
 
 ---
 
@@ -410,7 +456,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### NotificationService (UT)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/notification/service/NotificationServiceTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/notification/service/NotificationServiceTest.java)]
 
 | Test ID                                | 행위                | 상황                                                                   |
 | -------------------------------------- | ------------------- | ---------------------------------------------------------------------- |
@@ -424,7 +470,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### NotificationV1Controller (ST)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/notification/controller/NotificationV1ControllerTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/notification/controller/NotificationV1ControllerTest.java)]
 
 > `@WebMvcTest` 슬라이스 테스트. `MvcTestSupport` 상속.
 
@@ -441,7 +487,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### CoinService (UT)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/coin/service/CoinServiceTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/coin/service/CoinServiceTest.java)]
 
 | Test ID                                   | 행위                              | 상황                                                      |
 | ----------------------------------------- | --------------------------------- | --------------------------------------------------------- |
@@ -461,7 +507,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### CoinV1Controller (ST)
 
-[[Test Code](../backend/src/test/java/com/mycpt/backend/domain/coin/controller/CoinV1ControllerTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/coin/controller/CoinV1ControllerTest.java)]
 
 > `@WebMvcTest(CoinV1Controller.class)` 슬라이스 테스트. `MvcTestSupport` 상속.
 > `CoinService`는 `@MockitoBean`으로 대체.

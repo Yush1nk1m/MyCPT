@@ -101,190 +101,213 @@
 ```
 com.mycpt.backend
 ├── BackendApplication.java
-│
-├── config/                              # 전역 설정 클래스
-│   ├── SecurityConfig.java              # Spring Security + Kakao OAuth2
-│   ├── RedisConfig.java                 # RedisTemplate, RedisMessageListenerContainer (Pub/Sub)
-│   ├── AsyncConfig.java                 # @Async ThreadPoolTaskExecutor
-│   ├── BatchConfig.java                 # Spring Batch Job/Step 정의
-│   └── StorageConfig.java               # 로컬/S3 스토리지 전환 설정
-│
-├── common/
-│   ├── enums/
-│   │   └── TestType.java                # DISC / MBTI / BIG5 등 (ChemistryReport 전용)
-│   ├── exception/
-│   │   ├── BusinessException.java       # 도메인 예외 공통 클래스
-│   │   └── ErrorCode.java               # 에러 코드 enum (HTTP 상태 + 메시지)
-│   └── llm/
-│       └── AnthropicLlmClient.java      # Anthropic Java SDK 래퍼. 전역 1개 인스턴스
-│
-├── domain/
-│   ├── auth/                            # 인증
-│   │   ├── controller/
-│   │   │   ├── AuthApi.java
-│   │   │   └── AuthV1Controller.java    # GET /auth/kakao, GET /auth/me, POST /auth/logout
-│   │   ├── service/
-│   │   │   └── CustomOAuth2UserService.java  # 카카오 사용자 조회/신규 가입
-│   │   ├── dto/
-│   │   │   ├── MeResponse.java
-│   │   │   └── UserPrincipal.java       # Spring Security Principal
-│   │   └── handler/
-│   │       └── OAuth2SuccessHandler.java    # 로그인 성공 후 JWT 발급
-│   │
-│   ├── user/                            # 프로필
-│   │   ├── controller/
-│   │   │   ├── UserApi.java
-│   │   │   └── UserV1Controller.java    # PATCH /users/me, POST /users/me/profile-image
-│   │   ├── service/
-│   │   │   └── UserService.java
-│   │   ├── repository/
-│   │   │   └── UserRepository.java
-│   │   ├── entity/
-│   │   │   └── User.java
-│   │   └── dto/
-│   │       ├── UpdateProfileRequest.java
-│   │       └── UpdateProfileResponse.java
-│   │
-│   ├── result/                          # 채점, LLM 캐시, 결과 저장/이력/상세
-│   │   ├── controller/
-│   │   │   ├── ResultApi.java           # Swagger 문서 + API 계약 인터페이스
-│   │   │   └── ResultV1Controller.java  # POST /results/score, POST /results, GET /results, GET /results/{id}
-│   │   ├── service/
-│   │   │   ├── ScoringService.java      # 원점수 검증 + 버킷 정규화 (1~3)
-│   │   │   ├── CacheService.java        # disc_cache Lazy Caching (히트/미스/만료)
-│   │   │   └── ResultService.java       # 결과 저장 + 이력/상세 조회
-│   │   ├── repository/
-│   │   │   ├── DiscTestRepository.java  # disc_tests 테이블 (JOINED 상속 자식)
-│   │   │   └── DiscCacheRepository.java
-│   │   ├── entity/
-│   │   │   ├── Test.java                # tests 테이블. @Inheritance(JOINED) 추상 부모
-│   │   │   ├── DiscTest.java            # disc_tests 테이블. Test 상속 자식 (DISC 전용)
-│   │   │   ├── DiscCache.java           # disc_cache 테이블
-│   │   │   └── DiscCacheId.java         # disc_cache 복합 PK @Embeddable
-│   │   ├── enums/
-│   │   │   └── RaterType.java           # SELF / OTHER
-│   │   └── dto/
-│   │       ├── DiscScoreRequest.java    # POST /results/score 요청
-│   │       ├── DiscScoreResponse.java   # POST /results/score 응답
-│   │       ├── SaveResponse.java        # POST /results 응답
-│   │       ├── ResultListResponse.java  # GET /results 응답
-│   │       ├── ResultSummaryResponse.java
-│   │       ├── ResultDetailResponse.java
-│   │       ├── DiscScores.java          # 원점수 공용 record
-│   │       └── DiscBuckets.java         # 버킷값 공용 record
-│   │
-│   ├── assessment/                      # 타인 평정 (링크 생성 → 응시 → 제출)
-│   │   ├── controller/
-│   │   │   ├── AssessmentApi.java
-│   │   │   └── AssessmentV1Controller.java  # POST /assessment-tokens, GET /assessment-tokens/{token}, POST /assessment-tokens/{token}/submit
-│   │   ├── service/
-│   │   │   └── AssessmentService.java
-│   │   ├── repository/
-│   │   │   └── AssessmentTokenRepository.java
-│   │   ├── entity/
-│   │   │   └── AssessmentToken.java
-│   │   └── dto/
-│   │       ├── CreateTokenResponse.java
-│   │       ├── SubjectInfoResponse.java
-│   │       └── SubmitRequest.java
-│   │
-│   ├── statistics/                      # 통계 비교 (직접 집계 쿼리)
-│   │   ├── controller/
-│   │   │   ├── StatisticsApi.java
-│   │   │   └── StatisticsV1Controller.java  # GET /statistics/comparison, GET /statistics/trend
-│   │   ├── service/
-│   │   │   └── StatisticsService.java
-│   │   ├── repository/
-│   │   │   └── StatisticsRepository.java    # 집계 전용 @Query (네이티브 또는 JPQL)
-│   │   └── dto/
-│   │       ├── ComparisonResponse.java
-│   │       ├── TrendResponse.java
-│   │       └── LatestBuckets.java           # ChemistryReportProcessor에서도 사용
-│   │
-│   ├── colleague/                       # 동료 초대/등록/조회/삭제
-│   │   ├── controller/
-│   │   │   ├── ColleagueApi.java
-│   │   │   └── ColleagueV1Controller.java   # GET /peer-code, GET /colleagues/invite/{code}, POST /colleagues, GET /colleagues, GET /colleagues/{id}, DELETE /colleagues/{id}
-│   │   ├── service/
-│   │   │   ├── PeerCodeService.java         # 동료 코드 생성/갱신 (7일 만료, 온디맨드 리프레시)
-│   │   │   └── ColleagueService.java        # 동료 등록/조회/삭제
-│   │   ├── repository/
-│   │   │   ├── PeerCodeRepository.java
-│   │   │   └── ColleagueRepository.java
-│   │   └── entity/
-│   │       ├── PeerCode.java
-│   │       └── Colleague.java
-│   │
-│   ├── chemistry/                       # 케미 보고서
-│   │   ├── controller/
-│   │   │   ├── ChemistryApi.java
-│   │   │   └── ChemistryV1Controller.java   # POST /chemistry-reports, GET /chemistry-reports, GET /chemistry-reports/{id}
-│   │   ├── service/
-│   │   │   ├── ChemistryService.java        # 동료 검증 + 코인 차감 + 202 즉시 반환 + @Async 트리거
-│   │   │   ├── ChemistryReportProcessor.java   # @Async. 버킷 조회 → 캐시 락 → 발행자/구독자 분기 → 알림
-│   │   │   └── ChemistryCacheService.java      # chemistry_cache SELECT FOR UPDATE. 발행자/구독자 결정. 대기자 맵 소유
-│   │   ├── repository/
-│   │   │   ├── ChemistryReportRepository.java
-│   │   │   └── ChemistryCacheRepository.java   # findByIdWithLock() — @Lock(PESSIMISTIC_WRITE)
-│   │   ├── entity/
-│   │   │   ├── ChemistryReport.java            # chemistry_reports 테이블. 사용자별 발행 요청 이력
-│   │   │   ├── ChemistryCache.java             # chemistry_cache 테이블. status 컬럼으로 락 라이프사이클 관리
-│   │   │   └── ChemistryCacheId.java           # chemistry_cache 복합 PK @Embeddable (requester 4축 + partner 4축)
-│   │   ├── enums/
-│   │   │   └── ChemistryReportStatus.java      # GENERATING / READY / ERROR (chemistry_reports 전용)
-│   │   ├── event/
-│   │   │   ├── ChemistryEventPublisher.java    # Redis Pub/Sub 발행 — 보고서 완료/실패 이벤트
-│   │   │   └── ChemistryEventSubscriber.java   # Redis Pub/Sub 수신 → 대기자 맵 조회 → SSE push
-│   │   └── dto/
-│   │       ├── ChemistryReportRequest.java     # POST /chemistry-reports 요청
-│   │       ├── ChemistryReportListResponse.java
-│   │       ├── ChemistryReportSummary.java
-│   │       └── ChemistryReportDetail.java
-│   │
-│   ├── notification/                    # 인앱 알림 + SSE
-│   │   ├── controller/
-│   │   │   ├── NotificationApi.java
-│   │   │   └── NotificationV1Controller.java   # GET /notifications/stream, GET /notifications, DELETE /notifications/{id}
-│   │   ├── service/
-│   │   │   ├── NotificationService.java        # 알림 생성/조회/삭제
-│   │   │   └── SseService.java                 # Map<userId, SseEmitter> 소유. 연결 관리 + Last-Event-ID 재전송
-│   │   ├── repository/
-│   │   │   └── NotificationRepository.java     # 부모 타입으로 다형 조회 (JOINED 전략)
-│   │   └── entity/
-│   │       ├── Notification.java               # notifications 테이블. @Inheritance(JOINED) 추상 부모
-│   │       ├── ColleagueNotification.java      # colleague_notifications 테이블. 동료 등록 알림
-│   │       └── ChemistryNotification.java      # chemistry_notifications 테이블. 케미 보고서 알림
-│   │
-│   └── coin/                            # 코인
-│       ├── controller/
-│       │   ├── CoinApi.java
-│       │   └── CoinV1Controller.java    # GET /coins, GET /coins/history
-│       ├── service/
-│       │   └── CoinService.java         # 온디맨드 충전 (next_coin_at 기반), 차감
-│       ├── repository/
-│       │   └── CoinTransactionRepository.java
-│       └── entity/
-│           └── CoinTransaction.java
-│
-└── global/                              # 전역 공통
-    └── exception/
-        └── GlobalExceptionHandler.java  # @RestControllerAdvice. BusinessException → ErrorResponse 변환
+├── BackendApplication.java:Zone.Identifier
+├── common
+│   ├── enums
+│   │   └── TestType.java
+│   ├── exception
+│   │   ├── BusinessException.java
+│   │   └── ErrorCode.java
+│   ├── llm
+│   │   └── AnthropicLlmClient.java
+│   ├── response
+│   │   └── ErrorResponse.java
+│   └── storage
+│       ├── LocalStorageService.java
+│       └── StorageService.java
+├── config
+│   ├── AsyncConfig.java
+│   ├── JwtAuthenticationFilter.java
+│   ├── JwtProvider.java
+│   ├── RedisConfig.java
+│   ├── SecurityConfig.java
+│   ├── StorageConfig.java
+│   └── SwaggerConfig.java
+├── domain
+│   ├── assessment
+│   │   ├── controller
+│   │   │   ├── AssessmentApi.java
+│   │   │   └── AssessmentV1Controller.java
+│   │   ├── dto
+│   │   │   ├── CreateTokenRequest.java
+│   │   │   ├── CreateTokenResponse.java
+│   │   │   ├── SubjectInfoResponse.java
+│   │   │   └── SubmitResponse.java
+│   │   ├── entity
+│   │   │   └── AssessmentToken.java
+│   │   ├── repository
+│   │   │   └── AssessmentTokenRepository.java
+│   │   └── service
+│   │       └── AssessmentService.java
+│   ├── auth
+│   │   ├── controller
+│   │   │   ├── AuthApi.java
+│   │   │   └── AuthV1Controller.java
+│   │   ├── dto
+│   │   │   ├── KakaoUserInfo.java
+│   │   │   ├── MeResponse.java
+│   │   │   └── UserPrincipal.java
+│   │   └── service
+│   │       └── CustomOAuth2UserService.java
+│   ├── chemistry
+│   │   ├── controller
+│   │   │   ├── ChemistryApi.java
+│   │   │   └── ChemistryV1Controller.java
+│   │   ├── dto
+│   │   │   ├── ChemistryReportDetail.java
+│   │   │   ├── ChemistryReportListResponse.java
+│   │   │   ├── ChemistryReportRequest.java
+│   │   │   └── ChemistryReportSummary.java
+│   │   ├── entity
+│   │   │   ├── ChemistryCache.java
+│   │   │   ├── ChemistryCacheId.java
+│   │   │   └── ChemistryReport.java
+│   │   ├── enums
+│   │   │   ├── ChemistryCacheStatus.java
+│   │   │   └── ChemistryReportStatus.java
+│   │   ├── event
+│   │   │   ├── ChemistryEventPublisher.java
+│   │   │   ├── ChemistryEventSubscriber.java
+│   │   │   └── ChemistryReportIssuedEvent.java
+│   │   ├── repository
+│   │   │   ├── ChemistryCacheRepository.java
+│   │   │   └── ChemistryReportRepository.java
+│   │   └── service
+│   │       ├── ChemistryCacheService.java
+│   │       ├── ChemistryReportProcessor.java
+│   │       ├── ChemistryService.java
+│   │       └── ChemistryTxHelper.java
+│   ├── coin
+│   │   ├── controller
+│   │   │   ├── CoinApi.java
+│   │   │   └── CoinV1Controller.java
+│   │   ├── dto
+│   │   │   ├── CoinBalanceResponse.java
+│   │   │   ├── CoinHistoryResponse.java
+│   │   │   └── CoinTransactionResponse.java
+│   │   ├── entity
+│   │   │   └── CoinTransaction.java
+│   │   ├── enums
+│   │   │   └── CoinReason.java
+│   │   ├── repository
+│   │   │   └── CoinTransactionRepository.java
+│   │   └── service
+│   │       └── CoinService.java
+│   ├── colleague
+│   │   ├── controller
+│   │   │   ├── ColleagueApi.java
+│   │   │   └── ColleagueV1Controller.java
+│   │   ├── dto
+│   │   │   ├── ColleagueListResponse.java
+│   │   │   ├── ColleagueRegisterRequest.java
+│   │   │   ├── ColleagueResponse.java
+│   │   │   ├── InviteInfoResponse.java
+│   │   │   └── PeerCodeResponse.java
+│   │   ├── entity
+│   │   │   ├── Colleague.java
+│   │   │   └── PeerCode.java
+│   │   ├── repository
+│   │   │   ├── ColleagueRepository.java
+│   │   │   └── PeerCodeRepository.java
+│   │   └── service
+│   │       ├── ColleagueService.java
+│   │       └── PeerCodeService.java
+│   ├── notification
+│   │   ├── controller
+│   │   │   ├── NotificationApi.java
+│   │   │   └── NotificationV1Controller.java
+│   │   ├── dto
+│   │   │   ├── NotificationListResponse.java
+│   │   │   └── NotificationResponse.java
+│   │   ├── entity
+│   │   │   ├── ChemistryNotification.java
+│   │   │   ├── ColleagueNotification.java
+│   │   │   └── Notification.java
+│   │   ├── repository
+│   │   │   └── NotificationRepository.java
+│   │   └── service
+│   │       ├── NotificationService.java
+│   │       └── SseService.java
+│   ├── result
+│   │   ├── controller
+│   │   │   ├── ResultApi.java
+│   │   │   └── ResultV1Controller.java
+│   │   ├── dto
+│   │   │   ├── DiscBuckets.java
+│   │   │   ├── DiscScoreRequest.java
+│   │   │   ├── DiscScoreResponse.java
+│   │   │   ├── DiscScores.java
+│   │   │   ├── ResultDetailResponse.java
+│   │   │   ├── ResultListResponse.java
+│   │   │   ├── ResultSummaryResponse.java
+│   │   │   └── SaveResponse.java
+│   │   ├── entity
+│   │   │   ├── DiscCache.java
+│   │   │   ├── DiscCacheId.java
+│   │   │   ├── DiscTest.java
+│   │   │   └── Test.java
+│   │   ├── enums
+│   │   │   └── RaterType.java
+│   │   ├── repository
+│   │   │   ├── DiscCacheRepository.java
+│   │   │   ├── DiscTestRepository.java
+│   │   │   └── TestRepository.java
+│   │   └── service
+│   │       ├── DiscCacheService.java
+│   │       ├── ResultService.java
+│   │       └── ScoringService.java
+│   ├── statistics
+│   │   ├── controller
+│   │   │   ├── StatisticsApi.java
+│   │   │   └── StatisticsV1Controller.java
+│   │   ├── dto
+│   │   │   ├── BucketAverage.java
+│   │   │   ├── ComparisonResponse.java
+│   │   │   ├── DiscAverageDto.java
+│   │   │   ├── DiscBucketsDto.java
+│   │   │   ├── LatestBuckets.java
+│   │   │   ├── TrendPoint.java
+│   │   │   └── TrendResponse.java
+│   │   ├── repository
+│   │   │   └── StatisticsRepository.java
+│   │   └── service
+│   │       └── StatisticsService.java
+│   └── user
+│       ├── controller
+│       │   ├── UserApi.java
+│       │   └── UserV1Controller.java
+│       ├── dto
+│       │   ├── UpdateProfileImageResponse.java
+│       │   ├── UpdateProfileRequest.java
+│       │   └── UpdateProfileResponse.java
+│       ├── entity
+│       │   └── User.java
+│       ├── enums
+│       │   └── Gender.java
+│       ├── repository
+│       │   └── UserRepository.java
+│       └── service
+│           └── UserService.java
+└── global
+    └── exception
+        └── GlobalExceptionHandler.java
 ```
 
 ---
 
 ### 패키지 구조 설계 원칙
 
-| 원칙             | 내용                                                                                                       |
-| ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| 도메인 중심 분리 | 기능별로 `domain/` 하위에 패키지를 나눔. 레이어(controller/service/repository)는 각 도메인 내부에 위치     |
-| 의존 방향        | Controller → Service → Repository. 역방향 참조 금지                                                        |
-| 트랜잭션 경계    | Service 레이어에서만 `@Transactional` 선언                                                                 |
-| 비동기 격리      | `@Async` 메서드는 별도 Service 클래스(`ChemistryLlmService`, `SseService`)로 분리하여 트랜잭션 경계 명확화 |
-| 환경별 전환      | `StorageService` 인터페이스로 로컬/S3 구현체를 분리. `@Profile`로 환경별 Bean 등록                         |
-| 컨트롤러 버저닝  | 인터페이스({도메인}Api)와 구현체({도메인}V1Controller)로 분리.                                             |
-|                  | Swagger 애노테이션은 인터페이스에 집중. 구현체는 로직만 담당.                                              |
-|                  | V2 추가 시 {도메인}V2Controller implements {도메인}Api.                                                    |
+| 원칙             | 내용                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------ |
+| 도메인 중심 분리 | 기능별로 `domain/` 하위에 패키지를 나눔. 레이어(controller/service/repository)는 각 도메인 내부에 위치 |
+| 의존 방향        | Controller → Service → Repository. 역방향 참조 금지                                                    |
+| 트랜잭션 경계    | Service 레이어에서만 `@Transactional` 선언                                                             |
+| 비동기 격리      | @Async + @TransactionalEventListener는 ChemistryReportProcessor에 격리.                                |
+|                  | REQUIRES_NEW 트랜잭션은 ChemistryTxHelper 별도 빈으로 분리 (self-invocation 방지)                      |
+| 환경별 전환      | `StorageService` 인터페이스로 로컬/S3 구현체를 분리. `@Profile`로 환경별 Bean 등록                     |
+| 컨트롤러 버저닝  | 인터페이스({도메인}Api)와 구현체({도메인}V1Controller)로 분리.                                         |
+|                  | Swagger 애노테이션은 인터페이스에 집중. 구현체는 로직만 담당.                                          |
+|                  | V2 추가 시 {도메인}V2Controller implements {도메인}Api.                                                |
 
 ---
 

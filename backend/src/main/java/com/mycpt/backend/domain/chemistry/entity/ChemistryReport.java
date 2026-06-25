@@ -81,13 +81,13 @@ public class ChemistryReport {
     private LocalDateTime createdAt;
 
     // chemistry_cache 락 이후 INSERT. status=GENERATING으로 시작
-    public static ChemistryReport create(User requester, User partner, TestType testType) {
+    public static ChemistryReport create(User requester, User partner, TestType testType, ChemistryCacheId cacheId) {
         ChemistryReport cr = new ChemistryReport();
         cr.requester = requester;
         cr.partner = partner;
         cr.testType = testType;
         cr.status = ChemistryReportStatus.GENERATING;
-        cr.cacheId = null;
+        cr.cacheId = cacheId;
         cr.createdAt = LocalDateTime.now();
         return cr;
     }

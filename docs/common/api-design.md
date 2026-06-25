@@ -783,7 +783,7 @@ Spring Security JWT 기반.
 ### `POST /chemistry-reports` — 케미 보고서 발행
 
 - 인증: 회원 전용
-- 설명: 대상 동료와의 케미 보고서를 발행한다. 코인 1개 차감 후 `@Async`로 실시간 LLM 호출. 발행 완료 시 SSE로 발행자에게 푸시하고 상대방에게 인앱 알림을 전송한다.
+- 설명: 대상 동료와의 케미 보고서를 발행한다. 동료 관계 검증 + 버킷 조회 후 코인 1개 차감. chemistry_reports INSERT 후 @TransactionalEventListener(AFTER_COMMIT)으로 비동기 처리 트리거. Lazy Caching + 중복 LLM 호출 방지(SELECT FOR UPDATE + Redis Pub/Sub) 적용. 발행 완료 시 SSE로 발행자·구독자 모두에게 푸시, 상대방에게 인앱 알림 전송.
 
 **요청 바디**
 
@@ -814,6 +814,69 @@ Spring Security JWT 기반.
 | `401`                    | 인증되지 않은 요청                     |
 | `403`                    | 동료 관계가 아닌 사용자                |
 | `422 INSUFFICIENT_COINS` | 코인 부족                              |
+
+#### 동시성 제어 흐름
+
+```mermaid
+sequenceDiagram
+    participant C1 as 클라이언트 A (발행자)
+    participant C2 as 클라이언트 B (구독자)
+    participant SVC as ChemistryService
+    participant PROC as ChemistryReportProcessor (@Async)
+    participant TX as ChemistryCacheLockTx
+    participant DB as MySQL
+    participant LLM as Anthropic LLM
+    participant REDIS as Redis Pub/Sub
+    participant SSE as SseService
+
+    C1->>SVC: POST /chemistry-reports
+    C2->>SVC: POST /chemistry-reports (동일 버킷 조합)
+
+    SVC->>DB: chemistry_reports INSERT (GENERATING) [A]
+    SVC->>DB: chemistry_reports INSERT (GENERATING) [B]
+    SVC-->>C1: 202 Accepted
+    SVC-->>C2: 202 Accepted
+
+    SVC->>PROC: process(reportId_A) @Async
+    SVC->>PROC: process(reportId_B) @Async
+
+    par 발행자 경로 [A]
+        PROC->>TX: acquireLockAndDecideRole()
+        TX->>DB: SELECT FOR UPDATE → status=NULL
+        TX->>DB: UPDATE status=GENERATING
+        TX-->>PROC: COMMIT (락 해제), NULL 반환
+        PROC->>LLM: LLM 호출
+    and 구독자 경로 [B]
+        PROC->>TX: acquireLockAndDecideRole()
+        Note over TX,DB: 발행자 커밋 후 락 획득
+        TX->>DB: SELECT FOR UPDATE → status=GENERATING
+        TX->>PROC: registerWaiter() 콜백 실행
+        Note over PROC: waitingMap에 (userId_B, reportId_B, latch) 등록
+        TX-->>PROC: COMMIT (락 해제), GENERATING 반환
+        PROC->>PROC: latch.await() 블로킹
+    end
+
+    LLM-->>PROC: 보고서 텍스트 반환
+
+    PROC->>TX: saveCompletedCache()
+    TX->>DB: SELECT FOR UPDATE → UPDATE status=READY, report 저장
+    TX-->>PROC: COMMIT (락 해제)
+
+    PROC->>REDIS: publishReady(cacheId)
+    REDIS-->>PROC: onMessage() [모든 인스턴스에 브로드캐스트]
+
+    PROC->>PROC: releaseWaiters() → latch.countDown()
+    Note over PROC: 구독자 latch.await() 즉시 반환
+
+    PROC->>DB: chemistry_reports UPDATE status=READY [A]
+    PROC->>DB: chemistry_reports UPDATE status=READY [B]
+
+    PROC->>SSE: pushChemistryReady(userId_A, reportId_A)
+    PROC->>SSE: pushChemistryReady(userId_B, reportId_B)
+
+    SSE-->>C1: SSE 이벤트 (보고서 생성 완료)
+    SSE-->>C2: SSE 이벤트 (보고서 생성 완료)
+```
 
 ---
 

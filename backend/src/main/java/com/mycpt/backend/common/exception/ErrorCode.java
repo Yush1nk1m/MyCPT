@@ -21,6 +21,7 @@ public enum ErrorCode {
     TOKEN_USED(HttpStatus.BAD_REQUEST, "이미 사용된 토큰입니다."),
     SELF_INVITE(HttpStatus.BAD_REQUEST, "본인의 초대 코드는 사용할 수 없습니다."),
     INSUFFICIENT_COINS(HttpStatus.BAD_REQUEST, "코인이 부족합니다."),
+    NO_RESULT(HttpStatus.BAD_REQUEST, "최근 성향 검사 결과가 없습니다."),
 
     // ── 403 Forbidden ────────────────────────────────────────────────────────
     FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),

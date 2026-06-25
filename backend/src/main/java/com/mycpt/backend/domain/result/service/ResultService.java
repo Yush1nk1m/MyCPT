@@ -3,6 +3,7 @@ package com.mycpt.backend.domain.result.service;
 import com.mycpt.backend.common.exception.BusinessException;
 import com.mycpt.backend.common.exception.ErrorCode;
 import com.mycpt.backend.domain.result.dto.*;
+import com.mycpt.backend.domain.result.entity.DiscCacheId;
 import com.mycpt.backend.domain.result.entity.DiscTest;
 import com.mycpt.backend.domain.result.enums.RaterType;
 import com.mycpt.backend.domain.result.repository.DiscTestRepository;
@@ -84,13 +85,21 @@ public class ResultService {
         List<DiscTest> page = hasNext ? rows.subList(0, size) : rows;
 
         List<ResultSummaryResponse> results = page.stream()
-                .map(dt -> new ResultSummaryResponse(
-                        dt.getId(),
-                        dt.getRaterType(),
-                        dt.getLabel(),
-                        new DiscBuckets(dt.getDBucket(), dt.getIBucket(), dt.getSBucket(), dt.getCBucket()),
-                        dt.getCreatedAt()
-                ))
+                .map(dt -> {
+                    DiscCacheId cacheId = dt.getCacheId();
+                    return new ResultSummaryResponse(
+                            dt.getId(),
+                            dt.getRaterType(),
+                            dt.getLabel(),
+                            new DiscBuckets(
+                                    cacheId.getD(),
+                                    cacheId.getI(),
+                                    cacheId.getS(),
+                                    cacheId.getC()
+                            ),
+                            dt.getCreatedAt()
+                    );
+                })
                 .toList();
 
         Long nextCursor = hasNext ? page.getLast().getId() : null;
@@ -112,8 +121,12 @@ public class ResultService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
+        DiscCacheId cacheId = dt.getCacheId();
         ScoringService.Buckets buckets = new ScoringService.Buckets(
-                dt.getDBucket(), dt.getIBucket(), dt.getSBucket(), dt.getCBucket()
+                cacheId.getD(),
+                cacheId.getI(),
+                cacheId.getS(),
+                cacheId.getC()
         );
         String report = discCacheService.getReport(buckets);
 
@@ -122,7 +135,7 @@ public class ResultService {
                 dt.getRaterType(),
                 dt.getLabel(),
                 new DiscScores(dt.getDScore(), dt.getIScore(), dt.getSScore(), dt.getCScore()),
-                new DiscBuckets(dt.getDBucket(), dt.getIBucket(), dt.getSBucket(), dt.getCBucket()),
+                new DiscBuckets(cacheId.getD(), cacheId.getI(), cacheId.getS(), cacheId.getC()),
                 report,
                 dt.getCreatedAt()
         );

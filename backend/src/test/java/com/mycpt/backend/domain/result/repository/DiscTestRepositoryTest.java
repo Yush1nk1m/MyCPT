@@ -18,7 +18,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 
-@Sql(scripts = "/sql/disc_cache_seed.sql")
 @DisplayName("DiscTestRepository 슬라이스 테스트")
 class DiscTestRepositoryTest extends JpaTestSupport {
 

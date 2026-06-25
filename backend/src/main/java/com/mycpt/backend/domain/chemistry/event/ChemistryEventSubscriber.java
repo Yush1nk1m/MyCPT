@@ -3,6 +3,7 @@ package com.mycpt.backend.domain.chemistry.event;
 import com.mycpt.backend.domain.chemistry.entity.ChemistryCacheId;
 import com.mycpt.backend.domain.chemistry.service.ChemistryCacheService;
 import com.mycpt.backend.domain.chemistry.service.ChemistryCacheService.WaitingEntry;
+import com.mycpt.backend.domain.notification.service.SseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;

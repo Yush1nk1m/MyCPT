@@ -2,25 +2,21 @@ package com.mycpt.backend.domain.chemistry.service;
 
 import com.mycpt.backend.domain.chemistry.entity.ChemistryCacheId;
 import com.mycpt.backend.domain.chemistry.entity.ChemistryReport;
+import com.mycpt.backend.domain.chemistry.event.ChemistryReportIssuedEvent;
 import com.mycpt.backend.domain.chemistry.repository.ChemistryReportRepository;
 import com.mycpt.backend.domain.notification.service.NotificationService;
-import com.mycpt.backend.domain.result.enums.RaterType;
 import com.mycpt.backend.domain.statistics.dto.LatestBuckets;
-import com.mycpt.backend.domain.statistics.repository.StatisticsRepository;
 import com.mycpt.backend.domain.user.entity.User;
-import com.mycpt.backend.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
  * 케미 보고서 비동기 생성 프로세서.
@@ -43,60 +39,29 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ChemistryReportProcessor {
 
+    private final ChemistryTxHelper txHelper;
     private final ChemistryReportRepository chemistryReportRepository;
-    private final StatisticsRepository statisticsRepository;
     private final ChemistryCacheService chemistryCacheService;
     private final NotificationService notificationService;
 
-    @Async
-    @Retryable(
-            retryFor = Exception.class,
-            noRetryFor = IllegalStateException.class,
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 2000, multiplier = 2)
-    )
-    @Transactional
-    public void process(Long reportId) {
+    public void process(Long reportId, LatestBuckets requesterBuckets, LatestBuckets partnerBuckets) {
         ChemistryReport report = chemistryReportRepository.findByIdWithUsers(reportId)
                 .orElseThrow(() -> new IllegalStateException("ChemistryReport 없음: " + reportId));
 
+        ChemistryCacheId cacheId = report.getCacheId();
         User requester = report.getRequester();
         User partner = report.getPartner();
 
-        List<LatestBuckets> requesterBuckets = statisticsRepository.findLatestBuckets(
-                requester.getId(), RaterType.SELF, PageRequest.of(0, 1));
-        List<LatestBuckets> partnerBuckets = statisticsRepository.findLatestBuckets(
-                partner.getId(), RaterType.SELF, PageRequest.of(0, 1));
-
-        if (requesterBuckets.isEmpty() || partnerBuckets.isEmpty()) {
-            throw new IllegalStateException("검사 결과 없음. reportId=" + reportId);
-        }
-
-        LatestBuckets rb = requesterBuckets.get(0);
-        LatestBuckets pb = partnerBuckets.get(0);
-
-        ChemistryCacheId cacheId = new ChemistryCacheId(
-                rb.dBucket(), rb.iBucket(), rb.sBucket(), rb.cBucket(),
-                pb.dBucket(), pb.iBucket(), pb.sBucket(), pb.cBucket()
-        );
-
-        // 발행자/구독자 분기 - 보고서 텍스트 반환 (캐시 히트 or LLM 생성 or 구독 대기)
-        chemistryCacheService.getOrGenerate(cacheId, requester.getId(), reportId, rb, pb);
+        // 버킷은 호출자에서 이미 조회됨 - 재조회 없음
+        chemistryCacheService.getOrGenerate(cacheId, requester.getId(), reportId, requesterBuckets, partnerBuckets);
 
         // chemistry_reports READY 업데이트
-        completeReport(reportId, cacheId);
-
+        txHelper.completeReport(reportId, cacheId);
         // 상대방에게 인앱 알림 전송
         // SSE push는 ChemistryEventSubscriber가 Pub/Sub 수신 후 처리
         notificationService.sendChemistryNotification(partner, report, requester);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void completeReport(Long reportId, ChemistryCacheId cacheId) {
-        chemistryReportRepository.findById(reportId)
-                .orElseThrow(() -> new IllegalStateException("ChemistryReport 없음: " + reportId))
-                .complete(cacheId);
-    }
 
     @Recover
     @Transactional
@@ -109,5 +74,17 @@ public class ChemistryReportProcessor {
                     log.warn("케미 보고서 실패 처리 완료. reportId={}, requesterId={}",
                             r.getId(), r.getRequester().getId());
                 });
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async
+    @Retryable(
+            retryFor = Exception.class,
+            noRetryFor = IllegalStateException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 2000, multiplier = 2)
+    )
+    public void handle(ChemistryReportIssuedEvent event) {
+        process(event.reportId(), event.requesterBuckets(), event.partnerBuckets());
     }
 }

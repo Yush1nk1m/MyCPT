@@ -24,8 +24,8 @@ public interface StatisticsRepository extends JpaRepository<DiscTest, Long> {
      * List<>로 받아서 empty -> my.buckets = null 처리
      */
     @Query("""
-        SELECT dt.dBucket AS dBucket, dt.iBucket AS iBucket,
-               dt.sBucket AS sBucket, dt.cBucket AS cBucket
+        SELECT dt.cacheId.d AS dBucket, dt.cacheId.i AS iBucket,
+               dt.cacheId.s AS sBucket, dt.cacheId.c AS cBucket
         FROM DiscTest dt
         WHERE dt.user.id = :userId
             AND dt.raterType = :raterType
@@ -45,7 +45,7 @@ public interface StatisticsRepository extends JpaRepository<DiscTest, Long> {
      */
     @Query("""
         SELECT new com.mycpt.backend.domain.statistics.dto.BucketAverage(
-            AVG(dt.dBucket), AVG(dt.iBucket), AVG(dt.sBucket), AVG(dt.cBucket), COUNT(dt)
+            AVG(dt.cacheId.d), AVG(dt.cacheId.i), AVG(dt.cacheId.s), AVG(dt.cacheId.c), COUNT(dt)
         )
         FROM DiscTest dt
         JOIN dt.user u
@@ -74,7 +74,7 @@ public interface StatisticsRepository extends JpaRepository<DiscTest, Long> {
      */
     @Query("""
         SELECT new com.mycpt.backend.domain.statistics.dto.TrendPoint(
-            dt.dBucket, dt.iBucket, dt.sBucket, dt.cBucket, dt.createdAt
+            dt.cacheId.d, dt.cacheId.i, dt.cacheId.s, dt.cacheId.c, dt.createdAt
         )
         FROM DiscTest dt
         WHERE dt.user.id = :userId

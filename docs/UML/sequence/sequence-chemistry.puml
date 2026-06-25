@@ -45,107 +45,228 @@ skinparam note {
 }
 
 actor "발행자 (회원 A)" as UserA
+actor "구독자 (회원 C)\n동일 버킷 조합" as UserC
 actor "상대방 (회원 B)" as UserB
 participant "Next.js" as Client
-participant "ChemistryController" as Controller
-participant "CoinService" as Coin
-participant "ChemistryService\n(@Async)" as Chemistry
-participant "LlmService" as Llm
+participant "ChemistryV1Controller" as Controller
+participant "ChemistryService" as Chemistry
+participant "ChemistryReportProcessor\n(@Async)" as Processor
+participant "ChemistryCacheService" as CacheService
+participant "ChemistryTxHelper\n(REQUIRES_NEW)" as TxHelper
+participant "AnthropicLlmClient" as Llm
+participant "ChemistryEventPublisher" as Publisher
+participant "ChemistryEventSubscriber" as Subscriber
 participant "SseService" as Sse
 participant "NotificationService" as Notify
 database "MySQL" as DB
+database "Redis Pub/Sub" as Redis
 
 == SSE 연결 수립 ==
 
 UserA -> Client : 페이지 진입
 Client -> Sse : GET /notifications/stream
 note right of Sse
-  SseEmitter 생성 후 보관
+  SseEmitter 생성 후
+  Map<userId, SseEmitter>에 보관
   Last-Event-ID 기반 재전송 지원
 end note
 Sse --> Client : SSE 연결 유지 (text/event-stream)
 
-== 케미 보고서 발행 요청 ==
+== 케미 보고서 발행 요청 (발행자 A) ==
 
 UserA -> Client : 동료 목록에서 B 선택\n'케미 보고서 발행' 클릭
 Client -> Controller : POST /chemistry-reports\n{ partnerId: B }
 activate Controller
 
-Controller -> Coin : checkAndDeduct(userId: A)
-activate Coin
+Controller -> Chemistry : issue(requesterId: A, partnerId: B)
+activate Chemistry
 
-alt 코인 부족 (coins == 0)
-  Coin --> Controller : INSUFFICIENT_COINS
-  Controller --> Client : 422 INSUFFICIENT_COINS
-  Client --> UserA : 코인 부족 안내
-else 코인 충분
-  Coin -> DB : UPDATE users SET coins = coins - 1
-  Coin -> DB : INSERT coin_transactions\n(amount=-1, reason=CHEMISTRY_REPORT)
-  Coin --> Controller : 차감 완료
-  deactivate Coin
+Chemistry -> DB : existsByPair(A, B) — 동료 관계 검증
+DB --> Chemistry : true
 
-  Controller -> Chemistry : issueAsync(requesterId: A, partnerId: B)
-  note right of Chemistry
-    @Async — 별도 스레드에서 실행
-    호출 즉시 반환
+Chemistry -> DB : findLatestBuckets(A) — 버킷 조회
+DB --> Chemistry : A 버킷값 (rd, ri, rs, rc)
+
+Chemistry -> DB : findLatestBuckets(B) — 버킷 조회
+DB --> Chemistry : B 버킷값 (pd, pi, ps, pc)
+
+alt A 또는 B의 자기 평정 결과 없음
+  Chemistry --> Controller : BusinessException(NO_RESULT)
+  Controller --> Client : 400 NO_RESULT
+  Client --> UserA : 검사 결과 없음 안내
+else 두 사람 모두 결과 있음
+
+  Chemistry -> DB : deduct(A) — 코인 차감
+  note right of DB
+    UPDATE users SET coins = coins - 1
+    INSERT coin_transactions (amount=-1)
   end note
+  DB --> Chemistry : 차감 완료
+
+  Chemistry -> DB : INSERT chemistry_reports\n(requesterId=A, partnerId=B,\nstatus=GENERATING, cacheId 세팅)
+  DB --> Chemistry : reportId
+
+  Chemistry -> Chemistry : publishEvent(\n  ChemistryReportIssuedEvent\n)
+  note right of Chemistry
+    @TransactionalEventListener(AFTER_COMMIT)
+    트랜잭션 커밋 완료 후 이벤트 발행 보장
+    커밋 전 @Async 트리거 문제 원천 차단
+  end note
+
+  Chemistry --> Controller : void
+  deactivate Chemistry
 
   Controller --> Client : 202 Accepted
   deactivate Controller
   Client --> UserA : "보고서 생성 중..." 안내
 
-  == 비동기 LLM 호출 (별도 스레드) ==
+  == 비동기 처리 — 발행자 경로 (트랜잭션 커밋 후 별도 스레드) ==
 
-  activate Chemistry
-  Chemistry -> DB : SELECT 최신 자기 평정 버킷값\n(A의 d,i,s,c + B의 d,i,s,c)
-  DB --> Chemistry : A 버킷값, B 버킷값
+  activate Processor
+  note right of Processor
+    @Async 별도 스레드
+    @Retryable(maxAttempts=3, backoff=2s×2)
+  end note
 
-  alt A 또는 B의 검사 결과 없음
-    Chemistry -> Notify : sendNotification(A, "상대방 검사 결과 없음")
-    Chemistry -> Sse : push(userId: A, event: ERROR)
-  else 두 사람 모두 결과 있음
-    Chemistry -> Llm : generateChemistryReport(A버킷값, B버킷값)
-    activate Llm
-    Llm -> Llm : 케미 프롬프트 구성\n(6개 섹션 요청)
-    note right of Llm
-      섹션 구성:
-      1. 두 사람의 성향 요약
-      2. 협업 시너지
-      3. 갈등 포인트
-      4. 소통 방식 차이
-      5. 서로에게 맞는 역할
-      6. 협업 팁
-    end note
-    Llm --> Chemistry : Markdown 보고서
-    deactivate Llm
+  Processor -> TxHelper : acquireLockAndDecideRole(\n  cacheId, ttlDays,\n  onSubscriber: registerWaiter()\n)
+  activate TxHelper
+  note right of TxHelper
+    @Transactional(REQUIRES_NEW)
+    별도 빈으로 분리 — self-invocation 방지
+  end note
 
-    Chemistry -> DB : INSERT chemistry_reports\n(requesterId, partnerId, report)
-    DB --> Chemistry : reportId
+  TxHelper -> DB : SELECT FOR UPDATE\nWHERE chemistry_cache.id = cacheId
+  DB --> TxHelper : status = NULL (미생성)
 
-    == 발행자 SSE 푸시 ==
-    Chemistry -> Sse : push(userId: A,\nevent: CHEMISTRY_COMPLETE,\ndata: { reportId })
-    activate Sse
-    Sse --> Client : SSE 이벤트 전송
-    deactivate Sse
-    Client --> UserA : 토스트 알림\n"케미 보고서가 완성됐어요!"
+  TxHelper -> DB : UPDATE chemistry_cache\nSET status = 'GENERATING'
+  TxHelper --> Processor : COMMIT (락 즉시 해제), NULL 반환
+  deactivate TxHelper
 
-    == 상대방 인앱 알림 ==
-    Chemistry -> Notify : sendNotification(userId: B,\ntype: CHEMISTRY_REPORT,\ndata: { reportId })
-    activate Notify
-    Notify -> DB : INSERT notifications\n(userId: B, ...)
-    DB --> Notify : notificationId
+  Processor -> Llm : complete(prompt)
+  activate Llm
+  note right of Llm
+    섹션 구성:
+    1. 두 사람의 성향 요약
+    2. 협업 시너지
+    3. 갈등 포인트
+    4. 소통 방식 차이
+    5. 서로에게 맞는 역할
+    6. 협업 팁
+  end note
+  Llm --> Processor : Markdown 보고서
+  deactivate Llm
 
-    alt B가 SSE 연결 중
-      Notify -> Sse : push(userId: B, event: NEW_NOTIFICATION)
-      Sse --> UserB : SSE 이벤트 전송
-      UserB -> Client : 알림 클릭
-      Client -> DB : DELETE /notifications/{id}
-      note right of DB : 알림 클릭 시 즉시 삭제
-    end
+  Processor -> TxHelper : saveCompletedCache(cacheId, report)
+  activate TxHelper
+  TxHelper -> DB : SELECT FOR UPDATE\nWHERE chemistry_cache.id = cacheId
+  TxHelper -> DB : UPDATE chemistry_cache\nSET status='READY', report=?, created_at=NOW()
+  TxHelper --> Processor : COMMIT (락 해제)
+  note right of TxHelper
+    READY 커밋 선행 보장
+    이후 신규 요청은 READY를 보고 즉시 반환
+  end note
+  deactivate TxHelper
 
-    deactivate Notify
+  Processor -> Publisher : publishReady(cacheId)
+  Publisher -> Redis : PUBLISH chemistry:{버킷 조합} "READY"
+
+  Processor -> TxHelper : completeReport(reportId_A, cacheId)
+  activate TxHelper
+  TxHelper -> DB : UPDATE chemistry_reports\nSET status='READY'\nWHERE id = reportId_A
+  TxHelper --> Processor : COMMIT
+  deactivate TxHelper
+
+  Processor -> Notify : sendChemistryNotification(B, report, A)
+  Notify -> DB : INSERT chemistry_notifications\n(userId=B, referenceId=reportId_A)
+
+  == Redis Pub/Sub 수신 — 모든 인스턴스 브로드캐스트 ==
+
+  Redis --> Subscriber : onMessage("READY")
+  activate Subscriber
+
+  Subscriber -> CacheService : releaseWaiters(cacheId)
+  note right of CacheService
+    waitingMap에서 cacheId 키 제거
+    각 WaitingEntry.latch.countDown()
+    → 구독자 스레드 latch.await() 즉시 반환
+  end note
+  CacheService --> Subscriber : List<WaitingEntry> (userId, reportId)
+
+  Subscriber -> Sse : pushChemistryReady(userId_A, reportId_A)
+  Sse --> Client : SSE 이벤트\nevent: CHEMISTRY_REPORT\ndata: { reportId, message: "보고서가 발행됐어요." }
+  Client --> UserA : 토스트 알림 + 보고서 카드 갱신
+
+  alt B가 SSE 연결 중
+    Subscriber -> Sse : pushChemistryReady(userId_B, reportId_B)
+    Sse --> UserB : SSE 이벤트 전송
   end
-  deactivate Chemistry
+
+  deactivate Subscriber
+  deactivate Processor
+
 end
+
+== 동일 버킷 조합 동시 요청 — 구독자 경로 (회원 C) ==
+
+UserC -> Controller : POST /chemistry-reports\n{ partnerId: B }
+note right of Controller
+  C의 버킷값 = A와 동일
+  → 동일 cacheId
+end note
+
+Controller -> Chemistry : issue(requesterId: C, partnerId: B)
+activate Chemistry
+Chemistry -> DB : INSERT chemistry_reports\n(requesterId=C, partnerId=B,\nstatus=GENERATING, cacheId 세팅)
+Chemistry -> Chemistry : publishEvent(ChemistryReportIssuedEvent)
+Chemistry --> Controller : void
+deactivate Chemistry
+Controller --> Client : 202 Accepted
+
+activate Processor
+Processor -> TxHelper : acquireLockAndDecideRole(\n  cacheId, ttlDays,\n  onSubscriber: registerWaiter(C, reportId_C)\n)
+activate TxHelper
+TxHelper -> DB : SELECT FOR UPDATE
+DB --> TxHelper : status = GENERATING
+
+TxHelper -> CacheService : registerWaiter(cacheId, userId_C, reportId_C)
+note right of CacheService
+  waitingMap.computeIfAbsent(cacheId, CopyOnWriteArrayList::new)
+           .add(WaitingEntry(userId_C, reportId_C, latch))
+  CopyOnWriteArrayList — 다중 구독자 동시 add 안전
+  락 트랜잭션 내 등록 — releaseWaiters 경쟁 원천 차단
+end note
+
+TxHelper --> Processor : COMMIT (락 해제), GENERATING 반환
+deactivate TxHelper
+
+Processor -> Processor : latch.await() 블로킹
+note right of Processor
+  park() — CPU 소비 없음
+  countDown() 선행 시에도 즉시 반환 (타이밍 안전)
+end note
+
+note right of Redis
+  발행자가 publishReady() 호출
+  → Subscriber.onMessage() 수신
+  → releaseWaiters() → latch.countDown()
+  → 구독자 latch.await() 즉시 반환
+end note
+
+Processor -> TxHelper : completeReport(reportId_C, cacheId)
+activate TxHelper
+TxHelper -> DB : UPDATE chemistry_reports\nSET status='READY'\nWHERE id = reportId_C
+TxHelper --> Processor : COMMIT
+deactivate TxHelper
+
+deactivate Processor
+
+== 실패 처리 (@Recover) ==
+
+note over Processor
+  @Retryable 3회 소진 시 @Recover 실행
+  chemistry_reports.status = ERROR
+  TODO: 코인 환불
+  구독자에게 pushChemistryError() SSE 전송
+end note
 
 @enduml

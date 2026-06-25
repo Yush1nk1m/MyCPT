@@ -62,12 +62,13 @@ rectangle "MyCPT 시스템" {
     usecase "동료 초대 코드 생성\n대문자+숫자 8자리 · 다회용 · 7일 갱신" as UC_Code
     usecase "동료 초대 및 등록\n링크 공유 또는 코드 직접 입력\n수락 시 양방향 관계 생성" as UC_ColleagueRegister
     usecase "타인 평정 링크 생성\n'나는 어떤 사람인가요?'\n일회용 토큰 · 7일 만료 · 라벨 입력" as UC_AssessLink
-    usecase "동료 케미 보고서 발행\n동료 목록에서 대상 선택 · 6개 섹션\n@Async LLM · SSE 완료 푸시" as UC_Compat
+    usecase "동료 케미 보고서 발행\n동료 목록에서 대상 선택 · 6개 섹션\nLazy Caching + 중복 방지 · SSE 푸시" as UC_Compat
     usecase "인앱 알림 확인\n클릭 시 즉시 삭제" as UC_Notify
   }
 
   package "시스템 내부" #FFF7ED {
-    usecase "LLM 캐시 조회 / 저장\nD · I · S · C 버킷 기반 (3⁴ = 81)\n온디맨드 만료 · 행 UPDATE 갱신" as UC_Cache
+    usecase "개인 분석 LLM 캐시 조회/저장\nD · I · S · C 버킷 기반 (3⁴ = 81)\n온디맨드 만료 · 행 UPDATE 갱신" as UC_Cache
+    usecase "케미 보고서 LLM 캐시 조회/저장\n버킷 조합 기반 (3⁴ × 3⁴ = 6,561)\nSELECT FOR UPDATE · Redis Pub/Sub 중복 방지" as UC_ChemistryCache
     usecase "만료 동료 코드 삭제\n만료 평정 토큰 삭제 통합 실행" as UC_CleanBatch
   }
 }
@@ -92,24 +93,41 @@ Member --> UC_Notify
 
 Batch  --> UC_CleanBatch : 주기적 실행
 
-UC_Result ..> UC_Cache  : <<include>>
-UC_Save   ..> UC_Login  : <<include>>
-UC_Compat ..> UC_Notify : <<include>>
+UC_Result  ..> UC_Cache          : <<include>>
+UC_Save    ..> UC_Login          : <<include>>
+UC_Compat  ..> UC_ChemistryCache : <<include>>
+UC_Compat  ..> UC_Notify         : <<include>>
 
 note right of UC_Cache
-  캐시 미스 → LLM 호출 → INSERT
+  캐시 미스 → LLM 호출 → UPDATE
   캐시 히트 + 유효 → 즉시 반환
   캐시 히트 + 만료 → LLM 호출 → UPDATE
   보고서 원문에 이름 미포함 저장
   렌더링 시 이름 삽입
 end note
 
+note right of UC_ChemistryCache
+  6,561행 사전 삽입 (애플리케이션 시작 시)
+  캐시 미스(NULL) → 발행자: SELECT FOR UPDATE
+    → GENERATING 전환 즉시 커밋 → LLM 호출
+    → READY 커밋 → Redis Pub/Sub 발행
+  캐시 생성 중(GENERATING) → 구독자:
+    → Redis Pub/Sub 구독 · CountDownLatch 대기
+    → 완료 이벤트 수신 시 SSE push
+  캐시 히트(READY + 유효) → 즉시 반환
+  캐시 만료(READY + 만료) → 발행자 재진입
+  보고서 원문에 이름 미포함 저장
+end note
+
 note right of UC_Compat
-  캐싱 없이 매번 실시간 LLM 호출 (@Async)
+  @TransactionalEventListener(AFTER_COMMIT)으로
+  트랜잭션 커밋 후 비동기 처리 트리거 보장
   발행 즉시 202 반환 → 완료 시 SSE 푸시
-  DISC 버킷 스냅샷 미저장 (보고서 텍스트로 충분)
+  발행자·구독자 모두 SSE push 수신
+  상대방에게 인앱 알림 전송
   코인 충전: 초기 3개 지급
   이후 24h마다 +1 (온디맨드), 최대 3개
+  실패 시 코인 자동 환불
 end note
 
 note right of UC_Code
@@ -137,7 +155,7 @@ end note
 note bottom of UC_Save
   sessionStorage의 DISC 원점수를
   POST /results 로 전송
-  서버가 버킷값 산출 후 test_results INSERT
+  서버가 버킷값 산출 후 disc_tests INSERT
 end note
 
 note right of UC_Stats
