@@ -26,18 +26,20 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * 공통 시드가 없으므로 베이스 클래스에 @Sql을 두지 않는다.
  */
 @DataJpaTest
-@Testcontainers
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public abstract class JpaTestSupport {
 
     // static: 상속받는 모든 테스트 클래스가 컨테이너 1개를 공유
     // IntegrationTestSupport 패턴과 동일
-    @Container
     static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName("mycpt_test")
             .withUsername("test")
             .withPassword("test");
+
+    static {
+        MYSQL.start();
+    }
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
