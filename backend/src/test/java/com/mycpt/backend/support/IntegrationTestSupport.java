@@ -1,5 +1,8 @@
 package com.mycpt.backend.support;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -12,6 +15,14 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @ActiveProfiles("test")
 @Testcontainers
 public abstract class IntegrationTestSupport {
+
+    @Autowired
+    private DatabaseCleaner databaseCleaner;
+
+    @AfterEach
+    void clearDatabase() {
+        databaseCleaner.clear();
+    }
 
     // static: 테스트 클래스 전체에서 컨테이너 1개 재사용 (매 테스트마다 새로 띄우지 않음)
     static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")

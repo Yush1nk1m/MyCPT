@@ -1,7 +1,7 @@
 # MyCPT 테스트 설계 문서
 
-**문서 버전**: v0.8
-**작성일**: '26.06.25.
+**문서 버전**: v0.9
+**작성일**: '26.06.28.
 **작성자**: 김유신
 
 ---
@@ -18,6 +18,7 @@
 | v0.6 | §10 Chemistry 도메인 테스트 케이스 추가 (UT 7건, ST 6건, IT 5건).                                                                                                                                                                                                                                                              | '26.06.24. |
 | v0.7 | §10 Chemistry 도메인 테스트 케이스 전면 재작성. ChemistryCacheLockTx 트랜잭션 격리 IT 추가 (Self-invocation 해결 검증). ChemistryCache 엔티티 UT 상태전이 케이스 교체 (create/refresh → startGenerating/complete/refresh). Lazy Caching IT 3건 + Duplication Defense IT 2건 추가. ChemistryCacheStatus 신규 enum UT 추가.      | '26.06.25. |
 | v0.8 | §10 Chemistry 도메인 전면 재작성. ChemistryTxHelper(구 ChemistryCacheLockTx) 네이밍 변경 반영. `ChemistryReport.create(cacheId)` 시그니처 변경 반영 (생성 시점 cacheId 주입). `completeReport()` ChemistryTxHelper 이관 반영. ChemistryTxHelper IT 케이스 3건으로 확장. Lazy Caching IT 3건 + Duplication Defense IT 2건 확정. | '26.06.25. |
+| v0.9 | §10 Chemistry 도메인: 캐시만료경계 케이스 제거 (구현 세부사항 검증으로 IT 목적 부적합). 동시요청 2개 케이스 제거 (3개 케이스가 포함 관계). @TransactionalEventListener AFTER_COMMIT 검증 섹션 신규 추가.                                                                                                                       | '26.06.28. |
 
 ---
 
@@ -445,10 +446,10 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 > `AnthropicLlmClient` `@MockitoBean` — `Thread.sleep(300)` 딜레이로 경쟁 구간 확보.
 > `CountDownLatch(1)`로 두 스레드 동시 출발.
 
-| Test ID                                             | 행위                             | 상황                                                                            |
-| --------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------- |
-| `IT-ChemistryCacheSvc-동시요청-LLM단일호출`         | `process()` 2개 스레드 동시 실행 | 동일 버킷 조합 → LLM 1회 호출, `chemistry_reports` 2건 모두 `status=READY`      |
-| `IT-ChemistryCacheSvc-다른버킷동시요청-LLM각각호출` | `process()` 2개 스레드 동시 실행 | 서로 다른 버킷 조합 → LLM 2회 호출, `chemistry_reports` 2건 모두 `status=READY` |
+| Test ID                                                     | 행위                             | 상황                                                                                                                                            |
+| ----------------------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `IT-ChemistryCacheSvc-동시요청3개-LLM단일호출_3건모두READY` | `process()` 3개 스레드 동시 실행 | 동일 버킷 조합 → LLM 1회 호출, `chemistry_reports` 3건 모두 `status=READY`. 구독자 2명으로 `CopyOnWriteArrayList` 다중 `add()` 안전성 검증 포함 |
+| `IT-ChemistryCacheSvc-다른버킷동시요청-LLM각각호출`         | `process()` 2개 스레드 동시 실행 | 서로 다른 버킷 조합 → LLM 2회 호출                                                                                                              |
 
 ---
 

@@ -55,8 +55,6 @@ class ChemistryTxHelperTest extends IntegrationTestSupport {
 
     @BeforeEach
     void setUp() {
-        chemistryReportRepository.deleteAll();
-        userRepository.deleteAll();
         requester = userRepository.save(User.create("kakao-tx-1", "발행자", null));
         partner = userRepository.save(User.create("kakao-tx-2", "파트너", null));
     }

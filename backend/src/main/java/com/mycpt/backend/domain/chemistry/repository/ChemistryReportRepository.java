@@ -49,4 +49,6 @@ public interface ChemistryReportRepository extends JpaRepository<ChemistryReport
         WHERE cr.id = :id
     """)
     Optional<ChemistryReport> findByIdWithUsers(@Param("id") Long id);
+
+    List<ChemistryReport> findByRequesterId(@Param("requesterId") Long requesterId);
 }

@@ -21,7 +21,7 @@ public class ChemistryEventPublisher {
 
     private final StringRedisTemplate redisTemplate;
 
-    public void publishReady(ChemistryCacheId cacheId, String report) {
+    public void publishReady(ChemistryCacheId cacheId) {
         String channel = toChannel(cacheId);
         redisTemplate.convertAndSend(channel, "READY");
         log.debug("케미 Pub/Sub 발행. channel={}", channel);

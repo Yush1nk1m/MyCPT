@@ -96,7 +96,7 @@ public class ChemistryCacheService {
         String prompt = buildPrompt(requesterBuckets, partnerBuckets);
         String report = llmClient.complete(prompt);
         txHelper.saveCompletedCache(cacheId, report);
-        eventPublisher.publishReady(cacheId, report);
+        eventPublisher.publishReady(cacheId);
         return report;
     }
 
