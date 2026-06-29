@@ -902,7 +902,9 @@ sequenceDiagram
     {
       "reportId": 7,
       "requesterId": 1,
+      "requesterNickname": "유신",
       "partnerId": 15,
+      "partnerNickname": "연우",
       "testType": "DISC",
       "status": "READY",
       "createdAt": "2026-05-24T14:30:00"
