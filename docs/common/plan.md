@@ -32,7 +32,7 @@
 - [x] **API 명세** — api-design.md v0.4 완성 (GET /auth/me nextCoinAt 추가, profile_image_url 통일)
 - [x] **DDL** — schema.sql v0.5 완성 (10개 테이블)
 - [x] **시스템 아키텍처 다이어그램** — architecture-design.md 완성 (컴포넌트 다이어그램 + 주요 데이터 흐름 3종)
-- [x] **시퀀스 다이어그램** — 3종 완성 (검사 채점/캐시 흐름, 케미 발행 @Async+SSE 흐름, 비회원→회원 결과 저장 연계)
+- [x] **시퀀스 다이어그램** — 3종 완성 (검사 채점/캐시 흐름, 케미 발행 Lazy Caching+중복방지+SSE 흐름, 비회원→회원 결과 저장 연계)
 - [x] **Spring 패키지 구조 설계** — architecture-design.md에 포함. 레이어드 아키텍처 기준 패키지 트리
 - [x] **화면 설계 (와이어프레임)** — 19개 화면 완성
 - [x] **테스트 설계 문서** — test-design.md v0.1 완성 (레이어별 전략, 도메인별 테스트 케이스 ID 체계)
@@ -239,10 +239,11 @@
 
 ### 미착수 → 5·6주차 이월
 
-- [ ] 코인 시스템 구현 — CoinService → **5주차로 이월**
-- [ ] 동료 목록 페이지 + 케미 보고서 발행 흐름 — ChemistryService → **5주차로 이월**
-- [ ] SSE 연결 구현 → **5주차로 이월**
-- [ ] Claude API 케미 프롬프트 설계 → **5주차로 이월**
+- [x] 코인 시스템 구현 — CoinService → **5주차 완료**
+- [x] 케미 보고서 발행 흐름 — ChemistryService + Lazy Caching + 중복 방지 → **5주차 완료 (백엔드)**
+- [x] SSE 연결 구현 — SseService → **5주차 완료 (백엔드)**
+- [x] Claude API 케미 프롬프트 설계 → **5주차 완료**
+- [ ] 동료 목록/케미 프론트엔드 페이지 → **6주차로 이월**
 - [ ] Spring Batch (만료 코드/토큰 삭제) → **6주차로 이월**
 - [ ] 전체 흐름 QA, 배포, 베타 테스터 초대 → **6주차로 이월**
 
@@ -259,22 +260,30 @@
 
 **페어 1 — 코인**
 
-- [ ] CoinService 구현 (가입 초기 지급 3개, 온디맨드 충전 `next_coin_at` 기반, coin_transactions 적재)
-- [ ] `/me/coins` 페이지 구현 (잔량 + 3슬롯 시각화 + 카운트다운 + 사용 이력)
+- [x] CoinService 구현 (가입 초기 지급 3개, 온디맨드 충전 `next_coin_at` 기반, coin_transactions 적재)
+- [x] `/me/coins` 페이지 구현 (잔량 + 3슬롯 시각화 + 카운트다운 + 사용 이력)
 - [ ] 검증: 코인 초기 지급/충전/이력이 화면에 정확히 반영되는지 확인
 
 **페어 2 — 케미 발행**
 
-- [ ] ChemistryService 구현 (`@Async` LLM 호출, 202 즉시 반환)
-- [ ] Claude API 케미 프롬프트 설계 (두 사람 DISC 버킷값 기반 6개 섹션)
+- [x] ChemistryService 구현 (동료 검증 + 버킷 조회 + 코인 차감 + chemistry_reports INSERT + @TransactionalEventListener(AFTER_COMMIT) 트리거)
+- [x] ChemistryReportProcessor 구현 (@Async + @Retryable + @Recover)
+- [x] ChemistryCacheService 구현 (Lazy Caching + SELECT FOR UPDATE 발행자/구독자 분기 + CountDownLatch 대기)
+- [x] ChemistryTxHelper 구현 (REQUIRES_NEW 트랜잭션 전담 빈 — self-invocation 방지)
+- [x] ChemistryEventPublisher / ChemistryEventSubscriber 구현 (Redis Pub/Sub 브로커)
+- [x] SseService 구현 (Map<userId, SseEmitter> 소유, pushChemistryReady / pushChemistryError)
+- [x] RedisConfig 구현 (RedisMessageListenerContainer, chemistry:\* 패턴 구독)
+- [x] ChemistryReportIssuedEvent 구현
+- [x] chemistry_cache 6,561행 seeding (schema.sql + chemistry_cache_seed.sql)
+- [x] Claude API 케미 프롬프트 설계 (두 사람 DISC 버킷값 기반 6개 섹션)
 - [ ] `/colleagues` 동료 목록 페이지 구현
 - [ ] `/colleagues/[id]` 동료 프로필 + 케미 발행 CTA 페이지 구현
 - [ ] 검증: Swagger로 동료 관계 생성 → 화면에서 케미 발행 트리거 → 202 응답 확인
 
 **페어 3 — SSE 실시간 반영**
 
-- [ ] SSE 연결 구현 (`GET /notifications/stream`, Last-Event-ID 기반 재전송)
-- [ ] 케미 보고서 발행 완료 시 SSE 푸시 + 상대방 인앱 알림 전송 연동
+- [x] SSE 연결 구현 (`GET /notifications/stream`, Last-Event-ID 기반 재전송)
+- [x] 케미 보고서 발행 완료 시 SSE 푸시 + 상대방 인앱 알림 전송 연동
 - [ ] `/chemistry` 케미 보고서 목록 페이지 구현 (generating 상태 inline 표시)
 - [ ] `/chemistry/[id]` 케미 보고서 상세 페이지 구현
 - [ ] 헤더 알림 드롭다운 + SSE 토스트 전역 컴포넌트 구현
@@ -282,25 +291,41 @@
 
 ### 실행 기록
 
-| 날짜       | 내용                                                                                                                                                                                                                                                                                | 산출물                                                                                                                                                   |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 06.22 (월) | CoinReason enum, CoinTransaction 엔티티, CoinTransactionRepository, CoinService(가입보너스/온디맨드충전/차감/이력조회), CoinApi, CoinV1Controller 구현. EntityTestSupport(구 EntityIdSetter) setField() 추가. CoinServiceTest(UT 11케이스) + CoinV1ControllerTest(ST 4케이스) 통과. | CoinReason, CoinTransaction, CoinTransactionRepository, CoinService, CoinApi, CoinV1Controller, EntityTestSupport, CoinServiceTest, CoinV1ControllerTest |
+| 날짜       | 내용                                                                                                                                                                                                                                                                                                                                                                                                                          | 산출물                                                                                                                                                              |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 06.22 (월) | CoinReason enum, CoinTransaction 엔티티, CoinTransactionRepository, CoinService(가입보너스/온디맨드충전/차감/이력조회), CoinApi, CoinV1Controller 구현. EntityTestSupport(구 EntityIdSetter) setField() 추가. CoinServiceTest(UT 11케이스) + CoinV1ControllerTest(ST 4케이스) 통과.                                                                                                                                           | CoinReason, CoinTransaction, CoinTransactionRepository, CoinService, CoinApi, CoinV1Controller, EntityTestSupport, CoinServiceTest, CoinV1ControllerTest            |
+| 06.23 (화) | ChemistryCache 엔티티 설계 개선 — status 컬럼(NULL/GENERATING/READY) 추가, 6,561행 seding 방침 전환. ChemistryCacheStatus enum 신규. ChemistryReport.create() cacheId 생성 시점 주입으로 변경 (실패 추적 강화). ChemistryService.issue()에 버킷 조회 + BusinessException(NO_RESULT) 즉시 반환 추가.                                                                                                                           | ChemistryCacheStatus, ChemistryCache, ChemistryReport, ChemistryService                                                                                             |
+| 06.24 (수) | ChemistryCacheService 전면 재작성 (Lazy Caching + SELECT FOR UPDATE 기반 발행자/구독자 분기 + CountDownLatch + CopyOnWriteArrayList). ChemistryTxHelper 신규 (REQUIRES_NEW 트랜잭션 전담 — self-invocation 방지). ChemistryCacheRepository findByIdWithLock() 추가. ChemistryReportProcessor LatestBuckets 파라미터 수신으로 변경 (재조회 제거).                                                                              | ChemistryCacheService, ChemistryTxHelper, ChemistryCacheRepository, ChemistryReportProcessor                                                                        |
+| 06.25 (목) | ChemistryEventPublisher / ChemistryEventSubscriber 신규 (Redis Pub/Sub 브로커. publishReady 파라미터 String report 제거). RedisConfig 신규 (chemistry:\* 패턴 구독). SseService 신규 (Map<userId, SseEmitter> 소유). ChemistryReportIssuedEvent 신규. ChemistryService @TransactionalEventListener(AFTER_COMMIT) 트리거로 전환 (커밋 전 @Async 실행 문제 원천 차단). ChemistryReportProcessor handle() / process() 역할 분리. | ChemistryEventPublisher, ChemistryEventSubscriber, RedisConfig, SseService, ChemistryReportIssuedEvent                                                              |
+| 06.26 (금) | chemistry_cache 6,561행 seeding SQL 작성 (CROSS JOIN 방식, schema.sql + chemistry_cache_seed.sql). 개발 문서 전체 수정 — database-design.md v0.12, architecture-design.md v0.10, service-design.md v0.11, api-design.md POST /chemistry-reports 섹션 개정, usecase.puml 재작성, sequence-chemistry.puml 전면 재작성, sequence-guest-to-member.puml "9단계→3단계" 수정.                                                        | schema.sql, chemistry_cache_seed.sql, 개발 문서 6종, UML 2종                                                                                                        |
+| 06.27 (토) | Chemistry 도메인 테스트 전체 작성 — ChemistryReportTest(UT 3), ChemistryCacheIdTest(UT 2), ChemistryCacheTest(UT 3), ChemistryRepositoryTest(ST 4), ChemistryTxHelperTest(IT 3, TransactionTemplate 외부 트랜잭션 롤백 방식), ChemistryCacheServiceIntegrationTest(IT 9 — Lazy Caching 3, Duplication Defense 2, AFTER_COMMIT 검증 2). test-design.md v0.8/v0.9 개정.                                                         | ChemistryReportTest, ChemistryCacheIdTest, ChemistryCacheTest, ChemistryRepositoryTest, ChemistryTxHelperTest, ChemistryCacheServiceIntegrationTest, test-design.md |
 
 ### 완료 확인 체크리스트
 
-- [ ] 코인 초기 지급 (3개) 확인
-- [ ] next_coin_at 기반 온디맨드 충전 로직 확인
-- [ ] coin_transactions 로그 적재 확인
+- [x] 코인 초기 지급 (3개) 확인
+- [x] next_coin_at 기반 온디맨드 충전 로직 확인
+- [x] coin_transactions 로그 적재 확인
 - [ ] `/me/coins` 화면에서 잔량/카운트다운/이력 정상 표시 확인
 - [ ] 동료 목록에서 대상 선택 → 202 즉시 반환 확인
 - [ ] `/colleagues`, `/colleagues/[id]` 화면 정상 동작 확인
-- [ ] @Async LLM 호출 완료 후 SSE 푸시 확인
+- [x] @TransactionalEventListener(AFTER_COMMIT) 커밋 후 LLM 호출 확인 (IT 검증 완료)
+- [x] 동시 요청 시 LLM 1회 호출 보장 확인 (IT 검증 완료)
 - [ ] 인터넷 재연결 시 Last-Event-ID 기반 놓친 알림 재전송 확인
 - [ ] 케미 보고서 발행 시 상대방 인앱 알림 전송 확인
 - [ ] 알림 클릭 시 즉시 삭제 확인
 - [ ] 코인 0개일 때 발행 차단 (INSUFFICIENT_COINS) 확인
 - [ ] `/chemistry`, `/chemistry/[id]` 화면에서 generating → ready 자동 전환 확인
 - [ ] 헤더 알림 드롭다운 정상 동작 확인
+
+### 미착수 → 6주차 이월
+
+- [ ] `/me/coins` 화면 검증 (코인 초기 지급/충전/이력 표시) → **6주차로 이월**
+- [ ] `/colleagues` 동료 목록 페이지 구현 → **6주차로 이월**
+- [ ] `/colleagues/[id]` 동료 프로필 + 케미 발행 CTA 페이지 구현 → **6주차로 이월**
+- [ ] `/chemistry` 케미 보고서 목록 페이지 구현 → **6주차로 이월**
+- [ ] `/chemistry/[id]` 케미 보고서 상세 페이지 구현 → **6주차로 이월**
+- [ ] 헤더 알림 드롭다운 + SSE 토스트 전역 컴포넌트 구현 → **6주차로 이월**
+- [ ] end-to-end 케미 발행 검증 (SSE 푸시 → 화면 자동 갱신) → **6주차로 이월**
 
 ---
 
@@ -312,6 +337,16 @@
 배치 작업과 전체 QA를 거쳐 배포 후 베타 테스트를 시작한다. 4일의 단축 주차이므로 정적 페이지보다 핵심 동선을 우선한다.
 
 ### 계획
+
+**이월 — 5주차 미완료 프론트엔드**
+
+- [ ] `/me/coins` 화면 검증 및 마무리
+- [ ] `/colleagues` 동료 목록 페이지 구현
+- [ ] `/colleagues/[id]` 동료 프로필 + 케미 발행 CTA 페이지 구현
+- [ ] `/chemistry` 케미 보고서 목록 페이지 (generating 상태 inline 표시)
+- [ ] `/chemistry/[id]` 케미 보고서 상세 페이지
+- [ ] 헤더 알림 드롭다운 + SSE 토스트 전역 컴포넌트
+- [ ] end-to-end 케미 발행 검증
 
 **우선순위 1 — 핵심 동선**
 
