@@ -103,7 +103,7 @@ public class ChemistryService {
         List<ChemistryReport> page = hasNext ? rows.subList(0, size) : rows;
 
         return new ChemistryReportListResponse(
-                page.stream().map(ChemistryReportSummary::from).toList(),
+                page.stream().map(cr -> ChemistryReportSummary.from(cr, userId)).toList(),
                 hasNext ? page.getLast().getId() : null,
                 hasNext
         );

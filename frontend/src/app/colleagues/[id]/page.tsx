@@ -28,7 +28,10 @@ interface CoinBalanceResponse {
 interface ChemistryReportSummary {
   reportId: number;
   requesterId: number;
+  requesterNickname: string;
   partnerId: number;
+  partnerNickname: string;
+  myRole: "REQUESTER" | "PARTNER";
   status: "GENERATING" | "READY" | "ERROR";
   createdAt: string;
 }
