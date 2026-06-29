@@ -21,6 +21,8 @@ public interface ChemistryReportRepository extends JpaRepository<ChemistryReport
      */
     @Query("""
         SELECT cr FROM ChemistryReport cr
+        JOIN FETCH cr.requester
+        JOIN FETCH cr.partner
         WHERE (cr.requester.id = :userId OR cr.partner.id = :userId)
             AND cr.status != :errorStatus
             AND (:partnerId IS NULL
