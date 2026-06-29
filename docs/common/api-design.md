@@ -905,6 +905,7 @@ sequenceDiagram
       "requesterNickname": "유신",
       "partnerId": 15,
       "partnerNickname": "연우",
+      "myRole": "REQUESTER",
       "testType": "DISC",
       "status": "READY",
       "createdAt": "2026-05-24T14:30:00"
@@ -914,6 +915,17 @@ sequenceDiagram
   "hasNext": false
 }
 ```
+
+| 필드                | 타입    | 설명                                                                |
+| ------------------- | ------- | ------------------------------------------------------------------- |
+| `requesterId`       | number  | 발행자 userId                                                       |
+| `requesterNickname` | string  | 발행자 닉네임                                                       |
+| `partnerId`         | number  | 대상자 userId                                                       |
+| `partnerNickname`   | string  | 대상자 닉네임                                                       |
+| `myRole`            | string  | 요청자 기준 역할. `REQUESTER`(내가 발행) / `PARTNER`(상대가 발행)   |
+| `status`            | string  | `GENERATING` / `READY`. `ERROR`는 목록에서 필터링되어 반환되지 않음 |
+| `nextCursor`        | number  | 다음 요청에 사용할 커서. 다음 페이지 없으면 null                    |
+| `hasNext`           | boolean | 다음 페이지 존재 여부                                               |
 
 | 응답 코드 | 설명                            |
 | --------- | ------------------------------- |

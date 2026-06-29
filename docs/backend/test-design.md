@@ -386,14 +386,14 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 > `@WebMvcTest` 슬라이스 테스트. `MvcTestSupport` 상속.
 
-| Test ID                            | 행위                          | 상황                                       |
-| ---------------------------------- | ----------------------------- | ------------------------------------------ |
-| `ST-ChemistryCtrl-발행-성공`       | `POST /chemistry-reports`     | 인증됨 → `202 Accepted`                    |
-| `ST-ChemistryCtrl-발행-미인증`     | `POST /chemistry-reports`     | 미인증 → `401`                             |
-| `ST-ChemistryCtrl-목록조회-성공`   | `GET /chemistry-reports`      | 인증됨 → `200` + `reports` 배열 반환       |
-| `ST-ChemistryCtrl-목록조회-미인증` | `GET /chemistry-reports`      | 미인증 → `401`                             |
-| `ST-ChemistryCtrl-상세조회-성공`   | `GET /chemistry-reports/{id}` | 인증됨 → `200` + `reportId`, `status` 반환 |
-| `ST-ChemistryCtrl-상세조회-미인증` | `GET /chemistry-reports/{id}` | 미인증 → `401`                             |
+| Test ID                            | 행위                          | 상황                                                      |
+| ---------------------------------- | ----------------------------- | --------------------------------------------------------- |
+| `ST-ChemistryCtrl-발행-성공`       | `POST /chemistry-reports`     | 인증됨 → `202 Accepted`                                   |
+| `ST-ChemistryCtrl-발행-미인증`     | `POST /chemistry-reports`     | 미인증 → `401`                                            |
+| `ST-ChemistryCtrl-목록조회-성공`   | `GET /chemistry-reports`      | 인증됨 → `200` + `reports` 배열 반환 (`myRole` 필드 포함) |
+| `ST-ChemistryCtrl-목록조회-미인증` | `GET /chemistry-reports`      | 미인증 → `401`                                            |
+| `ST-ChemistryCtrl-상세조회-성공`   | `GET /chemistry-reports/{id}` | 인증됨 → `200` + `reportId`, `status` 반환                |
+| `ST-ChemistryCtrl-상세조회-미인증` | `GET /chemistry-reports/{id}` | 미인증 → `401`                                            |
 
 ### ChemistryCacheRepository / ChemistryReportRepository (ST)
 
