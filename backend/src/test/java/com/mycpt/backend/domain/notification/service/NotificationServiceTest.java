@@ -30,9 +30,11 @@ class NotificationServiceTest {
 
     @Mock
     private NotificationRepository notificationRepository;
+    @Mock
+    private SseService sseService;
 
     private NotificationService sut() {
-        return new NotificationService(notificationRepository);
+        return new NotificationService(notificationRepository, sseService);
     }
 
     // ── 공통 픽스처 ───────────────────────────────────────────────────────────

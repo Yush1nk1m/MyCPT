@@ -8,9 +8,20 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Tag(name = "알림", description = "인앱 알림 조회/삭제")
 public interface NotificationApi {
+
+    @Operation(
+            summary = "SSE 연결",
+            description = "SSE 연결을 수립한다. 케미 보고서 완료·동료 등록 등 실시간 알림을 수신한다. " +
+                    "재연결 시 Last-Event-ID 이후 미확인 알림 재전송(TODO).",
+            security = @SecurityRequirement(name = "cookieAuth")
+    )
+    SseEmitter stream(
+            @AuthenticationPrincipal UserPrincipal principal
+    );
 
     @Operation(
             summary = "알림 목록 조회",

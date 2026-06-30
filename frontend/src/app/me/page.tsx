@@ -2,7 +2,6 @@
 
 import { useMe } from "@/hooks/useMe";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 interface MenuItem {
   label: string;
@@ -68,12 +67,13 @@ export default function MeHubPage() {
         >
           <div className="w-16 h-16 rounded-full overflow-hidden bg-paper-2 border border-line">
             {me?.profileImageUrl ? (
-              <Image
+              <img
                 src={me.profileImageUrl}
                 alt="프로필 이미지"
                 width={64}
                 height={64}
-                className="object-cover"
+                className="w-full h-full object-cover"
+                fetchPriority="high"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-ink-faint text-xs">

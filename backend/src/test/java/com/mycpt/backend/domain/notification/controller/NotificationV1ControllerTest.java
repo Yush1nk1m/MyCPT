@@ -3,6 +3,7 @@ package com.mycpt.backend.domain.notification.controller;
 import com.mycpt.backend.domain.notification.dto.NotificationListResponse;
 import com.mycpt.backend.domain.notification.dto.NotificationResponse;
 import com.mycpt.backend.domain.notification.service.NotificationService;
+import com.mycpt.backend.domain.notification.service.SseService;
 import com.mycpt.backend.support.MvcTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -25,6 +26,9 @@ class NotificationV1ControllerTest extends MvcTestSupport {
 
     @MockitoBean
     private NotificationService notificationService;
+
+    @MockitoBean
+    private SseService sseService;
 
     // ── GET /notifications ───────────────────────────────────────────────────
 

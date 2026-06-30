@@ -27,6 +27,11 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
       {
+        protocol: "http",
+        hostname: "k.kakaocdn.net",
+        pathname: "/**",
+      },
+      {
         // 로컬 개발 환경 업로드 이미지 (LocalStorageService 반환 URL)
         protocol: "http",
         hostname: "localhost",

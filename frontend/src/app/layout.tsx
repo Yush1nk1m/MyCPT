@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { ToastContainer } from "../components/ui/Toast";
+import { SseProvider } from "../components/providers/SseProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -26,7 +28,11 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <ToastContainer />
+          <SseProvider />
+        </Providers>
       </body>
     </html>
   );

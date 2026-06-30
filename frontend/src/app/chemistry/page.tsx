@@ -1,16 +1,9 @@
-// frontend/src/app/chemistry/page.tsx
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  useInfiniteQuery,
-  useQueryClient,
-  InfiniteData,
-} from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import Link from "next/link";
-
-// ── 타입 ──────────────────────────────────────────────────────────────────────
 
 interface ChemistryReportSummary {
   reportId: number;
@@ -29,13 +22,6 @@ interface ChemistryReportListResponse {
   hasNext: boolean;
 }
 
-interface SseChemistryEvent {
-  reportId: number;
-  message: string;
-}
-
-// ── fetch ─────────────────────────────────────────────────────────────────────
-
 async function fetchChemistryReports(
   cursor: number | null,
 ): Promise<ChemistryReportListResponse> {
@@ -49,8 +35,6 @@ async function fetchChemistryReports(
   return res.json();
 }
 
-// ── 헬퍼 ─────────────────────────────────────────────────────────────────────
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -59,7 +43,6 @@ function formatDate(iso: string) {
   });
 }
 
-// myRole 기반으로 상대방 닉네임 결정 — useMe 불필요
 function peerLabel(report: ChemistryReportSummary): string {
   const partnerName =
     report.myRole === "REQUESTER"
@@ -67,8 +50,6 @@ function peerLabel(report: ChemistryReportSummary): string {
       : report.requesterNickname;
   return `나 ↔ ${partnerName}`;
 }
-
-// ── 카드 컴포넌트 ─────────────────────────────────────────────────────────────
 
 function GeneratingCard({ report }: { report: ChemistryReportSummary }) {
   return (
@@ -116,12 +97,8 @@ function ReadyCard({ report }: { report: ChemistryReportSummary }) {
   );
 }
 
-// ── 페이지 ───────────────────────────────────────────────────────────────────
-
 export default function ChemistryPage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const sseRef = useRef<EventSource | null>(null);
 
   const reports = useInfiniteQuery({
     queryKey: ["chemistry-reports"],
@@ -132,66 +109,16 @@ export default function ChemistryPage() {
       lastPage.hasNext ? lastPage.nextCursor : undefined,
   });
 
-  const allReports = reports.data?.pages.flatMap((p) => p.reports) ?? [];
-  const hasGenerating = allReports.some((r) => r.status === "GENERATING");
-
-  // SSE: GENERATING 보고서가 있을 때만 연결 유지
-  // CHEMISTRY_REPORT 이벤트 → 해당 reportId를 낙관적으로 READY 전환
-  // 브라우저가 재연결 시 Last-Event-ID 헤더를 자동 포함하므로 별도 처리 없음
   useEffect(() => {
-    if (!hasGenerating) {
-      sseRef.current?.close();
-      sseRef.current = null;
-      return;
+    if (reports.error?.message === "UNAUTHORIZED") {
+      router.replace("/");
     }
+  }, [reports.error, router]);
 
-    if (sseRef.current) return; // 이미 연결 중
-
-    const es = new EventSource("/api/v1/notifications/stream", {
-      withCredentials: true,
-    });
-    sseRef.current = es;
-
-    es.addEventListener("CHEMISTRY_REPORT", (e: MessageEvent) => {
-      try {
-        const payload: SseChemistryEvent = JSON.parse(e.data);
-        queryClient.setQueryData(
-          ["chemistry-reports"],
-          (old: InfiniteData<ChemistryReportListResponse> | undefined) => {
-            if (!old) return old;
-            return {
-              ...old,
-              pages: old.pages.map((page) => ({
-                ...page,
-                reports: page.reports.map((r) =>
-                  r.reportId === payload.reportId
-                    ? { ...r, status: "READY" as const }
-                    : r,
-                ),
-              })),
-            };
-          },
-        );
-      } catch {
-        // 파싱 실패 시 전체 재조회 폴백
-        queryClient.invalidateQueries({ queryKey: ["chemistry-reports"] });
-      }
-    });
-
-    return () => {
-      es.close();
-      sseRef.current = null;
-    };
-  }, [hasGenerating, queryClient]);
-
-  if (reports.error?.message === "UNAUTHORIZED") {
-    router.replace("/");
-    return null;
-  }
+  const allReports = reports.data?.pages.flatMap((p) => p.reports) ?? [];
 
   return (
     <div className="min-h-screen bg-[var(--paper)]">
-      {/* 탭 헤더 */}
       <div className="flex border-b border-[var(--line)] bg-white sticky top-0 z-10">
         <Link
           href="/colleagues"
@@ -204,7 +131,6 @@ export default function ChemistryPage() {
         </div>
       </div>
 
-      {/* 목록 */}
       <div className="px-4 pt-4 pb-8 flex flex-col gap-3">
         {reports.isPending ? (
           [0, 1, 2].map((i) => (

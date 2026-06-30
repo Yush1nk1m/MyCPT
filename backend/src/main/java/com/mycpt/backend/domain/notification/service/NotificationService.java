@@ -22,6 +22,7 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final SseService sseService;
 
     /**
      * 동료 등록 알림 전송
@@ -31,7 +32,8 @@ public class NotificationService {
     public void sendColleagueNotification(User inviter, Colleague colleague) {
         ColleagueNotification notification = ColleagueNotification.create(inviter, colleague);
         notificationRepository.save(notification);
-        // TODO: SSE 연결 중이면 즉시 푸시 (SseService 구현 후 연동)
+        // SSE 연결 중이면 즉시 푸시
+        sseService.pushColleagueRegistered(inviter.getId(), colleague.getId());
     }
 
     /**
@@ -42,7 +44,8 @@ public class NotificationService {
     public void sendChemistryNotification(User recipient, ChemistryReport report, User requester) {
         ChemistryNotification notification = ChemistryNotification.create(recipient, report, requester);
         notificationRepository.save(notification);
-        // TODO: SSE 연결 중이면 즉시 푸시 (SseService 구현 후 연동)
+        // SSE 연결 중이면 즉시 푸시
+        sseService.pushChemistryReady(recipient.getId(), report.getId());
     }
 
     /**

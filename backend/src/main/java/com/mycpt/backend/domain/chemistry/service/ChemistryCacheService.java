@@ -161,6 +161,7 @@ public class ChemistryCacheService {
         return entries;
     }
 
+    // TODO: 프롬프트 캐싱을 위한 블록 빌드 로직 구현
     private String buildPrompt(LatestBuckets a, LatestBuckets b) {
         return """
                 당신은 DISC 성격 유형 전문 분석가입니다.
@@ -172,18 +173,20 @@ public class ChemistryCacheService {
                 - 3 (High) : 가장 확실하게 드러나는 주성향
 
                 [A(발행자)의 DISC 버킷값]
-                D(주도형): %d, I(사교형): %d, S(안정형): %d, C(신중형): %d
+                D(주도형): /ad, I(사교형): /ai, S(안정형): /as, C(신중형): /ac
 
                 [B(상대방)의 DISC 버킷값]
-                D(주도형): %d, I(사교형): %d, S(안정형): %d, C(신중형): %d
+                D(주도형): /bd, I(사교형): /bi, S(안정형): /bs, C(신중형): /bc
 
                 아래 6개 섹션을 Markdown 형식으로 작성하세요.
-                각 섹션은 3~5문장으로 구성하고, 이름 없이 "A유형의 사람"/"B유형의 사람"으로 서술하세요.
+                각 섹션은 3~5문장으로 구성하고, 발행자는 "{REQUESTER}", 상대방은 "{PARTNER}"로 서술하세요.
 
                 [제약 사항]
                 - 보고서 제목, 버킷값 요약 등 어떠한 머리말도 작성하지 마세요.
                 - 반드시 ## 두 사람의 성향 요약 섹션으로 시작하세요.
                 - 6개 섹션 외의 내용은 절대 추가하지 마세요.
+                - {REQUESTER}와 {PARTNER}는 반드시 중괄호를 포함한 그대로 사용하세요. 절대 다른 표현으로 대체하지 마세요.
+                - {REQUESTER}와 {PARTNER} 자리는 '{닉네임}님'으로 치환됩니다. 반드시 '는' 대신 '은', '와' 대신 '과'와 같은 조사를 사용하세요.
 
                 ## 두 사람의 성향 요약
                 ## 협업 시너지
@@ -191,6 +194,11 @@ public class ChemistryCacheService {
                 ## 소통 방식 차이
                 ## 서로에게 맞는 역할
                 ## 관계 발전을 위한 제안
+                
+                
+            """ + """
+                [프롬프트 변수]
+                /ad: %d, /ai: %d, /as: %d, /ac: %d, /bd: %d, /bi: %d, /bs: %d, /bc: %d    
             """.formatted(
                     a.dBucket(), a.iBucket(), a.sBucket(), a.cBucket(),
                 b.dBucket(), b.iBucket(), b.sBucket(), b.cBucket()

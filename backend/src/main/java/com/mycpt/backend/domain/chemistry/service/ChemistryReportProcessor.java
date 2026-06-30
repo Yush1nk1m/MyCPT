@@ -5,6 +5,7 @@ import com.mycpt.backend.domain.chemistry.entity.ChemistryReport;
 import com.mycpt.backend.domain.chemistry.event.ChemistryReportIssuedEvent;
 import com.mycpt.backend.domain.chemistry.repository.ChemistryReportRepository;
 import com.mycpt.backend.domain.notification.service.NotificationService;
+import com.mycpt.backend.domain.notification.service.SseService;
 import com.mycpt.backend.domain.statistics.dto.LatestBuckets;
 import com.mycpt.backend.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,7 @@ public class ChemistryReportProcessor {
     private final ChemistryReportRepository chemistryReportRepository;
     private final ChemistryCacheService chemistryCacheService;
     private final NotificationService notificationService;
+    private final SseService sseService;
 
     public void process(Long reportId, LatestBuckets requesterBuckets, LatestBuckets partnerBuckets) {
         ChemistryReport report = chemistryReportRepository.findByIdWithUsers(reportId)
@@ -57,6 +59,12 @@ public class ChemistryReportProcessor {
 
         // chemistry_reports READY 업데이트
         txHelper.completeReport(reportId, cacheId);
+
+        // 발행자 본인에게 SSE push
+        // - 구독자(waitingMap 등록된 동일 버킷 요청자)는 ChemistryEventSubscriber가 처리
+        // - 발행자와 캐시 READY 즉시 반환 케이스는 여기서 직접 push
+        sseService.pushChemistryReady(requester.getId(), reportId);
+
         // 상대방에게 인앱 알림 전송
         // SSE push는 ChemistryEventSubscriber가 Pub/Sub 수신 후 처리
         notificationService.sendChemistryNotification(partner, report, requester);

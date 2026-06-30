@@ -120,6 +120,6 @@ public class ChemistryService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        return ChemistryReportDetail.from(report);
+        return ChemistryReportDetail.from(report, userId);
     }
 }

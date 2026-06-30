@@ -1,3 +1,5 @@
+SET FOREIGN_KEY_CHECKS = 0;
+
 -- ============================================================
 -- MyCPT DDL
 -- 버전: v0.9
@@ -242,7 +244,7 @@ CREATE TABLE chemistry_reports (
     FOREIGN KEY (requester_d, requester_i, requester_s, requester_c,
                  partner_d,   partner_i,   partner_s,   partner_c)
         REFERENCES chemistry_cache (requester_d, requester_i, requester_s, requester_c,
-                                    partner_d,   partner_i,   partner_s,   partner_c)
+                                    partner_d,   partner_i,   partner_s,   partner_c),
 
     PRIMARY KEY (id),
     KEY idx_chemistry_reports_requester_id (requester_id),
@@ -369,3 +371,5 @@ FROM
     (SELECT 1 AS pi UNION SELECT 2 UNION SELECT 3) p_i,
     (SELECT 1 AS ps UNION SELECT 2 UNION SELECT 3) p_s,
     (SELECT 1 AS pc UNION SELECT 2 UNION SELECT 3) p_c;
+
+SET FOREIGN_KEY_CHECKS = 1;

@@ -38,7 +38,7 @@ public class SseService {
         emitter.onError(e -> emitters.remove(userId));
 
         emitters.put(userId, emitter);
-        log.debug("SSE 연결. userId={}", userId);
+        log.info("SSE emitter 등록 완료. userId={}, emitterCount={}", userId, emitters.size());
 
         // 연결 직후 더미 이벤트 - 일부 브라우저에서 연결 확인 용도
         try {
@@ -57,6 +57,7 @@ public class SseService {
      */
     public void pushChemistryReady(Long userId, Long reportId) {
         push(userId, "CHEMISTRY_REPORT", reportId, "케미 보고서가 발행됐어요.");
+        log.debug("케미 보고서 발행 알림 push 완료: userId={}, reportId={}", userId, reportId);
     }
 
     /**

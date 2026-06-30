@@ -958,23 +958,26 @@ sequenceDiagram
   },
   "partner": {
     "userId": 15,
-    "nickname": "민준",
+    "nickname": "연우",
     "profileImageUrl": "https://..."
   },
+  "myRole": "REQUESTER",
   "testType": "DISC",
   "status": "READY",
-  "report": "## 두 사람의 케미 요약\n...\n\n## 시너지 포인트\n...",
+  "report": "## 두 사람의 케미 요약\n...",
   "createdAt": "2026-05-24T14:30:00"
 }
 ```
 
-| 필드        | 타입   | 설명                                                                        |
-| ----------- | ------ | --------------------------------------------------------------------------- |
-| `requester` | object | 발행자 정보                                                                 |
-| `partner`   | object | 대상자 정보                                                                 |
-| `testType`  | string | 검사 유형 (DISC / MBTI / BIG5 등)                                           |
-| `status`    | string | `GENERATING` / `READY` / `ERROR`. ERROR는 목록에서 필터링되어 반환되지 않음 |
-| `report`    | string | Markdown 형식 케미 보고서 전문. Next.js에서 react-markdown으로 렌더링       |
+| 필드        | 타입   | 설명                                                              |
+| ----------- | ------ | ----------------------------------------------------------------- |
+| `requester` | object | 발행자 정보                                                       |
+| `partner`   | object | 대상자 정보                                                       |
+| `myRole`    | string | 요청자 기준 역할. `REQUESTER`(내가 발행) / `PARTNER`(상대가 발행) |
+
+| `testType` | string | 검사 유형 (DISC / MBTI / BIG5 등) |
+| `status` | string | `GENERATING` / `READY` / `ERROR`. ERROR는 목록에서 필터링되어 반환되지 않음 |
+| `report` | string | Markdown 형식 케미 보고서 전문. Next.js에서 react-markdown으로 렌더링 |
 
 | 응답 코드 | 설명                                  |
 | --------- | ------------------------------------- |

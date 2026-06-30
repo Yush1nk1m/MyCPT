@@ -3,10 +3,13 @@ package com.mycpt.backend.domain.notification.controller;
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
 import com.mycpt.backend.domain.notification.dto.NotificationListResponse;
 import com.mycpt.backend.domain.notification.service.NotificationService;
+import com.mycpt.backend.domain.notification.service.SseService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/api/v1/notifications")
@@ -14,6 +17,15 @@ import org.springframework.web.bind.annotation.*;
 public class NotificationV1Controller implements NotificationApi {
 
     private final NotificationService notificationService;
+    private final SseService sseService;
+
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Override
+    public SseEmitter stream(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return sseService.connect(principal.getUser().getId());
+    }
 
     @GetMapping
     @Override
