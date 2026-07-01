@@ -39,9 +39,13 @@ public class ChemistryCache {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     // NULL -> GENERATING: 발행자로 확정된 직후 호출. 커밋으로 락 즉시 해제
     public void startGenerating() {
         this.status = ChemistryCacheStatus.GENERATING;
+        this.updatedAt = LocalDateTime.now();
     }
 
     // GENERATING -> READY: LLM 완료 후 호출
@@ -49,6 +53,7 @@ public class ChemistryCache {
         this.status = ChemistryCacheStatus.READY;
         this.report = report;
         this.createdAt = now;
+        this.updatedAt = now;
     }
 
     // READY + 만료 -> 재생성 시작: 발행자 경로 재진입. startGenerating() 후 LLM 재호출
@@ -56,5 +61,13 @@ public class ChemistryCache {
         this.status = ChemistryCacheStatus.GENERATING;
         this.report = null;
         this.createdAt = null;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // 배치가 GENERATING 상태를 재시도 대상으로 확정할 때 호출.
+    // status/report는 건드리지 않고 updatedAt만 갱신 -> 다음 배치 주기(10분) 동안 재선택 방지
+    // (배치 중복 실행에 대한 뮤텍스 역할까지 겸함)
+    public void markRetryStartred() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

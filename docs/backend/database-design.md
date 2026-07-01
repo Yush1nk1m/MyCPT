@@ -1,6 +1,6 @@
 # MyCPT 데이터베이스 설계 문서
 
-**문서 버전**: v0.12
+**문서 버전**: v0.13
 **작성일**: '26.06.24.
 **작성자**: 김유신
 
@@ -22,6 +22,7 @@
 | v0.10 | `chemistry_reports.report` NOT NULL → NULL 변경. `status ENUM('GENERATING','READY','ERROR')` 컬럼 추가.                                                                                                                              | '26.06.22. |
 | v0.11 | `chemistry_cache` 테이블 추가 (케미 보고서 Lazy Caching. 복합 PK 8개 버킷값).                                                                                                                                                        | '26.06.22. |
 | v0.12 | `chemistry_cache` 사전 삽입 방침 변경 (6,561행 seeding). `status VARCHAR(20)` 컬럼 추가 (NULL→GENERATING→READY 락 라이프사이클). `chemistry_reports.status` 초기값 GENERATING → NULL 로 변경 (chemistry_cache 락 이후 INSERT되므로). | '26.06.24. |
+| v0.13 | chemistry_cache `updated_at` 컬럼 추가 (GENERATING 락 정체 탐지 및 배치 복구 기준). 스테일 캐시 복구 배치 섹션 추가.                                                                                                                 | '26.07.01. |
 
 ---
 
@@ -185,7 +186,8 @@ erDiagram
     VARCHAR20 status           "NULL(미생성)/GENERATING(생성 중)/READY(완료). 락 라이프사이클"
     TEXT      report           "NULL=미생성 또는 생성 중"
     DATETIME  created_at       "NULL=미생성 또는 생성 중"
-  }
+    DATETIME  updated_at       "마지막 상태 진입 시각. 스테일 탐지 기준"
+}
 
   notifications {
     BIGINT     id         PK
@@ -475,26 +477,36 @@ Ref: chemistry_reports.(requester_d, requester_i, requester_s, requester_c, part
 
 ## 4. 인덱스 전략
 
-| 테이블              | 인덱스                                        | 목적                            |
-| ------------------- | --------------------------------------------- | ------------------------------- |
-| `users`             | `uq_users_kakao_id`                           | OAuth 로그인 시 카카오 ID 조회  |
-| `tests`             | `idx_tests_user_id`                           | 특정 유저의 응시 이력 조회      |
-| `tests`             | `idx_tests_rater_type`                        | 자기/타인 평정 탭 분류          |
-| `disc_tests`        | `idx_disc_tests_cache`                        | 캐시 복합 FK 조회 최적화        |
-| `disc_cache`        | PK `(d, i, s, c)`                             | 버킷 기반 캐시 직접 조회        |
-| `coin_transactions` | `idx_coin_transactions_user_id`               | 특정 유저 코인 이력 조회        |
-| `peer_codes`        | `uq_peer_codes_user_id`, `uq_peer_codes_code` | 유저당 1행 보장, 코드 직접 조회 |
-| `peer_codes`        | `idx_peer_codes_expires_at`                   | 배치: 만료 코드 삭제            |
-| `assessment_tokens` | `uq_assessment_tokens_token`                  | 토큰 직접 조회 (링크 접속)      |
-| `assessment_tokens` | `idx_assessment_tokens_expires_at`            | 배치: 만료 토큰 삭제            |
-| `colleagues`        | `uq_colleagues_pair`                          | 중복 동료 등록 방지             |
-| `colleagues`        | `idx_colleagues_user_a_id/b_id`               | 양방향 동료 목록 UNION ALL 조회 |
-| `chemistry_reports` | `idx_chemistry_reports_requester/partner_id`  | 발행자/대상자 기준 이력 조회    |
-| `notifications`     | `idx_notifications_user_created`              | 유저별 알림 최신순 조회         |
+| 테이블              | 인덱스                                        | 목적                                                  |
+| ------------------- | --------------------------------------------- | ----------------------------------------------------- |
+| `users`             | `uq_users_kakao_id`                           | OAuth 로그인 시 카카오 ID 조회                        |
+| `tests`             | `idx_tests_user_id`                           | 특정 유저의 응시 이력 조회                            |
+| `tests`             | `idx_tests_rater_type`                        | 자기/타인 평정 탭 분류                                |
+| `disc_tests`        | `idx_disc_tests_cache`                        | 캐시 복합 FK 조회 최적화                              |
+| `disc_cache`        | PK `(d, i, s, c)`                             | 버킷 기반 캐시 직접 조회                              |
+| `coin_transactions` | `idx_coin_transactions_user_id`               | 특정 유저 코인 이력 조회                              |
+| `peer_codes`        | `uq_peer_codes_user_id`, `uq_peer_codes_code` | 유저당 1행 보장, 코드 직접 조회                       |
+| `peer_codes`        | `idx_peer_codes_expires_at`                   | 배치: 만료 코드 삭제                                  |
+| `assessment_tokens` | `uq_assessment_tokens_token`                  | 토큰 직접 조회 (링크 접속)                            |
+| `assessment_tokens` | `idx_assessment_tokens_expires_at`            | 배치: 만료 토큰 삭제                                  |
+| `colleagues`        | `uq_colleagues_pair`                          | 중복 동료 등록 방지                                   |
+| `colleagues`        | `idx_colleagues_user_a_id/b_id`               | 양방향 동료 목록 UNION ALL 조회                       |
+| `chemistry_reports` | `idx_chemistry_reports_requester/partner_id`  | 발행자/대상자 기준 이력 조회                          |
+| `notifications`     | `idx_notifications_user_created`              | 유저별 알림 최신순 조회                               |
+| `chemistry_cache`   | `idx_chemistry_cache_status_updated`          | 배치: 스테일 GENERATING 탐지 (status+updated_at 복합) |
 
 ---
 
 ## 5. 배치 작업
+
+### 케미 캐시 스테일 복구 (애플리케이션 레벨)
+
+매 10분 `ChemistryCacheRecoveryScheduler`가 실행.
+`chemistry_cache.status='GENERATING' AND updated_at < NOW() - 10분` 인 행을 찾아
+LLM 재호출 재시도. 성공 시 같은 cacheId로 `ERROR` 처리됐던 `chemistry_reports`를
+조용히 `READY`로 교정 (유저 재알림 없음).
+
+---
 
 매일 새벽 `ExpiredDataCleanupBatch`가 단일 Job으로 실행.
 

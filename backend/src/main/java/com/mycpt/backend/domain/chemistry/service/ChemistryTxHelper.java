@@ -2,15 +2,19 @@ package com.mycpt.backend.domain.chemistry.service;
 
 import com.mycpt.backend.domain.chemistry.entity.ChemistryCache;
 import com.mycpt.backend.domain.chemistry.entity.ChemistryCacheId;
+import com.mycpt.backend.domain.chemistry.entity.ChemistryReport;
 import com.mycpt.backend.domain.chemistry.enums.ChemistryCacheStatus;
+import com.mycpt.backend.domain.chemistry.enums.ChemistryReportStatus;
 import com.mycpt.backend.domain.chemistry.repository.ChemistryCacheRepository;
 import com.mycpt.backend.domain.chemistry.repository.ChemistryReportRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * chemistry_cache 락 트랜잭션 전담 컴포넌트.
@@ -19,6 +23,7 @@ import java.time.LocalDateTime;
  * 이 클래스의 모든 메서드는 REQUIRES_NEW — 독립 트랜잭션으로 실행되어
  * 커밋 즉시 SELECT FOR UPDATE 락이 해제됨.
  */
+@Log4j2
 @Component
 @RequiredArgsConstructor
 public class ChemistryTxHelper {
@@ -78,5 +83,44 @@ public class ChemistryTxHelper {
         chemistryReportRepository.findById(reportId)
                 .orElseThrow(() -> new IllegalStateException("ChemistryReport 없음: " + reportId))
                 .complete(cacheId);
+    }
+
+    /**
+     * 스테일 GENERATING 행을 배치 재시도 대상으로 확정.
+     * SELECT FOR UPDATE로 재검증(그 사이 다른 경로로 이미 처리됐을 수 있음) 후
+     * updatedAt만 갱신 -> 커밋(락 해제). status는 GENERATING 그대로 유지.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean claimForRetry(ChemistryCacheId cacheId, long staleThresholdMinutes) {
+        ChemistryCache cache = chemistryCacheRepository.findByIdWithLock(cacheId)
+                .orElseThrow(() -> new IllegalStateException("chemistry_cache 행 없음: " + cacheId));
+
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(staleThresholdMinutes);
+        boolean stillStale = cache.getStatus() == ChemistryCacheStatus.GENERATING
+                && cache.getUpdatedAt() != null
+                && cache.getUpdatedAt().isBefore(cutoff);
+
+        if (!stillStale) {
+            return false;
+        }
+
+        cache.markRetryStartred();
+        return true;
+    }
+
+    /**
+     * 캐시 재생성 성공 후, 같은 버킷 조합으로 ERROR 처리됐던 보고서를 조용히 READY로 교정.
+     * 유저 알림/SSE는 발생시키지 않음 — 다음 조회 시 자연스럽게 최신 상태 확인.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void reconcileErrorReports(ChemistryCacheId cacheId) {
+        List<ChemistryReport> errorReports =
+                chemistryReportRepository.findByCacheIdAndStatus(cacheId, ChemistryReportStatus.ERROR);
+
+        errorReports.forEach(r -> r.complete(cacheId));
+
+        if (!errorReports.isEmpty()) {
+            log.info("ERROR 보고서 {}건 READY로 교정. cacheId={}", errorReports.size(), cacheId);
+        }
     }
 }

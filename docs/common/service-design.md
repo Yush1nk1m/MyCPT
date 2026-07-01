@@ -173,12 +173,13 @@ DB SELECT WHERE d=? AND i=? AND s=? AND c=?
 
 #### 캐시 전략
 
-| chemistry_cache.status | 의미        | 처리                                                             |
-| ---------------------- | ----------- | ---------------------------------------------------------------- |
-| `NULL`                 | 미생성      | SELECT FOR UPDATE 후 발견한 스레드가 발행자 → LLM 호출           |
-| `GENERATING`           | LLM 호출 중 | SELECT FOR UPDATE 후 발견한 스레드가 구독자 → Redis Pub/Sub 대기 |
-| `READY` + 유효         | 캐시 히트   | 즉시 반환                                                        |
-| `READY` + 만료         | 캐시 만료   | 발행자로 재진입 → LLM 재호출                                     |
+| chemistry_cache.status                | 의미                       | 처리                                                                   |
+| ------------------------------------- | -------------------------- | ---------------------------------------------------------------------- |
+| `NULL`                                | 미생성                     | SELECT FOR UPDATE 후 발견한 스레드가 발행자 → LLM 호출                 |
+| `GENERATING`                          | LLM 호출 중                | SELECT FOR UPDATE 후 발견한 스레드가 구독자 → Redis Pub/Sub 대기       |
+| `READY` + 유효                        | 캐시 히트                  | 즉시 반환                                                              |
+| `READY` + 만료                        | 캐시 만료                  | 발행자로 재진입 → LLM 재호출                                           |
+| `GENERATING` + `updated_at` 10분 경과 | 스테일(발행자 실패로 추정) | 배치가 발행자 역할 재시도. 성공 시 관련 ERROR 보고서 조용히 READY 교정 |
 
 #### 발행자/구독자 처리 흐름
 
@@ -209,6 +210,14 @@ SELECT FOR UPDATE → registerWaiter() 콜백 실행 → COMMIT
 → chemistry_reports UPDATE (status=READY, cacheId 세팅)
 → SseService.pushChemistryReady() — 발행자/구독자 모두 SSE push
 → NotificationService.sendChemistryNotification() — 상대방 인앱 알림
+
+[스테일 복구 배치 경로] chemistry_cache.status = GENERATING (updated_at 10분 경과)
+→ ChemistryTxHelper.claimForRetry()
+SELECT FOR UPDATE → 재검증 → updatedAt만 갱신(status는 GENERATING 유지) → COMMIT
+→ cacheId 8축에서 버킷 직접 복원 (유저/결과 재조회 불필요)
+→ AnthropicLlmClient.complete() — LLM 재호출
+→ saveCompletedCache() + publishReady() — 발행자 경로와 동일 메서드 재사용
+→ reconcileErrorReports() — 같은 cacheId의 ERROR 보고서 조용히 READY 교정
 ```
 
 #### 동시성 방어 근거
@@ -235,6 +244,8 @@ Map<Long userId, SseEmitter>
 ChemistryCacheService 소유:
 Map<ChemistryCacheId, List<WaitingEntry>>
 → 버킷 조합별 대기자 목록. 보고서 완료/실패 시 제거.
+→ 구독자가 5분 타임아웃/인터럽트로 대기를 포기할 때도 자기 항목을 스스로 제거
+  (뒤늦게 배치/발행자가 완료시켜도 이미 이탈한 구독자에게 SSE가 잘못 나가지 않도록)
 → List 구현체: CopyOnWriteArrayList (다중 구독자 동시 add 안전)
 ```
 
@@ -298,22 +309,22 @@ Map<ChemistryCacheId, List<WaitingEntry>>
 
 ## 5. 기술 스택
 
-| 영역        | 기술                                                  |
-| ----------- | ----------------------------------------------------- |
-| 백엔드      | Java 25, Spring Boot 3.5.14                           |
-| API 문서    | SpringDoc OpenAPI (Swagger UI)                        |
-| 인증        | Spring Security, Kakao OAuth 2.0, JWT(액세스 토큰)    |
-| DB          | MySQL                                                 |
-| 캐시 (DB)   | disc_cache 테이블 (온디맨드 만료, Lazy Caching)       |
-| 캐시 (앱)   | Redis (`@Cacheable`, DB 결과 캐싱 전용)               |
-| LLM         | Anthropic Claude API (claude-sonnet-4-6)              |
-| 비동기 처리 | Spring `@Async`                                       |
-| 실시간 알림 | SSE (`SseEmitter`)                                    |
-| 스토리지    | 로컬 파일시스템 (개발) / AWS S3 (운영)                |
-| 배치        | Spring Batch (만료 동료 코드 + 만료 평정 토큰 삭제)   |
-| 프론트엔드  | Next.js (App Router), Tailwind CSS, Framer Motion     |
-| 상태 관리   | TanStack Query (서버 상태), Zustand (클라이언트 상태) |
-| 인프라      | 미정                                                  |
+| 영역        | 기술                                                                           |
+| ----------- | ------------------------------------------------------------------------------ |
+| 백엔드      | Java 25, Spring Boot 3.5.14                                                    |
+| API 문서    | SpringDoc OpenAPI (Swagger UI)                                                 |
+| 인증        | Spring Security, Kakao OAuth 2.0, JWT(액세스 토큰)                             |
+| DB          | MySQL                                                                          |
+| 캐시 (DB)   | disc_cache 테이블 (온디맨드 만료, Lazy Caching)                                |
+| 캐시 (앱)   | Redis (`@Cacheable`, DB 결과 캐싱 전용)                                        |
+| LLM         | Anthropic Claude API (claude-sonnet-4-6)                                       |
+| 비동기 처리 | Spring `@Async`                                                                |
+| 실시간 알림 | SSE (`SseEmitter`)                                                             |
+| 스토리지    | 로컬 파일시스템 (개발) / AWS S3 (운영)                                         |
+| 배치        | Spring Batch (만료 동료 코드/토큰 삭제) + `@Scheduled` (케미 캐시 스테일 복구) |
+| 프론트엔드  | Next.js (App Router), Tailwind CSS, Framer Motion                              |
+| 상태 관리   | TanStack Query (서버 상태), Zustand (클라이언트 상태)                          |
+| 인프라      | 미정                                                                           |
 
 ---
 

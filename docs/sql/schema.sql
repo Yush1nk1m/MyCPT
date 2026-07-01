@@ -344,6 +344,7 @@ CREATE TABLE chemistry_cache (
     status       VARCHAR(20)  NOT NULL  DEFAULT 'NULL'  COMMENT '락 라이프사이클. NULL(미생성)/GENERATING(LLM 호출 중)/READY(완료)',
     report       TEXT         NULL      COMMENT 'Markdown 케미 보고서. NULL=미생성 또는 생성 중. 이름 미포함',
     created_at   DATETIME     NULL      COMMENT '캐시 생성/갱신 시각. NULL=미생성 또는 생성 중. 온디맨드 만료 판단 기준',
+    updated_at   DATETIME     NULL      COMMENT '마지막 상태 진입 시각(GENERATING 진입 또는 배치 재시도 착수). 스테일 GENERATING 탐지 기준',
 
     PRIMARY KEY (requester_d, requester_i, requester_s, requester_c,
                  partner_d,   partner_i,   partner_s,   partner_c)
@@ -357,11 +358,11 @@ CREATE TABLE chemistry_cache (
 INSERT INTO chemistry_cache
     (requester_d, requester_i, requester_s, requester_c,
      partner_d,   partner_i,   partner_s,   partner_c,
-     status, report, created_at)
+     status, report, created_at, updated_at)
 SELECT
     rd, ri, rs, rc,
     pd, pi, ps, pc,
-    'NULL', NULL, NULL
+    'NULL', NULL, NULL, NULL
 FROM
     (SELECT 1 AS rd UNION SELECT 2 UNION SELECT 3) r_d,
     (SELECT 1 AS ri UNION SELECT 2 UNION SELECT 3) r_i,

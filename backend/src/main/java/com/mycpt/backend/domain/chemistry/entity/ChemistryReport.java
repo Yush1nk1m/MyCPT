@@ -50,7 +50,6 @@ public class ChemistryReport {
     private ChemistryReportStatus status;
 
     // chemistry_cache 복합 FK - ChemistryCacheId의 8개 컬럼이 DDL에 매핑
-    // NULL/GENERATING/ERROR 상태에서는 null (캐시 조회 전)
     @Embedded
     @AttributeOverrides({
             @AttributeOverride(name = "requesterD", column = @Column(name = "requester_d", columnDefinition = "TINYINT")),

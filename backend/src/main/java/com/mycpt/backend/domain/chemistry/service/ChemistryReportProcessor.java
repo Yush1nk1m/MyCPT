@@ -73,7 +73,8 @@ public class ChemistryReportProcessor {
 
     @Recover
     @Transactional
-    public void recover(Exception e, Long reportId) {
+    public void recover(Exception e, ChemistryReportIssuedEvent event) {
+        Long reportId = event.reportId();
         log.error("케미 보고서 생성 최종 실패. reportId={}", reportId, e);
         chemistryReportRepository.findById(reportId)
                 .ifPresent(r -> {

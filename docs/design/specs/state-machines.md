@@ -32,6 +32,10 @@ stateDiagram-v2
 | `ready`      | chemistry-list 카드에 NEW 뱃지. detail 본문 마크다운 렌더                                            | 열람                                         |
 | `error`      | 토스트 "발행에 실패했어요. 코인이 환불되었어요." + 재시도 버튼                                       | 재시도                                       |
 
+**참고**: `error` 상태는 다이어그램상 종국처럼 보이지만, chemistry_cache 스테일 복구 배치가
+성공하면 DB 레벨에서 `chemistry_reports.status`가 `error → ready`로 조용히 교정될 수 있다.
+이 전이는 사용자에게 알림/SSE로 노출되지 않으며, 다음 조회 시에만 반영된다.
+
 **예외 처리**
 
 - `generating` 중 동료가 탈퇴 → 발행 취소, 코인 환불, 토스트 안내

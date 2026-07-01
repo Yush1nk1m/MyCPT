@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * chemistry_cache 락 기반 중복 LLM 호출 방지 서비스.
@@ -42,6 +43,8 @@ public class ChemistryCacheService {
 
     // 버킷 조합 -> 대기 중인 (userId, reportId, latch) 목록
     private final Map<ChemistryCacheId, List<WaitingEntry>> waitingMap = new ConcurrentHashMap<>();
+    // 구독자 대기 타임아웃
+    private static final long SUBSCRIBER_WAIT_TIMEOUT_MINUTES = 5;
 
     public ChemistryCacheService(
             ChemistryCacheRepository chemistryCacheRepository,
@@ -115,16 +118,29 @@ public class ChemistryCacheService {
         }
 
         try {
-            latch.await();
+            boolean released = latch.await(SUBSCRIBER_WAIT_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+            if (!released) {
+                log.warn("구독자 대기 타임아웃({}분). userId={}, cacheId={}",
+                        SUBSCRIBER_WAIT_TIMEOUT_MINUTES, userId, cacheId);
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            removeWaiter(cacheId, userId);
             throw new IllegalStateException("구독자 대기 중 인터럽트. userId=" + userId);
         }
 
-        // latch 해제 후 캐시에서 report 읽기
-        return chemistryCacheRepository.findById(cacheId)
+        String report = chemistryCacheRepository.findById(cacheId)
                 .map(ChemistryCache::getReport)
-                .orElseThrow(() -> new IllegalStateException("latch 해제 후 캐시 report 없음: " + cacheId));
+                .orElse(null);
+
+        if (report == null) {
+            removeWaiter(cacheId, userId);
+            throw new IllegalStateException(
+                    "구독자 대기 종료 후에도 캐시 report 없음(타임아웃 또는 발행 실패). cacheId=" + cacheId
+            );
+        }
+
+        return report;
     }
 
     /**
@@ -161,8 +177,17 @@ public class ChemistryCacheService {
         return entries;
     }
 
+    private void removeWaiter(ChemistryCacheId cacheId, Long userId) {
+        List<WaitingEntry> entries = waitingMap.get(cacheId);
+        if (entries == null) return;
+        entries.removeIf(e -> e.userId().equals(userId));
+        if (entries.isEmpty()) {
+            waitingMap.remove(cacheId, entries);
+        }
+    }
+
     // TODO: 프롬프트 캐싱을 위한 블록 빌드 로직 구현
-    private String buildPrompt(LatestBuckets a, LatestBuckets b) {
+    String buildPrompt(LatestBuckets a, LatestBuckets b) {
         return """
                 당신은 DISC 성격 유형 전문 분석가입니다.
                 두 사람의 DISC 버킷값을 기반으로 한국어 케미 보고서를 작성하세요.

@@ -1,5 +1,6 @@
 package com.mycpt.backend.domain.chemistry.repository;
 
+import com.mycpt.backend.domain.chemistry.entity.ChemistryCacheId;
 import com.mycpt.backend.domain.chemistry.entity.ChemistryReport;
 import com.mycpt.backend.domain.chemistry.enums.ChemistryReportStatus;
 import org.springframework.data.domain.Pageable;
@@ -53,4 +54,6 @@ public interface ChemistryReportRepository extends JpaRepository<ChemistryReport
     Optional<ChemistryReport> findByIdWithUsers(@Param("id") Long id);
 
     List<ChemistryReport> findByRequesterId(@Param("requesterId") Long requesterId);
+
+    List<ChemistryReport> findByCacheIdAndStatus(ChemistryCacheId cacheId, ChemistryReportStatus status);
 }
