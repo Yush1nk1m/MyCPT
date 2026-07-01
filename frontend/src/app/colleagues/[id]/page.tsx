@@ -1,7 +1,7 @@
 // frontend/src/app/colleagues/[id]/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   useQuery,
@@ -258,12 +258,20 @@ export default function ColleagueDetailPage() {
     },
   });
 
-  // 에러 처리
+  // UNAUTHORIZED → / 리다이렉트 (렌더 중 setState 방지를 위해 useEffect로 분리)
+  useEffect(() => {
+    if (
+      colleague.error?.message === "UNAUTHORIZED" ||
+      coinBalance.error?.message === "UNAUTHORIZED"
+    ) {
+      router.replace("/");
+    }
+  }, [colleague.error, coinBalance.error, router]);
+
   if (
     colleague.error?.message === "UNAUTHORIZED" ||
     coinBalance.error?.message === "UNAUTHORIZED"
   ) {
-    router.replace("/");
     return null;
   }
 

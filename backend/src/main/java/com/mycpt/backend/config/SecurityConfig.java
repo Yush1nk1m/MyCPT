@@ -72,6 +72,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/assessments/*/submit").permitAll()
                 // 비회원도 초대 코드로 초대자 정보 미리보기 가능 (GET /api/v1/colleagues/invite/{code})
                 .requestMatchers(HttpMethod.GET, "/api/v1/colleagues/invite/*").permitAll()
+                // 개발 환경 전용 로그인 (dev 프로필에서만 컨트롤러 빈 존재 — prod에선 이 경로 자체가 없음)
+                .requestMatchers("/api/v1/dev/**").permitAll()
                 // 위 규칙에 해당하지 않는 모든 요청은 로그인 필요. 미인증 시 authenticationEntryPoint에서 401 상태 반환
                 .anyRequest().authenticated());
 

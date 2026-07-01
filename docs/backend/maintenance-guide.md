@@ -32,17 +32,29 @@
 
 판단 기준: 새 컨트롤러 작성 시, 그 컨트롤러의 모든 엔드포인트가 공통 prefix 하나로 묶이면 단일 리소스, 둘 이상의 서로 다른 리소스 명사를 다루면 다중 리소스로 본다.
 
-### OAuth2 로그인 후 리다이렉트 화이트리스트
+### OAuth2 로그인 후 리다이렉트 처리
 
-로그인 완료 후 이동 경로는 `SecurityConfig`의 `ALLOWED_REDIRECTS` Set으로 관리한다.
+로그인 완료 후 이동 경로는 고정 화이트리스트가 아니라 `SecurityConfig.isSafeRedirect()`의
+상대 경로 검증을 통과하면 어떤 경로든 허용한다.
 
-현재 허용 경로:
+```java
+private static boolean isSafeRedirect(String path) {
+    if (path == null || path.isBlank()) return false;
+    if (path.startsWith("http") || path.startsWith("//")) return false;
+    return path.startsWith("/");
+}
+```
 
-- `/` — 일반 로그인
-- `/save-result` — 비회원 검사 후 로그인 시 결과 자동 저장
+**동작 방식**
 
-새 경로 추가 시 `SecurityConfig.ALLOWED_REDIRECTS`에만 추가하면 된다.
-프론트에서 `redirect` 파라미터로 임의 경로를 넘겨도 화이트리스트에 없으면 `/`로 이동한다.
+1. 프론트에서 `GET /api/v1/auth/kakao?returnTo=<경로>` 호출
+2. `AuthV1Controller.kakaoLogin()`이 `returnTo`를 `oauth2_redirect` 쿠키에 저장 (5분 TTL — OAuth 리다이렉트 체인 중 쿼리 파라미터가 소실되므로 쿠키로 우회)
+3. 로그인 성공 후 `successHandler`가 쿠키값을 꺼내 `isSafeRedirect()` 검증
+4. 통과 시 해당 경로로, 실패 시(절대 URL·프로토콜 상대 URL·빈 값 등 오픈 리다이렉트 위험 패턴) `/`로 리다이렉트
+
+**허용 기준**: `/`로 시작하는 상대 경로면 전부 허용 (`http`, `//` 시작만 차단).
+동적 라우트(`/invite/[code]`, `/colleagues/[id]` 등)도 별도 등록 없이 그대로 사용 가능.
+새 경로 추가 시 코드 수정 불필요 — 프론트에서 `returnTo`만 올바르게 넘기면 된다.
 
 ## 2. 프로필 이미지 저장 방식
 
