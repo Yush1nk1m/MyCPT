@@ -100,6 +100,7 @@ public class AssessmentService {
      * @throws BusinessException (TOKEN_USED)                   이미 사용된 토큰
      * @throws BusinessException (EXPIRED_CODE)                 만료된 토큰
      */
+    @Transactional(readOnly = true)
     public SubjectInfo getSubjectInfo(String tokenValue) {
         AssessmentToken token = findAndValidate(tokenValue);
         User subject = token.getSubject();

@@ -207,3 +207,41 @@ export const DISC_QUESTIONS: DiscQuestion[] = RAW.map(
 );
 
 export const TOTAL_QUESTIONS = DISC_QUESTIONS.length; // 24
+
+/**
+ * 타인 평정용 문항 도입부 변환
+ *
+ * 문제: 모든 stem이 "..., 나는…" 1인칭으로 끝나는데, 타인 평정(rater=OTHER) 시
+ * 그대로 노출하면 평정자가 "나"를 자기 자신으로 착각할 수 있음 — 강제선택형
+ * 검사에서 이 혼동은 척도 타당도를 직접 훼손함.
+ *
+ * 해법: 문미의 "나는…"을 "{대상자}님은…"으로 치환.
+ * "님" 뒤에 붙는 조사는 받침(ㅁ) 고정이라 이름의 받침 유무와 무관하게
+ * 항상 은/을/이 형태로 문법적으로 안전함 (은/는, 을/를 분기 로직 불필요).
+ *
+ * 예외: 문미가 아닌 중간에 "나"가 등장하는 문항은 IRREGULAR_STEM_OVERRIDES에 수동 등록.
+ * (24문항 검수 결과 Q23 "누군가 내 결과물을 칭찬했을 때" 1건만 해당)
+ */
+const IRREGULAR_STEM_OVERRIDES: Record<number, (name: string) => string> = {
+  22: (name) => `누군가 ${name}님의 결과물을 칭찬했을 때, ${name}님은…`,
+};
+
+export function toRaterStem(
+  stem: string,
+  questionIndex: number,
+  subjectName: string,
+): string {
+  const override = IRREGULAR_STEM_OVERRIDES[questionIndex];
+  if (override) return override(subjectName);
+
+  if (!stem.endsWith("나는…")) {
+    // 검수되지 않은 새 패턴 — 잘못된 문구를 조용히 노출하는 것보단
+    // 콘솔에 남겨서 바로 눈에 띄게 함
+    console.warn(
+      `[disc/questions] toRaterStem: 예상치 못한 문항 패턴 (index=${questionIndex})`,
+    );
+    return stem;
+  }
+
+  return stem.replace(/나는…$/, `${subjectName}님은…`);
+}

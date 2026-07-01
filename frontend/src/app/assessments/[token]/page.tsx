@@ -4,7 +4,11 @@ import { use, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DotProgressBar } from "@/components/test/DotProgressBar";
 import { QuestionCard } from "@/components/test/QuestionCard";
-import { DISC_QUESTIONS, TOTAL_QUESTIONS } from "@/lib/disc/questions";
+import {
+  DISC_QUESTIONS,
+  TOTAL_QUESTIONS,
+  toRaterStem,
+} from "@/lib/disc/questions";
 import type { DiscTag } from "@/lib/disc/questions";
 import { calculateScores, validateScores } from "@/lib/disc/scoring";
 import type { Answers, DiscScores } from "@/lib/disc/scoring";
@@ -211,6 +215,11 @@ export default function AssessmentPage({
   // 응시 중
   if (pageState === "answering") {
     const question = DISC_QUESTIONS[currentIndex];
+    const raterStem = toRaterStem(
+      question.stem,
+      currentIndex,
+      info.subjectNickname,
+    );
 
     return (
       <div className="flex flex-col min-h-screen px-5 pt-6 pb-6 gap-4 max-w-[480px] mx-auto">
@@ -225,7 +234,7 @@ export default function AssessmentPage({
         <QuestionCard
           key={currentIndex}
           questionIndex={currentIndex}
-          stem={question.stem}
+          stem={raterStem}
           options={question.options}
           initialMost={currentAnswer?.most}
           initialLeast={currentAnswer?.least}
@@ -262,8 +271,8 @@ export default function AssessmentPage({
         {info.subjectNickname}님이 당신에게 평정을 요청했어요
       </p>
       <p className="text-[13px] text-[var(--ink-soft)] leading-relaxed">
-        24개의 문항에 답하면 {info.subjectNickname}님이 보는 당신의 시각으로
-        DISC 성향을 알려드려요. 약 3분 정도 걸려요.
+        24개의 문항에 답하면서 {info.subjectNickname}님의 성향을 평정해 주세요.
+        <br />약 3분 정도 걸려요.
       </p>
       <div className="w-full flex flex-col gap-2.5 mt-2 text-left">
         <div className="flex items-start gap-2 text-[13px] text-[var(--ink-soft)]">

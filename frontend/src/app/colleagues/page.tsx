@@ -58,27 +58,36 @@ async function postColleague(code: string): Promise<ColleagueResponse> {
     body: JSON.stringify({ code }),
   });
   if (res.status === 401) throw new Error("UNAUTHORIZED");
-  // 에러 응답 바디에서 메시지 추출
+  // 에러 응답 바디에서 code 추출 (message는 백엔드 범용 문구라 화면에 직접 노출 안 함)
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.message ?? "FETCH_ERROR");
+    throw new Error(body.code ?? "FETCH_ERROR");
   }
   return res.json();
 }
 
 // ── 유틸 ─────────────────────────────────────────────────────────────────────
 
-// 코드 포맷: 입력값을 MYCPT-XXXX-XXX 형태로 자동 변환
-function formatCode(raw: string): string {
-  const stripped = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const parts = ["MYCPT", stripped.slice(0, 4), stripped.slice(4, 7)].filter(
-    (p) => p.length > 0,
-  );
-  return parts.join("-");
+// 서버 에러 코드 → 서비스 말투 안내 문구
+// POST /colleagues가 던질 수 있는 코드: NOT_FOUND, EXPIRED_CODE, SELF_INVITE, ALREADY_COLLEAGUE
+function errorMessage(code: string): string {
+  if (code === "NOT_FOUND") return "동료 코드가 유효하지 않아요.";
+  if (code === "EXPIRED_CODE") return "만료된 코드예요.";
+  if (code === "SELF_INVITE") return "본인의 코드는 사용할 수 없어요.";
+  if (code === "ALREADY_COLLEAGUE") return "이미 동료로 등록된 코드예요.";
+  return "등록에 실패했어요";
 }
 
-// 코드 유효성: MYCPT-XXXX-XXX (대문자+숫자)
-const CODE_PATTERN = /^MYCPT-[A-Z0-9]{4}-[A-Z0-9]{3}$/;
+// 코드 포맷: 입력값을 MYCPT-XXXX-XXX 형태로 자동 변환
+function formatCode(raw: string): string {
+  return raw
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 8);
+}
+
+// 코드 유효성: 대문자+숫자 8자리
+const CODE_PATTERN = /^[A-Z0-9]{8}$/;
 
 function avatarLetter(nickname: string): string {
   return nickname.charAt(0).toUpperCase();
@@ -105,10 +114,7 @@ function RegisterSheet({
       onClose();
     },
     onError: (e: Error) => {
-      // 서버 에러 메시지 그대로 표시 (올바르지 않은 코드, 본인 코드 등)
-      setErrorMsg(
-        e.message === "FETCH_ERROR" ? "등록에 실패했어요" : e.message,
-      );
+      setErrorMsg(errorMessage(e.message));
     },
   });
 
@@ -119,7 +125,7 @@ function RegisterSheet({
 
   function handleSubmit() {
     if (!CODE_PATTERN.test(input)) {
-      setErrorMsg("올바른 형식의 코드를 입력해 주세요");
+      setErrorMsg("올바른 형식의 코드를 입력해 주세요.");
       return;
     }
     mutation.mutate(input);
@@ -171,10 +177,10 @@ function RegisterSheet({
             >
               <input
                 className="flex-1 font-mono text-[15px] font-bold tracking-widest bg-transparent outline-none text-[var(--ink)] placeholder:text-[var(--ink-faint)]"
-                placeholder="MYCPT-□□□□-□□□"
+                placeholder="□□□□□□□□"
                 value={input}
                 onChange={(e) => handleChange(e.target.value)}
-                maxLength={14}
+                maxLength={8}
                 autoComplete="off"
                 spellCheck={false}
               />
