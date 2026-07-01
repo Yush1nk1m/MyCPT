@@ -7,6 +7,7 @@ import com.mycpt.backend.domain.notification.dto.NotificationListResponse;
 import com.mycpt.backend.domain.notification.dto.NotificationResponse;
 import com.mycpt.backend.domain.notification.entity.ColleagueNotification;
 import com.mycpt.backend.domain.notification.entity.Notification;
+import com.mycpt.backend.domain.notification.repository.ColleagueNotificationRepository;
 import com.mycpt.backend.domain.notification.repository.NotificationRepository;
 import com.mycpt.backend.domain.user.entity.User;
 import org.junit.jupiter.api.DisplayName;
@@ -31,10 +32,12 @@ class NotificationServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
     @Mock
+    private ColleagueNotificationRepository colleagueNotificationRepository;
+    @Mock
     private SseService sseService;
 
     private NotificationService sut() {
-        return new NotificationService(notificationRepository, sseService);
+        return new NotificationService(notificationRepository, colleagueNotificationRepository, sseService);
     }
 
     // ── 공통 픽스처 ───────────────────────────────────────────────────────────
@@ -165,6 +168,30 @@ class NotificationServiceTest {
                         assertThat(be.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
                     });
             then(notificationRepository).should(never()).delete(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("deleteColleagueNotifications()")
+    class DeleteColleagueNotifications {
+
+        @Test
+        @DisplayName("[UT-NotificationSvc-동료알림삭제-성공]")
+        void 동료알림삭제_성공() {
+            // given
+            User recipient = stubUser(1L);
+            User requester = stubUser(2L);
+            Colleague colleague = Colleague.create(recipient, requester);
+            ColleagueNotification notification = ColleagueNotification.create(recipient, colleague);
+
+            given(colleagueNotificationRepository.findAllByColleague(colleague))
+                    .willReturn(List.of(notification));
+
+            // when
+            sut().deleteColleagueNotifications(colleague);
+
+            // then
+            then(colleagueNotificationRepository).should(times(1)).deleteAll(List.of(notification));
         }
     }
 }

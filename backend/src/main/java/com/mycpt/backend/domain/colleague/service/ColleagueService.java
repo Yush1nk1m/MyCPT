@@ -156,6 +156,9 @@ public class ColleagueService {
         Colleague colleague = colleagueRepository.findByPair(idA, idB)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN));
 
+        // 동료 삭제 전 관련 알림 먼저 제거 (FK 제약 위반 방지)
+        notificationService.deleteColleagueNotifications(colleague);
+
         colleagueRepository.delete(colleague);
     }
 }

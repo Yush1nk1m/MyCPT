@@ -355,6 +355,7 @@ class ColleagueServiceTest {
             sut().delete(partner.getId(), me.getId());
 
             // then
+            then(notificationService).should(times(1)).deleteColleagueNotifications(colleague);
             then(colleagueRepository).should(times(1)).delete(any(Colleague.class));
         }
 

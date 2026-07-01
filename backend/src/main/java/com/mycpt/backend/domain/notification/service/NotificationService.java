@@ -9,6 +9,7 @@ import com.mycpt.backend.domain.notification.dto.NotificationResponse;
 import com.mycpt.backend.domain.notification.entity.ChemistryNotification;
 import com.mycpt.backend.domain.notification.entity.ColleagueNotification;
 import com.mycpt.backend.domain.notification.entity.Notification;
+import com.mycpt.backend.domain.notification.repository.ColleagueNotificationRepository;
 import com.mycpt.backend.domain.notification.repository.NotificationRepository;
 import com.mycpt.backend.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final ColleagueNotificationRepository colleagueNotificationRepository;
     private final SseService sseService;
 
     /**
@@ -74,5 +76,19 @@ public class NotificationService {
         }
 
         notificationRepository.delete(notification);
+    }
+
+    /**
+     * 동료 관계 삭제 시 관련 알림도 함께 제거
+     * ColleagueService.delete() 트랜잭션 내에서 호출됨
+     * <p>
+     * JOINED 상속 엔티티를 remove()하면 자식(colleague_notifications) + 부모(notifications)
+     * 테이블 양쪽에서 올바른 순서로 DELETE가 발생 — 스키마 CASCADE만으로는 부모 행이 고아로 남음
+     */
+    @Transactional
+    public void deleteColleagueNotifications(Colleague colleague) {
+        List<ColleagueNotification> notifications =
+                colleagueNotificationRepository.findAllByColleague(colleague);
+        colleagueNotificationRepository.deleteAll(notifications);
     }
 }

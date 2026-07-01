@@ -307,6 +307,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 | `UT-ColleagueSvc-초대정보조회-코드없음`   | 존재하지 않는 코드             | `BusinessException(NOT_FOUND)`                                                  |
 | `UT-ColleagueSvc-초대정보조회-만료코드`   | `isExpired()` = true           | `BusinessException(EXPIRED_CODE)`                                               |
 | `UT-ColleagueSvc-초대정보조회-자기초대`   | 초대자 == 요청자               | `BusinessException(SELF_INVITE)`                                                |
+| `UT-ColleagueSvc-초대정보조회-비회원`     | myUserId=null (비회원)         | 자기초대 검증 스킵, `InviteInfoResponse` 정상 반환                              |
 | `UT-ColleagueSvc-동료등록-성공`           | 유효한 코드로 동료 등록        | `Colleague` save 1회, `sendColleagueNotification` 1회, `ColleagueResponse` 반환 |
 | `UT-ColleagueSvc-동료등록-코드없음`       | 존재하지 않는 코드             | `BusinessException(NOT_FOUND)`                                                  |
 | `UT-ColleagueSvc-동료등록-만료코드`       | `isExpired()` = true           | `BusinessException(EXPIRED_CODE)`                                               |
@@ -315,7 +316,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 | `UT-ColleagueSvc-동료목록조회-성공`       | 동료 목록 조회                 | `ColleagueListResponse` 반환, 상대방 정보 포함                                  |
 | `UT-ColleagueSvc-동료프로필조회-성공`     | 동료 관계인 상대 조회          | `ColleagueResponse` 반환                                                        |
 | `UT-ColleagueSvc-동료프로필조회-동료아님` | 동료 관계 없음                 | `BusinessException(FORBIDDEN)`                                                  |
-| `UT-ColleagueSvc-동료삭제-성공`           | 동료 관계 삭제                 | `delete` 1회 호출                                                               |
+| `UT-ColleagueSvc-동료삭제-성공`           | 동료 관계 삭제                 | `deleteColleagueNotifications` 1회 호출 후 `delete` 1회 호출                    |
 | `UT-ColleagueSvc-동료삭제-동료아님`       | 동료 관계 없음                 | `BusinessException(FORBIDDEN)`, delete 미호출                                   |
 
 ### ColleagueV1Controller (ST)
@@ -459,13 +460,14 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 [[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/notification/service/NotificationServiceTest.java)]
 
-| Test ID                                | 행위                | 상황                                                                   |
-| -------------------------------------- | ------------------- | ---------------------------------------------------------------------- |
-| `UT-NotificationSvc-동료알림전송-성공` | 동료 등록 알림 생성 | `ColleagueNotification` save 1회                                       |
-| `UT-NotificationSvc-알림목록조회-성공` | 내 알림 목록 조회   | `NotificationListResponse` 반환, 항목 수 / `type` / `referenceId` 검증 |
-| `UT-NotificationSvc-알림삭제-성공`     | 본인 알림 삭제      | `delete` 1회 호출                                                      |
-| `UT-NotificationSvc-알림삭제-없는ID`   | 존재하지 않는 알림  | `BusinessException(NOT_FOUND)`                                         |
-| `UT-NotificationSvc-알림삭제-권한없음` | 타인 알림 삭제 시도 | `BusinessException(FORBIDDEN)`, delete 미호출                          |
+| Test ID                                | 행위                             | 상황                                                                   |
+| -------------------------------------- | -------------------------------- | ---------------------------------------------------------------------- |
+| `UT-NotificationSvc-동료알림전송-성공` | 동료 등록 알림 생성              | `ColleagueNotification` save 1회                                       |
+| `UT-NotificationSvc-동료알림삭제-성공` | 동료 관계 삭제 시 관련 알림 제거 | `findAllByColleague` 결과 `deleteAll` 1회 호출                         |
+| `UT-NotificationSvc-알림목록조회-성공` | 내 알림 목록 조회                | `NotificationListResponse` 반환, 항목 수 / `type` / `referenceId` 검증 |
+| `UT-NotificationSvc-알림삭제-성공`     | 본인 알림 삭제                   | `delete` 1회 호출                                                      |
+| `UT-NotificationSvc-알림삭제-없는ID`   | 존재하지 않는 알림               | `BusinessException(NOT_FOUND)`                                         |
+| `UT-NotificationSvc-알림삭제-권한없음` | 타인 알림 삭제 시도              | `BusinessException(FORBIDDEN)`, delete 미호출                          |
 
 ---
 
