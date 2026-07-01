@@ -44,8 +44,10 @@ public class ColleagueV1Controller implements ColleagueApi {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable String code
     ) {
+        // 비회원은 principal이 null (permitAll 경로) - 자기초대 검증은 서비스에서 생략
+        Long myUserId = principal != null ? principal.getUser().getId() : null;
         return ResponseEntity.ok(
-                colleagueService.getInviteInfo(code, principal.getUser().getId())
+                colleagueService.getInviteInfo(code, myUserId)
         );
     }
 

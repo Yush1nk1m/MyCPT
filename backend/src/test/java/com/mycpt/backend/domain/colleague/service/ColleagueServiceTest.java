@@ -142,6 +142,23 @@ class ColleagueServiceTest {
                         assertThat(be.getErrorCode()).isEqualTo(ErrorCode.SELF_INVITE);
                     });
         }
+
+        @Test
+        @DisplayName("[UT-ColleagueSvc-초대정보조회-비회원]")
+        void 초대정보조회_비회원() {
+            // given: myUserId==null (비회원) - 자기초대 검증 스킵되어야 함
+            User inviter = stubUser(1L, "kakao-1");
+            PeerCode code = stubValidCode(inviter);
+
+            given(peerCodeRepository.findByCode(any()))
+                    .willReturn(Optional.of(code));
+
+            // when
+            InviteInfoResponse response = sut().getInviteInfo(code.getCode(), null);
+
+            // then
+            assertThat(response.nickname()).isEqualTo(inviter.getNickname());
+        }
     }
 
     // ── register() ───────────────────────────────────────────────────────────

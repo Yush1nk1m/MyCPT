@@ -117,12 +117,17 @@ class ColleagueV1ControllerTest extends MvcTestSupport {
         }
 
         @Test
-        @DisplayName("[ST-ColleagueCtrl-초대정보조회-미인증]")
-        void 초대정보조회_미인증() throws Exception {
+        @DisplayName("[ST-ColleagueCtrl-초대정보조회-비회원성공]")
+        void 초대정보조회_비회원성공() throws Exception {
+            // given
+            given(colleagueService.getInviteInfo(any(), isNull()))
+                    .willReturn(new InviteInfoResponse(1L, "유신", null));
+
             // when
             mockMvc.perform(get("/api/v1/colleagues/invite/{code}", "AB3D9K2M"))
                     // then
-                    .andExpect(status().isUnauthorized());
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.nickname").value("유신"));
         }
     }
 

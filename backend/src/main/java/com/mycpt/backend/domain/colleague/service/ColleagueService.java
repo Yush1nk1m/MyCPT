@@ -45,7 +45,8 @@ public class ColleagueService {
 
         User inviter = peerCode.getUser();
 
-        if (inviter.getId().equals(myUserId)) {
+        // 비회원(myUserId==null)은 자기초대 검증 대상이 아님
+        if (myUserId != null && inviter.getId().equals(myUserId)) {
             throw new BusinessException(ErrorCode.SELF_INVITE);
         }
 

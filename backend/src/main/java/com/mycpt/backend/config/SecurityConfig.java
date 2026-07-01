@@ -70,6 +70,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/assessments/*").permitAll()
                 // 비회원도 타인 평정 결과 제출 가능
                 .requestMatchers(HttpMethod.POST, "/api/v1/assessments/*/submit").permitAll()
+                // 비회원도 초대 코드로 초대자 정보 미리보기 가능 (GET /api/v1/colleagues/invite/{code})
+                .requestMatchers(HttpMethod.GET, "/api/v1/colleagues/invite/*").permitAll()
                 // 위 규칙에 해당하지 않는 모든 요청은 로그인 필요. 미인증 시 authenticationEntryPoint에서 401 상태 반환
                 .anyRequest().authenticated());
 

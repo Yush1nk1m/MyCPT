@@ -326,22 +326,22 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 > `PeerCodeService`, `ColleagueService`는 `@MockitoBean`으로 대체.
 > 비즈니스 예외 분기는 `ColleagueServiceTest`(UT)에서 전담 검증. ST는 인증 분기만 다룬다.
 
-| Test ID                                | 행위                                           | 상황                                   |
-| -------------------------------------- | ---------------------------------------------- | -------------------------------------- |
-| `ST-ColleagueCtrl-코드조회-성공`       | 인증된 사용자 GET /peer-code                   | 200 + 응답 바디 필드 검증              |
-| `ST-ColleagueCtrl-코드조회-미인증`     | 미인증 GET /peer-code                          | 401                                    |
-| `ST-ColleagueCtrl-코드갱신-성공`       | 인증된 사용자 POST /peer-code/refresh          | 200 + 응답 바디 필드 검증              |
-| `ST-ColleagueCtrl-코드갱신-미인증`     | 미인증 POST /peer-code/refresh                 | 401                                    |
-| `ST-ColleagueCtrl-초대정보조회-성공`   | 인증된 사용자 GET /colleagues/invite/{code}    | 200 + 응답 바디 필드 검증              |
-| `ST-ColleagueCtrl-초대정보조회-미인증` | 미인증 GET /colleagues/invite/{code}           | 401                                    |
-| `ST-ColleagueCtrl-동료등록-성공`       | 인증된 사용자 POST /colleagues                 | 201 + 응답 바디 필드 검증              |
-| `ST-ColleagueCtrl-동료등록-미인증`     | 미인증 POST /colleagues                        | 401                                    |
-| `ST-ColleagueCtrl-목록조회-성공`       | 인증된 사용자 GET /colleagues                  | 200 + 응답 바디 `colleagues` 배열 검증 |
-| `ST-ColleagueCtrl-목록조회-미인증`     | 미인증 GET /colleagues                         | 401                                    |
-| `ST-ColleagueCtrl-프로필조회-성공`     | 인증된 사용자 GET /colleagues/{colleagueId}    | 200 + 응답 바디 필드 검증              |
-| `ST-ColleagueCtrl-프로필조회-미인증`   | 미인증 GET /colleagues/{colleagueId}           | 401                                    |
-| `ST-ColleagueCtrl-삭제-성공`           | 인증된 사용자 DELETE /colleagues/{colleagueId} | 200                                    |
-| `ST-ColleagueCtrl-삭제-미인증`         | 미인증 DELETE /colleagues/{colleagueId}        | 401                                    |
+| Test ID                                    | 행위                                           | 상황                                   |
+| ------------------------------------------ | ---------------------------------------------- | -------------------------------------- |
+| `ST-ColleagueCtrl-코드조회-성공`           | 인증된 사용자 GET /peer-code                   | 200 + 응답 바디 필드 검증              |
+| `ST-ColleagueCtrl-코드조회-미인증`         | 미인증 GET /peer-code                          | 401                                    |
+| `ST-ColleagueCtrl-코드갱신-성공`           | 인증된 사용자 POST /peer-code/refresh          | 200 + 응답 바디 필드 검증              |
+| `ST-ColleagueCtrl-코드갱신-미인증`         | 미인증 POST /peer-code/refresh                 | 401                                    |
+| `ST-ColleagueCtrl-초대정보조회-성공`       | 인증된 사용자 GET /colleagues/invite/{code}    | 200 + 응답 바디 필드 검증              |
+| `ST-ColleagueCtrl-초대정보조회-비회원성공` | 미인증 GET /colleagues/invite/{code}           | 200                                    |
+| `ST-ColleagueCtrl-동료등록-성공`           | 인증된 사용자 POST /colleagues                 | 201 + 응답 바디 필드 검증              |
+| `ST-ColleagueCtrl-동료등록-미인증`         | 미인증 POST /colleagues                        | 401                                    |
+| `ST-ColleagueCtrl-목록조회-성공`           | 인증된 사용자 GET /colleagues                  | 200 + 응답 바디 `colleagues` 배열 검증 |
+| `ST-ColleagueCtrl-목록조회-미인증`         | 미인증 GET /colleagues                         | 401                                    |
+| `ST-ColleagueCtrl-프로필조회-성공`         | 인증된 사용자 GET /colleagues/{colleagueId}    | 200 + 응답 바디 필드 검증              |
+| `ST-ColleagueCtrl-프로필조회-미인증`       | 미인증 GET /colleagues/{colleagueId}           | 401                                    |
+| `ST-ColleagueCtrl-삭제-성공`               | 인증된 사용자 DELETE /colleagues/{colleagueId} | 200                                    |
+| `ST-ColleagueCtrl-삭제-미인증`             | 미인증 DELETE /colleagues/{colleagueId}        | 401                                    |
 
 ---
 
