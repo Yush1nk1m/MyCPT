@@ -8,7 +8,7 @@ import { useMe } from "@/hooks/useMe";
 // ── 타입 ──────────────────────────────────────────────────────────────────────
 
 interface InviteInfoResponse {
-  userId: number;
+  inviterId: number;
   nickname: string;
   profileImageUrl: string | null;
 }
@@ -167,7 +167,7 @@ export default function InviteAcceptPage({
           {inviter.nickname}님과 동료가 됐어요 🎉
         </p>
         <button
-          onClick={() => router.push(`/colleagues/${inviter.userId}`)}
+          onClick={() => router.push(`/colleagues/${inviter.inviterId}`)}
           className="mt-3 px-6 py-2.5 rounded-pill bg-[var(--ink)] text-white text-[13px] font-bold"
         >
           동료 프로필 보기
