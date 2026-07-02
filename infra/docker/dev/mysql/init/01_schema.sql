@@ -1,12 +1,8 @@
-SET FOREIGN_KEY_CHECKS = 0;
-
 -- ============================================================
 -- MyCPT DDL
--- 버전: v0.9
+-- 버전: v0.10
 -- 작성일: '26.06.15.
--- 변경: disc_results → disc_tests (JPA @Inheritance(JOINED) 적용)
---        tests.test_type 제거 → dtype 추가 (@DiscriminatorColumn)
---        notifications CTI 적용 (colleague_notifications, chemistry_notifications)
+-- 변경: chemistry_cache -> chemistry_reports 테이블 생성 순서 변경 
 -- ============================================================
 
 -- ============================================================
@@ -217,112 +213,8 @@ CREATE TABLE colleagues (
         REFERENCES users (id)
 ) COMMENT = '동료 관계. user_a_id < user_b_id 규칙으로 단일 행에 양방향 관계 저장';
 
--- 양방향 동료 목록 조회
--- SELECT user_b_id AS colleague_id FROM colleagues WHERE user_a_id = :userId
--- UNION ALL
--- SELECT user_a_id AS colleague_id FROM colleagues WHERE user_b_id = :userId
-
 -- ============================================================
--- 9. chemistry_reports
--- ============================================================
-CREATE TABLE chemistry_reports (
-    id              BIGINT      NOT NULL AUTO_INCREMENT            COMMENT '내부 식별자',
-    requester_id    BIGINT      NOT NULL                           COMMENT 'FK → users.id. 보고서 발행자',
-    partner_id      BIGINT      NOT NULL                           COMMENT 'FK → users.id. 보고서 대상자',
-    test_type       VARCHAR(20) NOT NULL DEFAULT 'DISC'            COMMENT '검사 유형 (DISC / MBTI / BIG5 등)',
-    status          VARCHAR(20) NOT NULL DEFAULT 'NULL'      COMMENT '발행 상태. NULL(발행 전) / (GENERATING(발행 중) / READY(완료) / ERROR(실패)',
-    requester_d     TINYINT     NULL      COMMENT 'requester D 버킷. READY 상태에서만 세팅',
-    requester_i     TINYINT     NULL,
-    requester_s     TINYINT     NULL,
-    requester_c     TINYINT     NULL,
-    partner_d       TINYINT     NULL      COMMENT 'partner D 버킷. READY 상태에서만 세팅',
-    partner_i       TINYINT     NULL,
-    partner_s       TINYINT     NULL,
-    partner_c       TINYINT     NULL,
-    created_at      DATETIME    NOT NULL                           COMMENT '발행 시각',
-
-    FOREIGN KEY (requester_d, requester_i, requester_s, requester_c,
-                 partner_d,   partner_i,   partner_s,   partner_c)
-        REFERENCES chemistry_cache (requester_d, requester_i, requester_s, requester_c,
-                                    partner_d,   partner_i,   partner_s,   partner_c),
-
-    PRIMARY KEY (id),
-    KEY idx_chemistry_reports_requester_id (requester_id),
-    KEY idx_chemistry_reports_partner_id   (partner_id),
-    KEY idx_chemistry_reports_test_type    (test_type),
-
-    CONSTRAINT fk_chemistry_reports_requester
-        FOREIGN KEY (requester_id)
-        REFERENCES users (id),
-
-    CONSTRAINT fk_chemistry_reports_partner
-        FOREIGN KEY (partner_id)
-        REFERENCES users (id)
-) COMMENT = '케미 보고서. Markdown 단일 TEXT로 검사 유형 무관 확장 가능. 이름 미포함 원문 저장';
-
--- ============================================================
--- 10. notifications
---     JPA @Inheritance(JOINED) 부모 테이블.
---     dtype: JPA @DiscriminatorColumn — 알림 유형별 서브타입 식별
---     클릭 시 즉시 DELETE — 배치 불필요
--- ============================================================
-CREATE TABLE notifications (
-    id          BIGINT       NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
-    user_id     BIGINT       NOT NULL                  COMMENT 'FK → users.id. 수신자',
-    dtype       VARCHAR(30)  NOT NULL                  COMMENT 'JPA @DiscriminatorColumn. COLLEAGUE_REGISTERED / CHEMISTRY_REPORT 등',
-    message     VARCHAR(255) NOT NULL                  COMMENT '알림 문구',
-    created_at  DATETIME     NOT NULL                  COMMENT '알림 발생 시각',
-
-    PRIMARY KEY (id),
-    KEY idx_notifications_user_created (user_id, created_at),
-
-    CONSTRAINT fk_notifications_user
-        FOREIGN KEY (user_id)
-        REFERENCES users (id)
-) COMMENT = '인앱 알림 공통 헤더. JPA @Inheritance(JOINED) 부모 테이블. 클릭 시 즉시 DELETE';
-
--- ============================================================
--- 11. colleague_notifications
---     COLLEAGUE_REGISTERED 알림 전용 서브타입.
---     colleague_id → colleagues.id FK로 타입 안전성 확보.
--- ============================================================
-CREATE TABLE colleague_notifications (
-    id              BIGINT  NOT NULL  COMMENT 'PK 겸 FK → notifications.id. JOINED 상속 PK 공유',
-    colleague_id    BIGINT  NOT NULL  COMMENT 'FK → colleagues.id. 등록된 동료 관계',
-
-    PRIMARY KEY (id),
-
-    CONSTRAINT fk_colleague_notifications_notification
-        FOREIGN KEY (id)
-        REFERENCES notifications (id),
-
-    CONSTRAINT fk_colleague_notifications_colleague
-        FOREIGN KEY (colleague_id)
-        REFERENCES colleagues (id)
-) COMMENT = 'COLLEAGUE_REGISTERED 알림 전용. notifications JOINED 상속 자식';
-
--- ============================================================
--- 12. chemistry_notifications
---     CHEMISTRY_REPORT 알림 전용 서브타입.
---     chemistry_report_id → chemistry_reports.id FK로 타입 안전성 확보.
--- ============================================================
-CREATE TABLE chemistry_notifications (
-    id                  BIGINT  NOT NULL  COMMENT 'PK 겸 FK → notifications.id. JOINED 상속 PK 공유',
-    chemistry_report_id BIGINT  NOT NULL  COMMENT 'FK → chemistry_reports.id. 완료된 케미 보고서',
-
-    PRIMARY KEY (id),
-
-    CONSTRAINT fk_chemistry_notifications_notification
-        FOREIGN KEY (id)
-        REFERENCES notifications (id),
-
-    CONSTRAINT fk_chemistry_notifications_chemistry_report
-        FOREIGN KEY (chemistry_report_id)
-        REFERENCES chemistry_reports (id)
-) COMMENT = 'CHEMISTRY_REPORT 알림 전용. notifications JOINED 상속 자식';
-
--- ============================================================
--- 13. chemistry_cache
+-- 9. chemistry_cache
 --     케미 보고서 Lazy Cache.
 --     복합 PK (requester 4축 + partner 4축) — 최대 81×81=6,561행.
 --     6,561행(81×81) 사전 삽입. disc_cache와 동일하게 UPDATE-only.
@@ -373,4 +265,106 @@ FROM
     (SELECT 1 AS ps UNION SELECT 2 UNION SELECT 3) p_s,
     (SELECT 1 AS pc UNION SELECT 2 UNION SELECT 3) p_c;
 
-SET FOREIGN_KEY_CHECKS = 1;
+-- 양방향 동료 목록 조회
+-- SELECT user_b_id AS colleague_id FROM colleagues WHERE user_a_id = :userId
+-- UNION ALL
+-- SELECT user_a_id AS colleague_id FROM colleagues WHERE user_b_id = :userId
+
+-- ============================================================
+-- 10. chemistry_reports
+-- ============================================================
+CREATE TABLE chemistry_reports (
+    id              BIGINT      NOT NULL AUTO_INCREMENT            COMMENT '내부 식별자',
+    requester_id    BIGINT      NOT NULL                           COMMENT 'FK → users.id. 보고서 발행자',
+    partner_id      BIGINT      NOT NULL                           COMMENT 'FK → users.id. 보고서 대상자',
+    test_type       VARCHAR(20) NOT NULL DEFAULT 'DISC'            COMMENT '검사 유형 (DISC / MBTI / BIG5 등)',
+    status          VARCHAR(20) NOT NULL DEFAULT 'NULL'      COMMENT '발행 상태. NULL(발행 전) / (GENERATING(발행 중) / READY(완료) / ERROR(실패)',
+    requester_d     TINYINT     NULL      COMMENT 'requester D 버킷. READY 상태에서만 세팅',
+    requester_i     TINYINT     NULL,
+    requester_s     TINYINT     NULL,
+    requester_c     TINYINT     NULL,
+    partner_d       TINYINT     NULL      COMMENT 'partner D 버킷. READY 상태에서만 세팅',
+    partner_i       TINYINT     NULL,
+    partner_s       TINYINT     NULL,
+    partner_c       TINYINT     NULL,
+    created_at      DATETIME    NOT NULL                           COMMENT '발행 시각',
+
+    FOREIGN KEY (requester_d, requester_i, requester_s, requester_c,
+                 partner_d,   partner_i,   partner_s,   partner_c)
+        REFERENCES chemistry_cache (requester_d, requester_i, requester_s, requester_c,
+                                    partner_d,   partner_i,   partner_s,   partner_c),
+
+    PRIMARY KEY (id),
+    KEY idx_chemistry_reports_requester_id (requester_id),
+    KEY idx_chemistry_reports_partner_id   (partner_id),
+    KEY idx_chemistry_reports_test_type    (test_type),
+
+    CONSTRAINT fk_chemistry_reports_requester
+        FOREIGN KEY (requester_id)
+        REFERENCES users (id),
+
+    CONSTRAINT fk_chemistry_reports_partner
+        FOREIGN KEY (partner_id)
+        REFERENCES users (id)
+) COMMENT = '케미 보고서. Markdown 단일 TEXT로 검사 유형 무관 확장 가능. 이름 미포함 원문 저장';
+
+-- ============================================================
+-- 11. notifications
+--     JPA @Inheritance(JOINED) 부모 테이블.
+--     dtype: JPA @DiscriminatorColumn — 알림 유형별 서브타입 식별
+--     클릭 시 즉시 DELETE — 배치 불필요
+-- ============================================================
+CREATE TABLE notifications (
+    id          BIGINT       NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
+    user_id     BIGINT       NOT NULL                  COMMENT 'FK → users.id. 수신자',
+    dtype       VARCHAR(30)  NOT NULL                  COMMENT 'JPA @DiscriminatorColumn. COLLEAGUE_REGISTERED / CHEMISTRY_REPORT 등',
+    message     VARCHAR(255) NOT NULL                  COMMENT '알림 문구',
+    created_at  DATETIME     NOT NULL                  COMMENT '알림 발생 시각',
+
+    PRIMARY KEY (id),
+    KEY idx_notifications_user_created (user_id, created_at),
+
+    CONSTRAINT fk_notifications_user
+        FOREIGN KEY (user_id)
+        REFERENCES users (id)
+) COMMENT = '인앱 알림 공통 헤더. JPA @Inheritance(JOINED) 부모 테이블. 클릭 시 즉시 DELETE';
+
+-- ============================================================
+-- 12. colleague_notifications
+--     COLLEAGUE_REGISTERED 알림 전용 서브타입.
+--     colleague_id → colleagues.id FK로 타입 안전성 확보.
+-- ============================================================
+CREATE TABLE colleague_notifications (
+    id              BIGINT  NOT NULL  COMMENT 'PK 겸 FK → notifications.id. JOINED 상속 PK 공유',
+    colleague_id    BIGINT  NOT NULL  COMMENT 'FK → colleagues.id. 등록된 동료 관계',
+
+    PRIMARY KEY (id),
+
+    CONSTRAINT fk_colleague_notifications_notification
+        FOREIGN KEY (id)
+        REFERENCES notifications (id),
+
+    CONSTRAINT fk_colleague_notifications_colleague
+        FOREIGN KEY (colleague_id)
+        REFERENCES colleagues (id)
+) COMMENT = 'COLLEAGUE_REGISTERED 알림 전용. notifications JOINED 상속 자식';
+
+-- ============================================================
+-- 13. chemistry_notifications
+--     CHEMISTRY_REPORT 알림 전용 서브타입.
+--     chemistry_report_id → chemistry_reports.id FK로 타입 안전성 확보.
+-- ============================================================
+CREATE TABLE chemistry_notifications (
+    id                  BIGINT  NOT NULL  COMMENT 'PK 겸 FK → notifications.id. JOINED 상속 PK 공유',
+    chemistry_report_id BIGINT  NOT NULL  COMMENT 'FK → chemistry_reports.id. 완료된 케미 보고서',
+
+    PRIMARY KEY (id),
+
+    CONSTRAINT fk_chemistry_notifications_notification
+        FOREIGN KEY (id)
+        REFERENCES notifications (id),
+
+    CONSTRAINT fk_chemistry_notifications_chemistry_report
+        FOREIGN KEY (chemistry_report_id)
+        REFERENCES chemistry_reports (id)
+) COMMENT = 'CHEMISTRY_REPORT 알림 전용. notifications JOINED 상속 자식';

@@ -3,6 +3,10 @@ spring:
     activate:
       on-profile: test
 
+  datasource:
+    hikari:
+      leak-detection-threshold: 5000
+
   jpa:
     hibernate:
       ddl-auto: create-drop

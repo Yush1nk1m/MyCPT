@@ -12,7 +12,6 @@ import com.mycpt.backend.domain.chemistry.repository.ChemistryCacheRepository;
 import com.mycpt.backend.domain.chemistry.repository.ChemistryReportRepository;
 import com.mycpt.backend.domain.colleague.entity.Colleague;
 import com.mycpt.backend.domain.colleague.repository.ColleagueRepository;
-import com.mycpt.backend.domain.notification.repository.NotificationRepository;
 import com.mycpt.backend.domain.notification.service.SseService;
 import com.mycpt.backend.domain.result.entity.DiscTest;
 import com.mycpt.backend.domain.result.repository.DiscTestRepository;
@@ -20,12 +19,8 @@ import com.mycpt.backend.domain.statistics.dto.LatestBuckets;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.repository.UserRepository;
 import com.mycpt.backend.support.IntegrationTestSupport;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
@@ -33,6 +28,8 @@ import org.springframework.test.context.jdbc.Sql;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.BooleanSupplier;
 
@@ -40,15 +37,17 @@ import static com.mycpt.backend.support.EntityTestSupport.*;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
-import static org.mockito.Mockito.*;
 
 @Sql(scripts = "/sql/chemistry_cache_seed.sql")
-@TestPropertySource(properties = "chemistry.subscriber-wait-timeout-seconds=2")
 @DisplayName("ChemistryCacheService 통합 테스트")
-public class ChemistryCacheServiceIntegrationTest extends IntegrationTestSupport {
+@TestPropertySource(properties = "chemistry.subscriber-wait-timeout-seconds=2")
+public class ChemistryCacheServiceTest extends IntegrationTestSupport {
 
     @MockitoBean
     AnthropicLlmClient llmClient;
+
+    @MockitoSpyBean
+    SseService sseService;
 
     @Autowired ChemistryService chemistryService;
     @Autowired ChemistryReportProcessor chemistryReportProcessor;
@@ -60,6 +59,7 @@ public class ChemistryCacheServiceIntegrationTest extends IntegrationTestSupport
 
     @BeforeEach
     void setUp() {
+        clearInvocations(llmClient, sseService);
         given(llmClient.complete(any())).willReturn("## 생성된 케미 보고서");
     }
 
@@ -312,7 +312,7 @@ public class ChemistryCacheServiceIntegrationTest extends IntegrationTestSupport
     class TransactionalEventListenerGuarantee {
 
         @Test
-        @DisplayName("[IT-CemistryCacheSvc-AFTER_COMMIT-커밋후처리실행]")
+        @DisplayName("[IT-ChemistryCacheSvc-AFTER_COMMIT-커밋후처리실행]")
         void AFTER_COMMIT_커밋후처리실행() throws Exception {
             // given
             User requester = stubUser("evt-r");
@@ -413,11 +413,7 @@ public class ChemistryCacheServiceIntegrationTest extends IntegrationTestSupport
 
     @Nested
     @DisplayName("Subscriber Timeout")
-    @TestPropertySource(properties = "chemistry.subscriber-wait-timeout-seconds=1")
     class SubscriberTimeout {
-
-        @MockitoSpyBean
-        SseService sseService;
 
         @Test
         @DisplayName("[IT-ChemistryCacheSvc-구독자타임아웃-ERROR전이및대기자맵정리]")

@@ -427,7 +427,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### ChemistryCacheService — Lazy Caching (IT)
 
-[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/service/ChemistryCacheServiceIntegrationTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/service/ChemistryCacheServiceTest.java)]
 
 > `IntegrationTestSupport` 상속.
 > `AnthropicLlmClient` `@MockitoBean` — 실제 LLM 호출 없이 고정 문자열 반환.
@@ -441,7 +441,7 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ### ChemistryCacheService — Duplication Defense (IT)
 
-[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/service/ChemistryCacheServiceIntegrationTest.java)]
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/service/ChemistryCacheServiceTest.java)]
 
 > `IntegrationTestSupport` 상속.
 > `AnthropicLlmClient` `@MockitoBean` — `Thread.sleep(300)` 딜레이로 경쟁 구간 확보.
@@ -451,6 +451,73 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 | ----------------------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `IT-ChemistryCacheSvc-동시요청3개-LLM단일호출_3건모두READY` | `process()` 3개 스레드 동시 실행 | 동일 버킷 조합 → LLM 1회 호출, `chemistry_reports` 3건 모두 `status=READY`. 구독자 2명으로 `CopyOnWriteArrayList` 다중 `add()` 안전성 검증 포함 |
 | `IT-ChemistryCacheSvc-다른버킷동시요청-LLM각각호출`         | `process()` 2개 스레드 동시 실행 | 서로 다른 버킷 조합 → LLM 2회 호출                                                                                                              |
+
+### ChemistryCacheService — @TransactionalEventListener AFTER_COMMIT 트리거 보장 (IT)
+
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/service/ChemistryCacheServiceTest.java)]
+
+> `IntegrationTestSupport` 상속.
+> `ChemistryService.issue()` 전체 흐름(코인 차감 → INSERT → 이벤트 발행)을 실제로 태워 검증.
+> 커밋 전 `@Async` 트리거 문제(트랜잭션 커밋 전 별도 스레드가 먼저 실행되는 타이밍 버그)를
+> `@TransactionalEventListener(AFTER_COMMIT)`으로 해소했음을 증명.
+> `@Async` 완료까지 최대 10초 폴링 대기(100ms 간격).
+
+| Test ID                                            | 행위                                            | 상황                                                                                                                       |
+| -------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `IT-ChemistryCacheSvc-AFTER_COMMIT-커밋후처리실행` | `issue(requesterId, partnerId)` 정상 흐름       | 코인 차감 + INSERT 커밋 후 `@Async` `process()` 실행 → `chemistry_reports.status=READY`, LLM 1회 호출                      |
+| `IT-ChemistryCacheSvc-AFTER_COMMIT-롤백시미실행`   | 코인 0개로 `issue()` 호출 → `deduct()`에서 예외 | 트랜잭션 롤백 → `AFTER_COMMIT` 이벤트 미발행 → `process()` 미실행 → LLM 0회 호출, `chemistry_reports` 행 자체가 생성 안 됨 |
+
+### ChemistryReportProcessor — Recover 시그니처 수정 검증 (IT)
+
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/service/ChemistryCacheServiceTest.java)]
+
+> `IntegrationTestSupport` 상속.
+> `handle()`을 직접 호출 — `process()` 직접 호출은 `@Retryable`/`@Recover` 프록시를 우회하므로 이 버그를 검증할 수 없음.
+> `@Async`라 즉시 반환하므로 폴링 헬퍼(`awaitUntil`)로 결과 대기.
+
+| Test ID                                                  | 행위                            | 상황                                                                                                                       |
+| -------------------------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `IT-ChemistryReportProcessor-recover-이벤트파라미터매칭` | `handle(event)` 3회 재시도 소진 | `recover(Exception e, ChemistryReportIssuedEvent event)` 정상 바인딩 → `chemistry_reports.status=ERROR`, LLM 3회 호출 확인 |
+
+### ChemistryCacheService — Subscriber Timeout (IT)
+
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/service/ChemistryCacheServiceTest.java)]
+
+> `IntegrationTestSupport` 상속.
+> `@TestPropertySource(properties = "chemistry.subscriber-wait-timeout-seconds=2")`로 타임아웃을 2초로 단축.
+> `SseService` `@MockitoSpyBean`으로 감시 — 뒤늦은 발행 성공 시 이미 이탈한 구독자에게 SSE가 안 나가는지까지 검증.
+
+| Test ID                                                       | 행위                                          | 상황                                                                                                                     |
+| ------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `IT-ChemistryCacheSvc-구독자타임아웃-ERROR전이및대기자맵정리` | 발행자 LLM 호출이 4초(타임아웃보다 길게) 소요 | 구독자는 1초 뒤 `chemistry_reports.status=ERROR`. 4초 뒤 발행자 성공해도 구독자는 SSE 미수신 (waitingMap 자가 정리 증명) |
+
+### ChemistryCacheService — Concurrency Load Test (IT)
+
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/service/ChemistryCacheConcurrencyLoadTest.java)]
+
+> `IntegrationTestSupport` 상속.
+> Duplication Defense와 동일 기법(`Thread.sleep(300)` + `CountDownLatch`)을 `@RepeatedTest(30)`으로 반복.
+> 동시성 문제는 결정적으로 재현되지 않으므로 단일 실행이 아닌 반복 시행으로 신뢰도 확보. 회차마다 독립된 버킷 조합 사용.
+
+| Test ID                                         | 행위                                                       | 상황                                                                  |
+| ----------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------- |
+| `IT-ChemistryCacheSvc-동시요청부하-LLM단일호출` | `process()` 5스레드 동시 실행 × 30회 반복(`@RepeatedTest`) | 매 회차 동일 버킷 조합 → LLM 정확히 1회 호출, 5건 모두 `status=READY` |
+
+### ChemistryCacheRecoveryScheduler (IT)
+
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/chemistry/service/ChemistryCacheRecoverySchedulerTest.java)]
+
+> `IntegrationTestSupport` 상속. 별도 파일 — 대상 빈이 `ChemistryCacheService`가 아닌 `ChemistryCacheRecoveryScheduler`.
+> `EntityTestSupport.setField()`로 `updated_at`을 과거 시각으로 강제 세팅 — 정상 비즈니스 메서드 조합만으로는 스테일 상태를 재현할 수 없어 리플렉션 픽스처 사용.
+> `recoverStaleGeneratingCaches()`를 직접 호출 (`@Scheduled` 트리거 대기 없음).
+
+| Test ID                                                                    | 행위                             | 상황                                                                                                                           |
+| -------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `IT-ChemistryCacheRecoveryScheduler-스테일복구-READY전이및ERROR보고서교정` | `recoverStaleGeneratingCaches()` | `status=GENERATING` + `updated_at` 11분 전 → LLM 1회 재호출 → `READY`. 같은 `cacheId`의 `ERROR` 보고서도 조용히 `READY`로 교정 |
+| `IT-ChemistryCacheRecoveryScheduler-스테일복구-임계값미달`                 | 동일                             | `updated_at` 10분 미만(방금 GENERATING 진입) → LLM 미호출, `status` 그대로 `GENERATING`                                        |
+| `IT-ChemistryCacheRecoveryScheduler-스테일복구-재시도중상태유지`           | 동일                             | LLM 호출 도중(`claimForRetry()` 커밋 직후) 조회해도 `status=GENERATING` 유지, `NULL` 미노출                                    |
+
+---
 
 ---
 

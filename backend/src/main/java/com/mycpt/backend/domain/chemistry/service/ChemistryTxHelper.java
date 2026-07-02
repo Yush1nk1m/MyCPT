@@ -104,7 +104,7 @@ public class ChemistryTxHelper {
             return false;
         }
 
-        cache.markRetryStartred();
+        cache.markRetryStarted();
         return true;
     }
 
@@ -122,5 +122,11 @@ public class ChemistryTxHelper {
         if (!errorReports.isEmpty()) {
             log.info("ERROR 보고서 {}건 READY로 교정. cacheId={}", errorReports.size(), cacheId);
         }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void resetCacheOnPublishFailure(ChemistryCacheId cacheId) {
+        chemistryCacheRepository.findByIdWithLock(cacheId)
+                .ifPresent(ChemistryCache::resetToNull);
     }
 }

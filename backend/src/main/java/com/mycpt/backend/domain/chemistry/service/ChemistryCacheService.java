@@ -44,20 +44,22 @@ public class ChemistryCacheService {
     // 버킷 조합 -> 대기 중인 (userId, reportId, latch) 목록
     private final Map<ChemistryCacheId, List<WaitingEntry>> waitingMap = new ConcurrentHashMap<>();
     // 구독자 대기 타임아웃
-    private static final long SUBSCRIBER_WAIT_TIMEOUT_MINUTES = 5;
+    private final long subscriberWaitTimeoutSeconds;
 
     public ChemistryCacheService(
             ChemistryCacheRepository chemistryCacheRepository,
             AnthropicLlmClient llmClient,
             ChemistryEventPublisher eventPublisher,
             ChemistryTxHelper txHelper,
-            @Value("${cache.chemistry.ttl-days:365}") long ttlDays
+            @Value("${cache.chemistry.ttl-days:365}") long ttlDays,
+            @Value("${chemistry.subscriber-wait-timeout-seconds:300}") long subscriberWaitTimeoutSeconds
     ) {
         this.chemistryCacheRepository = chemistryCacheRepository;
         this.llmClient = llmClient;
         this.eventPublisher = eventPublisher;
         this.txHelper = txHelper;
         this.ttlDays = ttlDays;
+        this.subscriberWaitTimeoutSeconds = subscriberWaitTimeoutSeconds;
     }
 
     /**
@@ -97,7 +99,13 @@ public class ChemistryCacheService {
             LatestBuckets partnerBuckets
     ) {
         String prompt = buildPrompt(requesterBuckets, partnerBuckets);
-        String report = llmClient.complete(prompt);
+        String report;
+        try {
+            report = llmClient.complete(prompt);
+        } catch (RuntimeException e) {
+            txHelper.resetCacheOnPublishFailure(cacheId);
+            throw e;
+        }
         txHelper.saveCompletedCache(cacheId, report);
         eventPublisher.publishReady(cacheId);
         return report;
@@ -118,10 +126,10 @@ public class ChemistryCacheService {
         }
 
         try {
-            boolean released = latch.await(SUBSCRIBER_WAIT_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+            boolean released = latch.await(subscriberWaitTimeoutSeconds, TimeUnit.SECONDS);
             if (!released) {
-                log.warn("구독자 대기 타임아웃({}분). userId={}, cacheId={}",
-                        SUBSCRIBER_WAIT_TIMEOUT_MINUTES, userId, cacheId);
+                log.warn("구독자 대기 타임아웃({}초). userId={}, cacheId={}",
+                        subscriberWaitTimeoutSeconds, userId, cacheId);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

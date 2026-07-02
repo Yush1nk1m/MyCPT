@@ -8,8 +8,8 @@
 INSERT INTO chemistry_cache
 (requester_d, requester_i, requester_s, requester_c,
  partner_d,   partner_i,   partner_s,   partner_c,
- status, report, created_at)
-SELECT rd, ri, rs, rc, pd, pi, ps, pc, 'NULL', NULL, NULL
+ status, report, created_at, updated_at)
+SELECT rd, ri, rs, rc, pd, pi, ps, pc, 'NULL', NULL, NULL, NULL
 FROM
     (SELECT 1 AS rd UNION ALL SELECT 2 UNION ALL SELECT 3) t_rd,
     (SELECT 1 AS ri UNION ALL SELECT 2 UNION ALL SELECT 3) t_ri,
@@ -22,4 +22,5 @@ FROM
 ON DUPLICATE KEY UPDATE
     status = 'NULL',
     report = NULL,
-    created_at = NULL;
+    created_at = NULL,
+    updated_at = NULL;

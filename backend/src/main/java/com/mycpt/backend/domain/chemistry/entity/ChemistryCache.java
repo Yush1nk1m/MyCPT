@@ -67,7 +67,15 @@ public class ChemistryCache {
     // 배치가 GENERATING 상태를 재시도 대상으로 확정할 때 호출.
     // status/report는 건드리지 않고 updatedAt만 갱신 -> 다음 배치 주기(10분) 동안 재선택 방지
     // (배치 중복 실행에 대한 뮤텍스 역할까지 겸함)
-    public void markRetryStartred() {
+    public void markRetryStarted() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // 발행자 LLM 호출 실패 시 락 원상복구.
+    // 이걸 안 하면 재시도(같은 이벤트든 다른 유저의 새 요청이든)가 구독자로 오판돼
+    // 아무도 깨워주지 않는 latch를 subscriberWaitTimeoutSeconds만큼 헛되이 대기하게 됨.
+    public void resetToNull() {
+        this.status = ChemistryCacheStatus.NULL;
         this.updatedAt = LocalDateTime.now();
     }
 }
