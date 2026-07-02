@@ -58,6 +58,7 @@ participant "ChemistryEventPublisher" as Publisher
 participant "ChemistryEventSubscriber" as Subscriber
 participant "SseService" as Sse
 participant "NotificationService" as Notify
+participant "ChemistryCacheRecoveryScheduler\n(@Scheduled, 10분 주기)" as Recovery
 database "MySQL" as DB
 database "Redis Pub/Sub" as Redis
 
@@ -153,33 +154,54 @@ else 두 사람 모두 결과 있음
     5. 서로에게 맞는 역할
     6. 협업 팁
   end note
-  Llm --> Processor : Markdown 보고서
-  deactivate Llm
 
-  Processor -> TxHelper : saveCompletedCache(cacheId, report)
-  activate TxHelper
-  TxHelper -> DB : SELECT FOR UPDATE\nWHERE chemistry_cache.id = cacheId
-  TxHelper -> DB : UPDATE chemistry_cache\nSET status='READY', report=?, created_at=NOW()
-  TxHelper --> Processor : COMMIT (락 해제)
-  note right of TxHelper
-    READY 커밋 선행 보장
-    이후 신규 요청은 READY를 보고 즉시 반환
-  end note
-  deactivate TxHelper
+  alt LLM 호출 성공
+    Llm --> Processor : Markdown 보고서
+    deactivate Llm
 
-  Processor -> Publisher : publishReady(cacheId)
-  Publisher -> Redis : PUBLISH chemistry:{버킷 조합} "READY"
+    Processor -> TxHelper : saveCompletedCache(cacheId, report)
+    activate TxHelper
+    TxHelper -> DB : SELECT FOR UPDATE\nWHERE chemistry_cache.id = cacheId
+    TxHelper -> DB : UPDATE chemistry_cache\nSET status='READY', report=?, created_at=NOW()
+    TxHelper --> Processor : COMMIT (락 해제)
+    note right of TxHelper
+      READY 커밋 선행 보장
+      이후 신규 요청은 READY를 보고 즉시 반환
+    end note
+    deactivate TxHelper
 
-  Processor -> TxHelper : completeReport(reportId_A, cacheId)
-  activate TxHelper
-  TxHelper -> DB : UPDATE chemistry_reports\nSET status='READY'\nWHERE id = reportId_A
-  TxHelper --> Processor : COMMIT
-  deactivate TxHelper
+    Processor -> Publisher : publishReady(cacheId)
+    Publisher -> Redis : PUBLISH chemistry:{버킷 조합} "READY"
 
-  Processor -> Notify : sendChemistryNotification(B, report, A)
-  Notify -> DB : INSERT chemistry_notifications\n(userId=B, referenceId=reportId_A)
+    Processor -> TxHelper : completeReport(reportId_A, cacheId)
+    activate TxHelper
+    TxHelper -> DB : UPDATE chemistry_reports\nSET status='READY'\nWHERE id = reportId_A
+    TxHelper --> Processor : COMMIT
+    deactivate TxHelper
 
-  == Redis Pub/Sub 수신 — 모든 인스턴스 브로드캐스트 ==
+    Processor -> Notify : sendChemistryNotification(B, report, A)
+    Notify -> DB : INSERT chemistry_notifications\n(userId=B, referenceId=reportId_A)
+
+  else LLM 호출 실패 (@Retryable maxAttempts=3, backoff=2s×2 소진)
+    Llm --> Processor : Exception
+    deactivate Llm
+    note right of Processor
+      noRetryFor=IllegalStateException 제외 모든 예외 최대 3회 재시도
+      소진 시 @Recover recover(Exception e, ChemistryReportIssuedEvent event) 호출
+      (재시도 대상 handle(ChemistryReportIssuedEvent)와 파라미터 타입을
+       맞춰야 Spring Retry가 recover를 정상 매칭함 — event.reportId()로 조회)
+    end note
+    Processor -> DB : UPDATE chemistry_reports\nSET status='ERROR'\nWHERE id = reportId_A
+    note right of DB
+      TODO: 코인 환불 로직 구현
+    end note
+    note right of Processor
+      chemistry_cache.status는 GENERATING에 그대로 남음 (report 없음)
+      → ChemistryCacheRecoveryScheduler가 나중에 복구 시도 (아래 별도 섹션)
+    end note
+  end
+
+  == Redis Pub/Sub 수신 — 모든 인스턴스 브로드캐스트 (LLM 호출 성공 시에만 발생) ==
 
   Redis --> Subscriber : onMessage("READY")
   activate Subscriber
@@ -193,7 +215,7 @@ else 두 사람 모두 결과 있음
   CacheService --> Subscriber : List<WaitingEntry> (userId, reportId)
 
   Subscriber -> Sse : pushChemistryReady(userId_A, reportId_A)
-  Sse --> Client : SSE 이벤트\nevent: CHEMISTRY_REPORT\ndata: { reportId, message: "보고서가 발행됐어요." }
+  Sse --> Client : SSE 이벤트\nevent: CHEMISTRY_REPORT\ndata: { reportId, message: "보고서가 발행됐어요."}
   Client --> UserA : 토스트 알림 + 보고서 카드 갱신
 
   alt B가 SSE 연결 중
@@ -239,7 +261,7 @@ end note
 TxHelper --> Processor : COMMIT (락 해제), GENERATING 반환
 deactivate TxHelper
 
-Processor -> Processor : latch.await() 블로킹
+Processor -> Processor : latch.await(5, TimeUnit.MINUTES)
 note right of Processor
   park() — CPU 소비 없음
   countDown() 선행 시에도 즉시 반환 (타이밍 안전)
@@ -252,21 +274,107 @@ note right of Redis
   → 구독자 latch.await() 즉시 반환
 end note
 
-Processor -> TxHelper : completeReport(reportId_C, cacheId)
-activate TxHelper
-TxHelper -> DB : UPDATE chemistry_reports\nSET status='READY'\nWHERE id = reportId_C
-TxHelper --> Processor : COMMIT
-deactivate TxHelper
+alt 타임아웃 전 정상 해제
+  Processor -> DB : SELECT chemistry_cache WHERE id=cacheId
+  DB --> Processor : report 존재
+
+  Processor -> TxHelper : completeReport(reportId_C, cacheId)
+  activate TxHelper
+  TxHelper -> DB : UPDATE chemistry_reports\nSET status='READY'\nWHERE id = reportId_C
+  TxHelper --> Processor : COMMIT
+  deactivate TxHelper
+
+else 5분 타임아웃 (발행자 A가 실패했거나 응답 없음)
+  Processor -> CacheService : removeWaiter(cacheId, userId_C)
+  note right of CacheService
+    waitingMap에서 자기 항목만 제거
+    → 나중에 배치가 이 cacheId를 복구시켜도
+       이미 이탈한 C에게는 SSE가 다시 나가지 않음
+  end note
+  Processor -> DB : SELECT chemistry_cache WHERE id=cacheId
+  DB --> Processor : report 없음 (여전히 GENERATING)
+  Processor -> DB : UPDATE chemistry_reports\nSET status='ERROR'\nWHERE id = reportId_C
+  note right of Processor
+    IllegalStateException throw
+    → noRetryFor 대상 → 재시도 없이 @Recover 즉시 실행
+  end note
+end
 
 deactivate Processor
 
-== 실패 처리 (@Recover) ==
+== 실패 처리 (@Recover) 요약 ==
 
 note over Processor
-  @Retryable 3회 소진 시 @Recover 실행
-  chemistry_reports.status = ERROR
-  TODO: 코인 환불
-  구독자에게 pushChemistryError() SSE 전송
+  @Retryable 3회 소진 시 @Recover recover(Exception e, ChemistryReportIssuedEvent event) 실행
+  → chemistry_reports.status = ERROR
+  → TODO: 코인 환불
+  → chemistry_cache.status는 GENERATING에 남음 (다음 섹션의 배치가 복구)
 end note
+
+== 스테일 캐시 복구 (ChemistryCacheRecoveryScheduler, 10분 주기) ==
+
+note over Recovery
+  발행자가 실패해도 chemistry_cache.status를 되돌리는 코드가 없어
+  GENERATING에 영구히 고정됨 → 같은 버킷 조합 모든 후속 요청이
+  계속 구독자로 등록됐다가 5분씩 타임아웃하는 문제를 이 배치가 해소
+end note
+
+Recovery -> DB : SELECT chemistry_cache\nWHERE status='GENERATING'\nAND updated_at < NOW() - 10분
+DB --> Recovery : 스테일 캐시 목록
+
+loop 스테일 캐시 각 행에 대해
+  Recovery -> TxHelper : claimForRetry(cacheId, 10)
+  activate TxHelper
+  TxHelper -> DB : SELECT FOR UPDATE\nWHERE chemistry_cache.id = cacheId
+  DB --> TxHelper : 재검증
+
+  alt 여전히 스테일 (다른 경로로 처리 안 됨)
+    TxHelper -> DB : UPDATE chemistry_cache\nSET updated_at=NOW()\n(status는 GENERATING 유지)
+    note right of TxHelper
+      status를 NULL로 되돌리지 않음
+      → 실유저 요청이 끼어들어 중복 발행자가 되는 창을 원천 차단
+      → updated_at 갱신 자체가 다음 10분 동안의 재선택 방지 뮤텍스 역할
+    end note
+    TxHelper --> Recovery : COMMIT (락 해제), true
+    deactivate TxHelper
+
+    Recovery -> Recovery : cacheId 8축 값으로\nLatestBuckets 두 개 직접 복원\n(유저/결과 재조회 불필요)
+
+    Recovery -> Llm : complete(prompt)
+    activate Llm
+    Llm --> Recovery : Markdown 보고서
+    deactivate Llm
+
+    Recovery -> TxHelper : saveCompletedCache(cacheId, report)
+    activate TxHelper
+    TxHelper -> DB : UPDATE chemistry_cache\nSET status='READY', report=?, created_at=NOW()
+    TxHelper --> Recovery : COMMIT
+    deactivate TxHelper
+
+    Recovery -> Publisher : publishReady(cacheId)
+    Publisher -> Redis : PUBLISH chemistry:{버킷 조합} "READY"
+    note right of Redis
+      이 시점에 아직 5분 타임아웃 전인 실시간 구독자가 있다면
+      기존 Subscriber.onMessage() 경로로 정상 SSE까지 도달
+    end note
+
+    Recovery -> TxHelper : reconcileErrorReports(cacheId)
+    activate TxHelper
+    TxHelper -> DB : SELECT chemistry_reports\nWHERE cacheId=? AND status='ERROR'
+    DB --> TxHelper : ERROR 보고서 목록
+    TxHelper -> DB : UPDATE chemistry_reports\nSET status='READY'\nWHERE id IN (...)
+    note right of TxHelper
+      유저 SSE/알림 발생 없음 — 조용히 DB만 교정
+      (removeWaiter로 이미 이탈한 구독자라 위 publishReady로도 안 나감)
+    end note
+    TxHelper --> Recovery : COMMIT
+    deactivate TxHelper
+
+  else 그 사이 이미 처리됨
+    TxHelper --> Recovery : COMMIT (락 해제), false
+    deactivate TxHelper
+    note right of Recovery : 스킵
+  end
+end
 
 @enduml
