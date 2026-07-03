@@ -36,7 +36,8 @@
 - [10. Chemistry 도메인](#10-chemistry-도메인)
 - [11. Notification 도메인](#11-notification-도메인)
 - [12. Coin 도메인](#12-coin-도메인)
-- [13. 통합 테스트 시나리오](#13-통합-테스트-시나리오)
+- [13. 스케줄러 (도메인 비결합)](#13-스케줄러-도메인-비결합)
+- [14. 통합 테스트 시나리오](#14-통합-테스트-시나리오)
 
 ---
 
@@ -592,6 +593,23 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 
 ---
 
-## 13. 통합 테스트 시나리오
+## 13. 스케줄러 (도메인 비결합)
+
+> `@Scheduled`가 유일한 진입점인 컴포넌트 중, 특정 도메인의 내부 구현(엔티티 상태·이벤트·헬퍼)에
+> 깊게 결합되지 않고 리포지토리를 얕게 호출하는 수준의 범용 운영 작업만 여기 속한다.
+> 반대로 도메인 내부 로직에 깊게 결합된 스케줄러(예: `ChemistryCacheRecoveryScheduler`)는
+> 트리거 방식과 무관하게 해당 도메인 섹션에 남는다.
+
+### ExpiredDataCleanupScheduler (IT)
+
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/batch/ExpiredDataCleanupSchedulerTest.java)]
+
+> `IntegrationTestSupport` 상속. Spring Batch 미사용 — 순수 `@Scheduled` 메서드(`cleanup()`) 직접 호출 검증.
+
+| Test ID                                                        | 행위        | 상황                                                                                                |
+| -------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------- |
+| `IT-ExpiredDataCleanupScheduler-만료데이터삭제-유효데이터보존` | `cleanup()` | 만료된 `peer_codes`/`assessment_tokens` 행과 유효한 행을 함께 시드 → 만료 행만 삭제, 유효 행은 보존 |
+
+## 14. 통합 테스트 시나리오
 
 _4주차 QA 단계 작성_
