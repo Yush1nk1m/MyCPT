@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface PeerCodeRepository extends JpaRepository<PeerCode, Long> {
@@ -24,4 +25,6 @@ public interface PeerCodeRepository extends JpaRepository<PeerCode, Long> {
     Optional<PeerCode> findByCodeWithUser(@Param("code") String code);
 
     boolean existsByCode(String code);
+
+    long deleteByExpiresAtBefore(LocalDateTime cutoff);
 }

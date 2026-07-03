@@ -359,7 +359,7 @@ IA v0.3에 확정된 전역 컴포넌트(상단 헤더, 하단 탭바 4개, SSE 
 - [x] `/invite/[code]` 동료 초대 수락 페이지 (비회원→로그인 연계)
 - [x] `/results/[id]` 결과 상세 페이지
 - [x] `/assessments/[token]` 타인 평정 응시 페이지
-- [ ] 만료 동료 코드 + 만료 평정 토큰 삭제 스케줄러 (@Scheduled)
+- [x] 만료 동료 코드 + 만료 평정 토큰 삭제 스케줄러 (@Scheduled)
 
 **우선순위 2 — 정적/보조 페이지**
 
@@ -387,10 +387,11 @@ IA v0.3에 확정된 전역 컴포넌트(상단 헤더, 하단 탭바 4개, SSE 
 scenario-test-design.md, dev_scenario_seed.sql |
 | 07.01 (수) | ChemistryCacheService 구독자 대기 5분 타임아웃 추가 (무한 대기 → IllegalStateException, waitingMap 자가 정리). ChemistryReportProcessor.recover() 파라미터 시그니처 버그 수정 (Long reportId → ChemistryReportIssuedEvent event — Spring Retry 매칭 계약 위반이라 recover 미호출 위험 있었음). ChemistryCache updated_at 컬럼 추가. ChemistryCacheRecoveryScheduler 신규 (10분 주기 스테일 GENERATING 복구 + ERROR→READY 조용한 교정, NULL 경유 없이 발행자 역할 재사용 방식). | ChemistryCache, ChemistryCacheRepository, ChemistryReportRepository, ChemistryTxHelper, ChemistryCacheService, ChemistryReportProcessor, ChemistryCacheRecoveryScheduler, schema.sql |
 | 07.02 (목) | ChemistryReportProcessor.recover() 시그니처 수정 검증 IT 추가. ChemistryCacheService 구독자 타임아웃을 SUBSCRIBER_WAIT_TIMEOUT_MINUTES 하드코딩에서 @Value(chemistry.subscriber-wait-timeout-seconds) 외부화로 전환 (테스트 가능성 확보). ChemistryCacheRecoveryScheduler IT 3건 신규 (ChemistryCacheRecoverySchedulerTest). 동시성 정합성 검증 부하 테스트 신규 (@RepeatedTest 30회, ChemistryCacheServiceIntegrationTest). | ChemistryCacheService, application.yml, ChemistryCacheServiceIntegrationTest, ChemistryCacheRecoverySchedulerTest, test-design.md |
+| 07.03 (금) | 만료 동료 코드/평정 토큰 삭제 기술 스택 재검토 — 최초 Spring Batch로 설계했으나 규모 대비 오버엔지니어링 판단, @Scheduled 방식으로 전환 확정(ChemistryCacheRecoveryScheduler와 동일 패턴 통일). service-design.md/architecture-design.md/architecture.puml/database-design.md/README.md 배치 기술스택 문구 수정. ExpiredDataCleanupScheduler 구현 — PeerCodeRepository/AssessmentTokenRepository에 deleteByExpiresAtBefore() 추가, 두 삭제를 단일 트랜잭션으로 처리. IT 1건 통과. | ExpiredDataCleanupScheduler, PeerCodeRepository, AssessmentTokenRepository, ExpiredDataCleanupSchedulerTest, service-design.md, architecture-design.md, architecture.puml, database-design.md, README.md |
 
 ### 완료 확인 체크리스트
 
-- [ ] 만료 동료 코드 + 만료 평정 토큰 배치 삭제 확인
+- [x] 만료 동료 코드 + 만료 평정 토큰 배치 삭제 확인
 - [x] `/invite/[code]` 초대 수락 → 동료 등록 정상 흐름 확인
 - [x] `/results/[id]` 결과 상세 정상 렌더링 확인
 - [x] `/assessments/[token]` 타인 평정 응시 정상 흐름 확인
