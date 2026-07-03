@@ -1,7 +1,7 @@
 # MyCPT 데이터베이스 설계 문서
 
-**문서 버전**: v0.13
-**작성일**: '26.06.24.
+**문서 버전**: v0.14
+**작성일**: '26.07.03.
 **작성자**: 김유신
 
 ---
@@ -23,6 +23,7 @@
 | v0.11 | `chemistry_cache` 테이블 추가 (케미 보고서 Lazy Caching. 복합 PK 8개 버킷값).                                                                                                                                                        | '26.06.22. |
 | v0.12 | `chemistry_cache` 사전 삽입 방침 변경 (6,561행 seeding). `status VARCHAR(20)` 컬럼 추가 (NULL→GENERATING→READY 락 라이프사이클). `chemistry_reports.status` 초기값 GENERATING → NULL 로 변경 (chemistry_cache 락 이후 INSERT되므로). | '26.06.24. |
 | v0.13 | chemistry_cache `updated_at` 컬럼 추가 (GENERATING 락 정체 탐지 및 배치 복구 기준). 스테일 캐시 복구 배치 섹션 추가.                                                                                                                 | '26.07.01. |
+| v0.14 | 만료 코드/토큰 삭제 배치를 Spring Batch → @Scheduled로 전환. ExpiredDataCleanupBatch → ExpiredDataCleanupScheduler 이름 변경.                                                                                                        | '26.07.03. |
 
 ---
 
@@ -38,6 +39,8 @@
   - [3. 테이블 명세 (DBML)](#3-테이블-명세-dbml)
   - [4. 인덱스 전략](#4-인덱스-전략)
   - [5. 배치 작업](#5-배치-작업)
+    - [케미 캐시 스테일 복구 (애플리케이션 레벨)](#케미-캐시-스테일-복구-애플리케이션-레벨)
+    - [만료 동료 코드/평정 토큰 삭제 (애플리케이션 레벨)](#만료-동료-코드평정-토큰-삭제-애플리케이션-레벨)
 
 ---
 
@@ -508,14 +511,16 @@ LLM 재호출 재시도. 성공 시 같은 cacheId로 `ERROR` 처리됐던 `chem
 
 ---
 
-매일 새벽 `ExpiredDataCleanupBatch`가 단일 Job으로 실행.
+### 만료 동료 코드/평정 토큰 삭제 (애플리케이션 레벨)
+
+매일 새벽(기본 03:00) `ExpiredDataCleanupScheduler`가 `@Scheduled`로 실행.
 
 ```sql
--- 만료 동료 코드 삭제
-DELETE FROM peer_codes WHERE expires_at < NOW();
+  -- 만료 동료 코드 삭제
+  DELETE FROM peer_codes WHERE expires_at < NOW();
 
--- 만료 평정 토큰 삭제
-DELETE FROM assessment_tokens WHERE expires_at < NOW();
+  -- 만료 평정 토큰 삭제
+  DELETE FROM assessment_tokens WHERE expires_at < NOW();
 ```
 
 `disc_cache` 만료는 배치 불필요 — 조회 시점 온디맨드 갱신.

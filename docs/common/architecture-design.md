@@ -1,7 +1,7 @@
 # MyCPT 시스템 아키텍처 설계
 
-**문서 버전**: v0.10
-**작성일**: '26.06.24.
+**문서 버전**: v0.11
+**작성일**: '26.07.03.
 **작성자**: 김유신
 
 ---
@@ -19,6 +19,7 @@
 | v0.8  | `DiscResult` → `DiscTest`, `DiscResultRepository` → `DiscTestRepository` 이름 변경. `Test` 엔티티 추상 클래스 전환 (`@Inheritance(JOINED)`). notification 도메인 CTI 적용 (`Notification` 추상화, `ColleagueNotification` / `ChemistryNotification` 서브클래스 추가). MySQL 테이블 수 12 → 13 반영. | '26.06.15. |
 | v0.9  | ScoreRequest → DiscScoreRequest, ScoreResponse → DiscScoreResponse 이름 변경. common/enums/TestType.java 추가 (ChemistryReport 전용). TestType을 DTO에 사용하지 않는 설계 근거 반영.                                                                                                                | '26.06.16. |
 | v0.10 | chemistry 도메인: ChemistryCache.status 필드 추가, chemistry/event 패키지 신규 (ChemistryEventPublisher / ChemistryEventSubscriber). RedisConfig 추가. Redis 용도 Pub/Sub 브로커 역할 추가.                                                                                                         | '26.06.24. |
+| v0.11 | 배치 컴포넌트 Spring Batch → @Scheduled 전환 반영. architecture.puml Batch 컴포넌트 라벨 수정.                                                                                                                                                                                                      | '26.07.03. |
 
 ---
 
@@ -61,7 +62,7 @@
 | Repository | JPA Repositories                  | DB CRUD                                             |
 | Async      | @Async + ThreadPoolTaskExecutor   | 케미 보고서 LLM 비동기 호출                         |
 | SSE        | SseEmitter                        | 케미 보고서 완료 푸시, Last-Event-ID 재전송         |
-| Batch      | Spring Batch                      | 만료 동료 코드 + 만료 평정 토큰 주기 삭제           |
+| Batch      | @Scheduled 기반 스케줄러          | 만료 동료 코드 + 만료 평정 토큰 주기 삭제           |
 
 ### 2.3 외부 시스템
 

@@ -106,21 +106,21 @@ LLM 호출 비용이 사용자 수에 비례해 선형 증가하는 문제를, *
 
 ## 🛠️ Tech Stack · 기술 스택
 
-| 영역                 | 기술                                                         |
-| -------------------- | ------------------------------------------------------------ |
-| **Backend**          | Java 25, Spring Boot 3.5.x, Spring Security, Spring Data JPA |
-| **Auth**             | Kakao OAuth 2.0, JWT                                         |
-| **API Docs**         | SpringDoc OpenAPI (Swagger UI)                               |
-| **DB / Cache**       | MySQL, Redis (`@Cacheable`)                                  |
-| **LLM**              | Anthropic Claude API (`claude-sonnet-4-6`)                   |
-| **Async / Realtime** | Spring `@Async`, SSE (`SseEmitter`)                          |
-| **Batch**            | Spring Batch (만료 토큰·코드 정리)                           |
-| **Storage**          | Local FS (dev) → AWS S3 (prod)                               |
-| **Frontend**         | Next.js 15 (App Router), TypeScript, Tailwind CSS v4         |
-| **State**            | TanStack Query (server), Zustand (client)                    |
-| **UI**               | Framer Motion, react-markdown                                |
-| **Test**             | JUnit5, Mockito/BDDMockito, Testcontainers, Vitest           |
-| **Infra**            | Docker Compose (profiles: infra / frontend / all)            |
+| 영역                 | 기술                                                             |
+| -------------------- | ---------------------------------------------------------------- |
+| **Backend**          | Java 25, Spring Boot 3.5.x, Spring Security, Spring Data JPA     |
+| **Auth**             | Kakao OAuth 2.0, JWT                                             |
+| **API Docs**         | SpringDoc OpenAPI (Swagger UI)                                   |
+| **DB / Cache**       | MySQL, Redis (`@Cacheable`)                                      |
+| **LLM**              | Anthropic Claude API (`claude-sonnet-4-6`)                       |
+| **Async / Realtime** | Spring `@Async`, SSE (`SseEmitter`)                              |
+| **Batch**            | Spring `@Scheduled` (만료 토큰·코드 정리, 케미 캐시 스테일 복구) |
+| **Storage**          | Local FS (dev) → AWS S3 (prod)                                   |
+| **Frontend**         | Next.js 15 (App Router), TypeScript, Tailwind CSS v4             |
+| **State**            | TanStack Query (server), Zustand (client)                        |
+| **UI**               | Framer Motion, react-markdown                                    |
+| **Test**             | JUnit5, Mockito/BDDMockito, Testcontainers, Vitest               |
+| **Infra**            | Docker Compose (profiles: infra / frontend / all)                |
 
 ---
 

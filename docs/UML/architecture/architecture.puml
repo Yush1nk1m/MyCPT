@@ -76,7 +76,7 @@ package "Spring Boot 3.x (com.mycpt.backend)" #EEEDFE {
     [JPA Repositories] as Repos
   }
 
-  [Spring Batch\n만료 코드/토큰 삭제] as Batch
+  [ExpiredDataCleanupScheduler\n(@Scheduled) 만료 코드/토큰 삭제] as Batch
 }
 
 database "MySQL" as MySQL {
@@ -116,7 +116,7 @@ Chemistry  -down-> Llm        : @Async
 Chemistry  -down-> Sse        : 완료 이벤트 푸시
 OtherServices -down-> Repos
 Coin       -down-> Repos
-Batch      -down-> Repos      : 만료 데이터 삭제
+Batch      -down-> Repos      : 만료 데이터 삭제 (@Scheduled)
 
 ' Persistence ↔ DB
 Repos -down-> MySQL

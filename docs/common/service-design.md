@@ -3,8 +3,8 @@
 > **My ComPeTency**
 > DISC 이론 기반 직무 역량 성향 분석 서비스
 
-**문서 버전**: v0.11
-**작성일**: '26.06.25.
+**문서 버전**: v0.12
+**작성일**: '26.07.03.
 **작성자**: 김유신
 
 ---
@@ -24,6 +24,7 @@
 | v0.9  | JWT 인증 방식 사용에 따른 Redis 사용 목적 수정                                                                                                                                                                                                                                              | '26.05.27. |
 | v0.10 | 버킷 수 수정 (6,561 → 81)                                                                                                                                                                                                                                                                   | '26.06.01  |
 | v0.11 | §4.2 동료 케미 보고서 발행 전략 전면 개정. 매번 실시간 호출 → Lazy Caching + 중복 LLM 호출 방지로 변경. chemistry_cache 6,561행 사전 삽입, SELECT FOR UPDATE 기반 발행자/구독자 분기, Redis Pub/Sub + CountDownLatch 대기 구조, Self-invocation 해결을 위한 ChemistryCacheLockTx 분리 명시. | '26.06.25. |
+| v0.12 | 배치 기술 스택 Spring Batch → @Scheduled 통합 (규모 대비 오버엔지니어링 판단)                                                                                                                                                                                                               | '26.07.03. |
 
 ---
 
@@ -309,22 +310,22 @@ Map<ChemistryCacheId, List<WaitingEntry>>
 
 ## 5. 기술 스택
 
-| 영역        | 기술                                                                           |
-| ----------- | ------------------------------------------------------------------------------ |
-| 백엔드      | Java 25, Spring Boot 3.5.14                                                    |
-| API 문서    | SpringDoc OpenAPI (Swagger UI)                                                 |
-| 인증        | Spring Security, Kakao OAuth 2.0, JWT(액세스 토큰)                             |
-| DB          | MySQL                                                                          |
-| 캐시 (DB)   | disc_cache 테이블 (온디맨드 만료, Lazy Caching)                                |
-| 캐시 (앱)   | Redis (`@Cacheable`, DB 결과 캐싱 전용)                                        |
-| LLM         | Anthropic Claude API (claude-sonnet-4-6)                                       |
-| 비동기 처리 | Spring `@Async`                                                                |
-| 실시간 알림 | SSE (`SseEmitter`)                                                             |
-| 스토리지    | 로컬 파일시스템 (개발) / AWS S3 (운영)                                         |
-| 배치        | Spring Batch (만료 동료 코드/토큰 삭제) + `@Scheduled` (케미 캐시 스테일 복구) |
-| 프론트엔드  | Next.js (App Router), Tailwind CSS, Framer Motion                              |
-| 상태 관리   | TanStack Query (서버 상태), Zustand (클라이언트 상태)                          |
-| 인프라      | 미정                                                                           |
+| 영역        | 기술                                                                            |
+| ----------- | ------------------------------------------------------------------------------- |
+| 백엔드      | Java 25, Spring Boot 3.5.14                                                     |
+| API 문서    | SpringDoc OpenAPI (Swagger UI)                                                  |
+| 인증        | Spring Security, Kakao OAuth 2.0, JWT(액세스 토큰)                              |
+| DB          | MySQL                                                                           |
+| 캐시 (DB)   | disc_cache 테이블 (온디맨드 만료, Lazy Caching)                                 |
+| 캐시 (앱)   | Redis (`@Cacheable`, DB 결과 캐싱 전용)                                         |
+| LLM         | Anthropic Claude API (claude-sonnet-4-6)                                        |
+| 비동기 처리 | Spring `@Async`                                                                 |
+| 실시간 알림 | SSE (`SseEmitter`)                                                              |
+| 스토리지    | 로컬 파일시스템 (개발) / AWS S3 (운영)                                          |
+| 배치        | `@Scheduled` (만료 동료 코드/토큰 삭제, 케미 캐시 스테일 복구 — 전부 동일 방식) |
+| 프론트엔드  | Next.js (App Router), Tailwind CSS, Framer Motion                               |
+| 상태 관리   | TanStack Query (서버 상태), Zustand (클라이언트 상태)                           |
+| 인프라      | 미정                                                                            |
 
 ---
 
