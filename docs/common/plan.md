@@ -356,9 +356,9 @@ IA v0.3에 확정된 전역 컴포넌트(상단 헤더, 하단 탭바 4개, SSE 
 
 **우선순위 1 — 핵심 동선**
 
-- [ ] `/invite/[code]` 동료 초대 수락 페이지 (비회원→로그인 연계)
+- [x] `/invite/[code]` 동료 초대 수락 페이지 (비회원→로그인 연계)
 - [x] `/results/[id]` 결과 상세 페이지
-- [ ] `/assessments/[token]` 타인 평정 응시 페이지
+- [x] `/assessments/[token]` 타인 평정 응시 페이지
 - [ ] Spring Batch — 만료 동료 코드 + 만료 평정 토큰 통합 삭제 스케줄러
 
 **우선순위 2 — 정적/보조 페이지**
@@ -375,18 +375,25 @@ IA v0.3에 확정된 전역 컴포넌트(상단 헤더, 하단 탭바 4개, SSE 
 
 ### 실행 기록
 
-| 날짜       | 내용                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | 산출물                                                                                                                                                                               |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 06.30 (화) | NotificationApi/V1Controller에 GET /notifications/stream 엔드포인트 추가 (SseService.connect() 연동 누락분). 발행자 본인 SSE push 누락 수정 (ChemistryReportProcessor). SSE 페이로드 키 reportId → referenceId 통일. 전역 SSE 연결 구조로 전환 (useSseConnection, SseProvider — 페이지별 개별 연결 제거). Next.js rewrites 프록시의 gzip 압축이 SSE 스트리밍을 버퍼링하는 문제 발견 — SSE만 백엔드 직접 연결로 분리(NEXT_PUBLIC_BACKEND_URL).                                  | NotificationApi, NotificationV1Controller, ChemistryReportProcessor, useSseConnection, SseProvider, next.config.ts 우회                                                              |
+| 날짜       | 내용                                                                                                                                                                                                                                                                                                                                                                                                                                          | 산출물                                                                                                                  |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 06.30 (화) | NotificationApi/V1Controller에 GET /notifications/stream 엔드포인트 추가 (SseService.connect() 연동 누락분). 발행자 본인 SSE push 누락 수정 (ChemistryReportProcessor). SSE 페이로드 키 reportId → referenceId 통일. 전역 SSE 연결 구조로 전환 (useSseConnection, SseProvider — 페이지별 개별 연결 제거). Next.js rewrites 프록시의 gzip 압축이 SSE 스트리밍을 버퍼링하는 문제 발견 — SSE만 백엔드 직접 연결로 분리(NEXT_PUBLIC_BACKEND_URL). | NotificationApi, NotificationV1Controller, ChemistryReportProcessor, useSseConnection, SseProvider, next.config.ts 우회 |
+|            | `/invite/[code]` 동료 초대 수락 페이지, `/assessments/[token]` 타인 평정                                                                                                                                                                                                                                                                                                                                                                      |
+
+응시 페이지 구현 (로딩/에러[만료·자기초대·이미동료·코드없음]/자동등록/완료 전 상태
+커버). `scenario-test-design.md` 신규 작성 — dev_scenario_seed.sql 기반 QA 테스트
+계정 4종(user-a~d) + 시나리오 케이스 정의. SC-Invite-_(6종), SC-Assess-_ 전 케이스
+검증 완료. | invite/[code]/page.tsx, assessments/[token]/page.tsx,
+scenario-test-design.md, dev_scenario_seed.sql |
 | 07.01 (수) | ChemistryCacheService 구독자 대기 5분 타임아웃 추가 (무한 대기 → IllegalStateException, waitingMap 자가 정리). ChemistryReportProcessor.recover() 파라미터 시그니처 버그 수정 (Long reportId → ChemistryReportIssuedEvent event — Spring Retry 매칭 계약 위반이라 recover 미호출 위험 있었음). ChemistryCache updated_at 컬럼 추가. ChemistryCacheRecoveryScheduler 신규 (10분 주기 스테일 GENERATING 복구 + ERROR→READY 조용한 교정, NULL 경유 없이 발행자 역할 재사용 방식). | ChemistryCache, ChemistryCacheRepository, ChemistryReportRepository, ChemistryTxHelper, ChemistryCacheService, ChemistryReportProcessor, ChemistryCacheRecoveryScheduler, schema.sql |
-| 07.02 (목) | ChemistryReportProcessor.recover() 시그니처 수정 검증 IT 추가. ChemistryCacheService 구독자 타임아웃을 SUBSCRIBER_WAIT_TIMEOUT_MINUTES 하드코딩에서 @Value(chemistry.subscriber-wait-timeout-seconds) 외부화로 전환 (테스트 가능성 확보). ChemistryCacheRecoveryScheduler IT 3건 신규 (ChemistryCacheRecoverySchedulerTest). 동시성 정합성 검증 부하 테스트 신규 (@RepeatedTest 30회, ChemistryCacheServiceIntegrationTest).                                                   | ChemistryCacheService, application.yml, ChemistryCacheServiceIntegrationTest, ChemistryCacheRecoverySchedulerTest, test-design.md                                                    |
+| 07.02 (목) | ChemistryReportProcessor.recover() 시그니처 수정 검증 IT 추가. ChemistryCacheService 구독자 타임아웃을 SUBSCRIBER_WAIT_TIMEOUT_MINUTES 하드코딩에서 @Value(chemistry.subscriber-wait-timeout-seconds) 외부화로 전환 (테스트 가능성 확보). ChemistryCacheRecoveryScheduler IT 3건 신규 (ChemistryCacheRecoverySchedulerTest). 동시성 정합성 검증 부하 테스트 신규 (@RepeatedTest 30회, ChemistryCacheServiceIntegrationTest). | ChemistryCacheService, application.yml, ChemistryCacheServiceIntegrationTest, ChemistryCacheRecoverySchedulerTest, test-design.md |
 
 ### 완료 확인 체크리스트
 
 - [ ] 만료 동료 코드 + 만료 평정 토큰 배치 삭제 확인
-- [ ] `/invite/[code]` 초대 수락 → 동료 등록 정상 흐름 확인
-- [ ] `/results/[id]` 결과 상세 정상 렌더링 확인
-- [ ] `/assessments/[token]` 타인 평정 응시 정상 흐름 확인
+- [x] `/invite/[code]` 초대 수락 → 동료 등록 정상 흐름 확인
+- [x] `/results/[id]` 결과 상세 정상 렌더링 확인
+- [x] `/assessments/[token]` 타인 평정 응시 정상 흐름 확인
 - [ ] `/me/about`, `/me/help`, `/me/leave` 정상 접근 확인
 - [ ] 비회원 전체 플로우 QA 통과
 - [ ] 회원 전체 플로우 QA 통과

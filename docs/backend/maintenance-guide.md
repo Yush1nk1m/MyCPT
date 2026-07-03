@@ -62,3 +62,23 @@ private static boolean isSafeRedirect(String path) {
 - 카카오 기본 이미지: 카카오가 제공하는 URL 그대로 저장
 - S3 업로드 후: S3 키가 아닌 조합된 Full URL 저장
 - 프론트엔드에서 URL 조합 로직 불필요
+
+## 3. 케미 캐시 실패 복구 구조
+
+케미 캐시(`chemistry_cache`)는 발행자 경로 실패에 대해 **동기 즉시 복구**와 **배치 지연 복구** 두 계층으로 대응한다. 서로 다른 실패 시나리오를 커버하므로 하나로 통합하지 않는다.
+
+### 계층 1 — 동기 즉시 리셋 (`ChemistryTxHelper.resetCacheOnPublishFailure`)
+
+- 발행자가 `llmClient.complete()` 호출 중 예외를 던지면, `ChemistryCacheService.generateAsPublisher()`가 이를 잡아 캐시를 즉시 `GENERATING → NULL`로 되돌린다.
+- try-catch를 `llmClient.complete()` 호출에만 narrow하게 잡는 이유: 이후 로직(`saveCompletedCache`, `publishReady`)에서 발생한 예외까지 캐시를 리셋하면 이미 완료된 LLM 응답이 유실된다.
+- 리셋 직후 예외를 다시 던지므로(`throw e`), 실제 재시도/실패 처리는 호출자인 `ChemistryReportProcessor`의 `@Retryable`이 담당한다.
+
+### 계층 2 — 배치 지연 복구 (`ChemistryCacheRecoveryScheduler`, 10분 주기)
+
+- 계층 1이 실행되지 못하는 경우(서버 프로세스 강제 종료, `@Async` 스레드 자체가 죽는 경우 등)를 대비한 안전망.
+- `chemistry_cache.status='GENERATING' AND updated_at < NOW() - 10분` 조건으로 스테일 행 탐지 후 재시도.
+- **주의**: 이 배치는 캐시 상태를 `NULL`로 되돌리지 않고 `GENERATING`을 유지한 채 `updated_at`만 갱신한다. 재시도 착수와 동시에 실유저 요청이 끼어들어 별도 발행자가 되는 경쟁을 막기 위함 — DB 근거는 `database-design.md` §5 참조.
+
+### 참고 — 구독자 타임아웃과의 구분
+
+`chemistry.subscriber-wait-timeout-seconds`(기본 300초)는 구독자가 발행자의 완료를 기다리는 대기 한도이며, 위 두 복구 계층과는 별개 타이머다. 구독자가 타임아웃되면 즉시 `ERROR`로 전이하고 재시도하지 않는다 — 캐시 자체의 복구는 여전히 계층 1/2에 달려 있으므로, 이후 재조회 시 복구된 캐시를 받을 수 있다.
