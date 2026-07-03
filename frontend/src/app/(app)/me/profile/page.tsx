@@ -137,7 +137,7 @@ function MeProfileForm({
         <div className="flex items-center gap-4 bg-white border border-line rounded-xl p-4">
           <div className="w-16 h-16 rounded-full overflow-hidden bg-paper-2 border border-line shrink-0">
             {previewUrl ? (
-              <Image
+              <img
                 src={previewUrl}
                 alt="프로필 이미지"
                 width={64}
