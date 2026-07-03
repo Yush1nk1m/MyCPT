@@ -1,7 +1,7 @@
 # MyCPT API 명세서
 
-**문서 버전**: v0.8
-**작성일**: '26.06.16.
+**문서 버전**: v0.9
+**작성일**: '26.06.26.
 **작성자**: 김유신
 
 ---
@@ -18,6 +18,7 @@
 | v0.6 | GET /questions 제거 (문항 프론트 위임). POST /results/score · POST /assessments/{token}/submit 요청 바디를 원점수 직접 전송 방식으로 변경.                                                                       | '26.05.30. |
 | v0.7 | 비회원 로그인 시 DISC 결과 저장을 위해 OAuth 로그인에 redirect 기능 추가                                                                                                                                         | '26.06.08. |
 | v0.8 | POST /results/score 요청/응답에서 testType 제거 (엔드포인트가 검사 유형 결정). POST /results 요청에서 testType 제거. POST /assessments 요청에서 testType 제거. 검사 유형 확장 시 전용 엔드포인트 분리 방침 명시. | '26.06.16. |
+| v0.9 | 9.케미 섹션 전면 개정 — Lazy Caching + SELECT FOR UPDATE + Redis Pub/Sub 동시성 제어 흐름 다이어그램 추가. POST /chemistry-reports 설명에 AFTER_COMMIT 트리거·중복 방지·SSE/인앱 알림 반영.                      | '26.06.26. |
 
 ---
 

@@ -1,24 +1,25 @@
 # MyCPT 테스트 설계 문서
 
-**문서 버전**: v0.9
-**작성일**: '26.06.28.
+**문서 버전**: v0.10
+**작성일**: '26.07.03.
 **작성자**: 김유신
 
 ---
 
 ## 변경 이력
 
-| 버전 | 변경 내용                                                                                                                                                                                                                                                                                                                      | 날짜       |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| v0.1 | 초안 작성. 레이어별 전략, Auth/User 도메인 테스트 케이스 ID 체계 수립.                                                                                                                                                                                                                                                         | '26.05.26. |
-| v0.2 | Result/Assessment 도메인 테스트 케이스 추가. JpaTestSupport 기반 슬라이스 테스트 전략 확정.                                                                                                                                                                                                                                    | '26.06.09. |
-| v0.3 | 예외 처리 체계 통합 반영 (BusinessException/ErrorCode). ScoringService 경계값 케이스 보강.                                                                                                                                                                                                                                     | '26.06.13. |
-| v0.4 | `DiscResultRepository` → `DiscTestRepository` 이름 변경. Test ID `ST-DiscResultRepo-*` → `ST-DiscTestRepo-*` 전면 변경. `ResultService` 저장 행위 설명 `disc_results` → `disc_tests` 수정. `AssessmentService` 평정 제출 상황 설명 `DiscResult` → `DiscTest` 수정.                                                             | '26.06.15. |
-| v0.5 | §8~§11 누락된 Test Code 링크 4건 추가(Statistics/PeerCode/Colleague/Notification Service). `ColleagueV1Controller` ST 테스트 미작성 상태 명시(TODO).                                                                                                                                                                           | '26.06.20. |
-| v0.6 | §10 Chemistry 도메인 테스트 케이스 추가 (UT 7건, ST 6건, IT 5건).                                                                                                                                                                                                                                                              | '26.06.24. |
-| v0.7 | §10 Chemistry 도메인 테스트 케이스 전면 재작성. ChemistryCacheLockTx 트랜잭션 격리 IT 추가 (Self-invocation 해결 검증). ChemistryCache 엔티티 UT 상태전이 케이스 교체 (create/refresh → startGenerating/complete/refresh). Lazy Caching IT 3건 + Duplication Defense IT 2건 추가. ChemistryCacheStatus 신규 enum UT 추가.      | '26.06.25. |
-| v0.8 | §10 Chemistry 도메인 전면 재작성. ChemistryTxHelper(구 ChemistryCacheLockTx) 네이밍 변경 반영. `ChemistryReport.create(cacheId)` 시그니처 변경 반영 (생성 시점 cacheId 주입). `completeReport()` ChemistryTxHelper 이관 반영. ChemistryTxHelper IT 케이스 3건으로 확장. Lazy Caching IT 3건 + Duplication Defense IT 2건 확정. | '26.06.25. |
-| v0.9 | §10 Chemistry 도메인: 캐시만료경계 케이스 제거 (구현 세부사항 검증으로 IT 목적 부적합). 동시요청 2개 케이스 제거 (3개 케이스가 포함 관계). @TransactionalEventListener AFTER_COMMIT 검증 섹션 신규 추가.                                                                                                                       | '26.06.28. |
+| 버전  | 변경 내용                                                                                                                                                                                                                                                                                                                      | 날짜       |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| v0.1  | 초안 작성. 레이어별 전략, Auth/User 도메인 테스트 케이스 ID 체계 수립.                                                                                                                                                                                                                                                         | '26.05.26. |
+| v0.2  | Result/Assessment 도메인 테스트 케이스 추가. JpaTestSupport 기반 슬라이스 테스트 전략 확정.                                                                                                                                                                                                                                    | '26.06.09. |
+| v0.3  | 예외 처리 체계 통합 반영 (BusinessException/ErrorCode). ScoringService 경계값 케이스 보강.                                                                                                                                                                                                                                     | '26.06.13. |
+| v0.4  | `DiscResultRepository` → `DiscTestRepository` 이름 변경. Test ID `ST-DiscResultRepo-*` → `ST-DiscTestRepo-*` 전면 변경. `ResultService` 저장 행위 설명 `disc_results` → `disc_tests` 수정. `AssessmentService` 평정 제출 상황 설명 `DiscResult` → `DiscTest` 수정.                                                             | '26.06.15. |
+| v0.5  | §8~§11 누락된 Test Code 링크 4건 추가(Statistics/PeerCode/Colleague/Notification Service). `ColleagueV1Controller` ST 테스트 미작성 상태 명시(TODO).                                                                                                                                                                           | '26.06.20. |
+| v0.6  | §10 Chemistry 도메인 테스트 케이스 추가 (UT 7건, ST 6건, IT 5건).                                                                                                                                                                                                                                                              | '26.06.24. |
+| v0.7  | §10 Chemistry 도메인 테스트 케이스 전면 재작성. ChemistryCacheLockTx 트랜잭션 격리 IT 추가 (Self-invocation 해결 검증). ChemistryCache 엔티티 UT 상태전이 케이스 교체 (create/refresh → startGenerating/complete/refresh). Lazy Caching IT 3건 + Duplication Defense IT 2건 추가. ChemistryCacheStatus 신규 enum UT 추가.      | '26.06.25. |
+| v0.8  | §10 Chemistry 도메인 전면 재작성. ChemistryTxHelper(구 ChemistryCacheLockTx) 네이밍 변경 반영. `ChemistryReport.create(cacheId)` 시그니처 변경 반영 (생성 시점 cacheId 주입). `completeReport()` ChemistryTxHelper 이관 반영. ChemistryTxHelper IT 케이스 3건으로 확장. Lazy Caching IT 3건 + Duplication Defense IT 2건 확정. | '26.06.25. |
+| v0.9  | §10 Chemistry 도메인: 캐시만료경계 케이스 제거 (구현 세부사항 검증으로 IT 목적 부적합). 동시요청 2개 케이스 제거 (3개 케이스가 포함 관계). @TransactionalEventListener AFTER_COMMIT 검증 섹션 신규 추가.                                                                                                                       | '26.06.28. |
+| v0.10 | §13(스케줄러·도메인 비결합)/§14(통합 테스트 시나리오) 섹션 신설. §10 Chemistry: Subscriber Timeout IT, Concurrency Load Test IT(@RepeatedTest 30), ChemistryCacheRecoveryScheduler IT 3건, recover() 이벤트파라미터매칭 IT 추가. §13: ExpiredDataCleanupScheduler IT 추가. — 07.01~07.03 작업분 지연 반영                      | '26.07.03. |
 
 ---
 
