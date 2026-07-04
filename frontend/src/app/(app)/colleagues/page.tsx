@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/useToast";
 import Link from "next/link";
 
 // ── 타입 ──────────────────────────────────────────────────────────────────────
@@ -105,7 +106,7 @@ function RegisterSheet({
   onSuccess: () => void;
 }) {
   const [input, setInput] = useState("");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const showToast = useToast();
 
   const mutation = useMutation({
     mutationFn: postColleague,
@@ -114,18 +115,17 @@ function RegisterSheet({
       onClose();
     },
     onError: (e: Error) => {
-      setErrorMsg(errorMessage(e.message));
+      showToast(errorMessage(e.message));
     },
   });
 
   function handleChange(value: string) {
     setInput(formatCode(value));
-    setErrorMsg(null);
   }
 
   function handleSubmit() {
     if (!CODE_PATTERN.test(input)) {
-      setErrorMsg("올바른 형식의 코드를 입력해 주세요.");
+      showToast("올바른 형식의 코드를 입력해 주세요.");
       return;
     }
     mutation.mutate(input);
@@ -171,10 +171,7 @@ function RegisterSheet({
             <span className="text-[12px] font-semibold text-[var(--ink-soft)]">
               ① 친구가 알려준 코드 입력
             </span>
-            <div
-              className="flex items-center justify-between border-[1.5px] border-[var(--ink)] rounded-[10px] px-3.5 py-3"
-              style={{ borderColor: errorMsg ? "var(--accent)" : undefined }}
-            >
+            <div className="flex items-center justify-between border-[1.5px] border-[var(--ink)] rounded-[10px] px-3.5 py-3">
               <input
                 className="flex-1 font-mono text-[15px] font-bold tracking-widest bg-transparent outline-none text-[var(--ink)] placeholder:text-[var(--ink-faint)]"
                 placeholder="□□□□□□□□"
@@ -196,11 +193,6 @@ function RegisterSheet({
                 붙여넣기
               </button>
             </div>
-            {errorMsg && (
-              <span className="text-[11px] text-[var(--accent)]">
-                {errorMsg}
-              </span>
-            )}
             <button
               onClick={handleSubmit}
               disabled={mutation.isPending}
@@ -292,7 +284,7 @@ export default function ColleaguesPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--paper)]">
+    <div className="flex flex-col min-h-full bg-[var(--paper)]">
       {/* 탭 헤더 */}
       <div className="flex border-b border-[var(--line)] bg-white sticky top-0 z-10">
         <div className="flex-1 py-3 text-center text-[13px] font-bold text-[var(--ink)] border-b-2 border-[var(--ink)]">

@@ -6,21 +6,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="bg-paper">
       <Header />
 
-      {/* 헤더~탭바 사이만 스크롤되는 독립 영역 — 내부 sticky(top:0) 요소가
-          뷰포트가 아닌 이 컨테이너 기준으로 붙도록 높이를 명시적으로 제한 */}
-      <main
-        className="overflow-y-auto"
+      {/* 헤더~탭바 사이 고정 영역. flex-col로 스크롤 영역과 푸터를 분리 */}
+      <div
+        className="flex flex-col"
         style={{
           marginTop: "var(--header-height)",
           marginBottom: "var(--tab-height)",
           height: "calc(100dvh - var(--header-height) - var(--tab-height))",
         }}
       >
-        {children}
-        <p className="px-4 py-6 text-center text-[10.5px] text-ink-faint">
-          본 결과는 참고용 성향 분석이며 심리 진단이 아닙니다.
-        </p>
-      </main>
+        {/* min-h-0가 핵심 — flex 자식은 기본이 min-height:auto라
+            내용이 넘쳐도 부모를 밀어내며 커짐. 0으로 잡아야 overflow-y-auto가 실제로 먹힘 */}
+        <main className="flex-1 min-h-0 overflow-y-auto">{children}</main>
+      </div>
 
       <TabBar />
     </div>

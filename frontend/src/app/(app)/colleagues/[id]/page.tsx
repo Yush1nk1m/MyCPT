@@ -9,6 +9,7 @@ import {
   useQueryClient,
   useInfiniteQuery,
 } from "@tanstack/react-query";
+import { useToast } from "@/hooks/useToast";
 import Link from "next/link";
 
 // ── 타입 ──────────────────────────────────────────────────────────────────────
@@ -100,6 +101,15 @@ async function deleteColleague(id: string): Promise<void> {
 
 // ── 케미 발행 확인 모달 ───────────────────────────────────────────────────────
 
+function formatNextCharge(nextCoinAt: string | null): string {
+  if (!nextCoinAt) return "만충 상태";
+  const diff = new Date(nextCoinAt).getTime() - Date.now();
+  if (diff <= 0) return "곧 충전 예정";
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  return `약 ${h}시간 ${m}분 후`;
+}
+
 function ChemistryConfirmModal({
   coins,
   nextCoinAt,
@@ -116,14 +126,7 @@ function ChemistryConfirmModal({
   const insufficient = coins === 0;
 
   // 다음 충전까지 남은 시간 (정적 표시 — 카운트다운은 coins 페이지에만)
-  function nextChargeLabel(): string {
-    if (!nextCoinAt) return "만충 상태";
-    const diff = new Date(nextCoinAt).getTime() - Date.now();
-    if (diff <= 0) return "곧 충전 예정";
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    return `약 ${h}시간 ${m}분 후`;
-  }
+  const [chargeLabel] = useState(() => formatNextCharge(nextCoinAt));
 
   return (
     <>
@@ -154,7 +157,7 @@ function ChemistryConfirmModal({
                 value: `${coins}개`,
                 accent: insufficient,
               },
-              { label: "다음 충전까지", value: nextChargeLabel() },
+              { label: "다음 충전까지", value: chargeLabel },
             ].map((row) => (
               <div
                 key={row.label}
@@ -209,7 +212,7 @@ export default function ColleagueDetailPage() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [issueError, setIssueError] = useState<string | null>(null);
+  const showToast = useToast();
 
   const colleague = useQuery({
     queryKey: ["colleague", id],
@@ -243,9 +246,13 @@ export default function ColleagueDetailPage() {
     onError: (e: Error) => {
       setModalOpen(false);
       if (e.message === "INSUFFICIENT_COINS") {
-        setIssueError("코인이 부족해요.");
+        showToast("코인이 부족해요.");
+      } else if (e.message === "NO_RESULT") {
+        showToast(
+          "두 사람 모두 DISC 검사를 완료해야 케미 보고서를 만들 수 있어요.",
+        );
       } else {
-        setIssueError("발행에 실패했어요. 다시 시도해 주세요.");
+        showToast("발행에 실패했어요. 다시 시도해 주세요.");
       }
     },
   });
@@ -277,7 +284,7 @@ export default function ColleagueDetailPage() {
 
   if (colleague.error?.message === "NOT_FOUND") {
     return (
-      <div className="flex items-center justify-center min-h-screen text-sm text-[var(--ink-faint)]">
+      <div className="flex items-center justify-center min-h-full text-sm text-[var(--ink-faint)]">
         존재하지 않는 동료예요
       </div>
     );
@@ -285,7 +292,7 @@ export default function ColleagueDetailPage() {
 
   if (colleague.error?.message === "FORBIDDEN") {
     return (
-      <div className="flex items-center justify-center min-h-screen text-sm text-[var(--ink-faint)]">
+      <div className="flex items-center justify-center min-h-full text-sm text-[var(--ink-faint)]">
         동료 관계가 아니에요
       </div>
     );
@@ -299,7 +306,7 @@ export default function ColleagueDetailPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--paper)]">
+    <div className="flex flex-col min-h-full bg-[var(--paper)]">
       {/* BackBar */}
       <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-[var(--line)] sticky top-0 z-10">
         <Link
@@ -383,13 +390,8 @@ export default function ColleagueDetailPage() {
             </span>
           </div>
 
-          {issueError && (
-            <p className="text-[11.5px] text-[var(--accent)]">{issueError}</p>
-          )}
-
           <button
             onClick={() => {
-              setIssueError(null);
               setModalOpen(true);
             }}
             disabled={coins === 0 || coinBalance.isPending}

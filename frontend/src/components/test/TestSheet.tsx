@@ -1,11 +1,3 @@
-/**
- * TestSheet
- *
- * 검사 시트 최상위 조립 컴포넌트.
- * 스텝 분기와 TestCloseDialog 표시만 담당.
- * 모든 상태는 useTestSheet 훅을 통해서만 접근.
- */
-
 "use client";
 
 import { useTestSheet } from "@/hooks/useTestSheet";
@@ -14,11 +6,14 @@ import { TestCloseDialog } from "./TestCloseDialog";
 import { Step1TypeSelect } from "./steps/Step1TypeSelect";
 import { Step2Answering } from "./steps/Step2Answering";
 import { Step3Result } from "./steps/Step3Result";
+import { ShareStep2Label } from "./steps/share/ShareStep2Label";
+import { ShareStep3Link } from "./steps/share/ShareStep3Link";
 
 export function TestSheet() {
   const {
     isOpen,
     step,
+    mode,
     currentIndex,
     answeredCount,
     currentAnswer,
@@ -41,12 +36,12 @@ export function TestSheet() {
         isOpen={isOpen}
         step={step}
         totalSteps={3}
-        title="DISC 검사"
+        title={mode === "share" ? "친구에게 물어보기" : "DISC 검사"}
         onClose={close}
       >
         {step === 1 && <Step1TypeSelect onStart={() => goToStep(2)} />}
 
-        {step === 2 && (
+        {step === 2 && mode === "self" && (
           <Step2Answering
             currentIndex={currentIndex}
             answeredCount={answeredCount}
@@ -56,8 +51,9 @@ export function TestSheet() {
             onPrev={goPrev}
           />
         )}
+        {step === 2 && mode === "share" && <ShareStep2Label />}
 
-        {step === 3 && (
+        {step === 3 && mode === "self" && (
           <Step3Result
             submitStatus={submitStatus}
             result={result}
@@ -66,9 +62,9 @@ export function TestSheet() {
             onClose={forceClose}
           />
         )}
+        {step === 3 && mode === "share" && <ShareStep3Link />}
       </SheetFrame>
 
-      {/* 중단 다이얼로그 — SheetFrame 바깥에서 portal처럼 렌더 */}
       {isCloseDialogOpen && (
         <TestCloseDialog
           answeredCount={answeredCount}

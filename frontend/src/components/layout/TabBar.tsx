@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuthStore } from "@/stores/autoStore";
+import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/hooks/useToast";
 
 const TABS = [

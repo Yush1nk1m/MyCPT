@@ -120,7 +120,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--paper)]">
+    <div className="flex flex-col min-h-full bg-[var(--paper)]">
       {/* BackBar */}
       <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-[var(--line)] sticky top-0 z-10">
         <Link

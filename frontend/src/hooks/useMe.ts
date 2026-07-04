@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAuthStore } from "@/stores/autoStore";
+import { useAuthStore } from "@/stores/authStore";
 import { useEffect } from "react";
 
 interface MeResponse {

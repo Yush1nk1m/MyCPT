@@ -113,7 +113,7 @@ function CoinContent({ balance }: { balance: CoinBalanceResponse }) {
   const allHistory = history.data?.pages.flatMap((p) => p.history) ?? [];
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--paper)]">
+    <div className="flex flex-col min-h-full bg-[var(--paper)]">
       {/* BackBar */}
       <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-[var(--line)] sticky top-0 z-10">
         <Link
@@ -280,7 +280,7 @@ export default function CoinsPage() {
 
   if (balance.isPending) {
     return (
-      <div className="flex items-center justify-center min-h-screen text-sm text-[var(--ink-faint)]">
+      <div className="flex items-center justify-center min-h-full text-sm text-[var(--ink-faint)]">
         로딩 중…
       </div>
     );
@@ -288,7 +288,7 @@ export default function CoinsPage() {
 
   if (balance.isError) {
     return (
-      <div className="flex items-center justify-center min-h-screen text-sm text-[var(--ink-faint)]">
+      <div className="flex items-center justify-center min-h-full text-sm text-[var(--ink-faint)]">
         잔액을 불러오지 못했어요
       </div>
     );

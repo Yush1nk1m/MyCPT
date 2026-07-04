@@ -41,8 +41,10 @@ export function useSseConnection() {
         queryClient.invalidateQueries({
           queryKey: ["chemistry-report", String(payload.referenceId)],
         });
+        queryClient.invalidateQueries({ queryKey: ["notifications"] }); // 추가
       } catch {
         queryClient.invalidateQueries({ queryKey: ["chemistry-reports"] });
+        queryClient.invalidateQueries({ queryKey: ["notifications"] }); // 추가
       }
     });
 
@@ -55,8 +57,10 @@ export function useSseConnection() {
         queryClient.invalidateQueries({
           queryKey: ["chemistry-report", String(payload.referenceId)],
         });
+        queryClient.invalidateQueries({ queryKey: ["notifications"] }); // 추가
       } catch {
         queryClient.invalidateQueries({ queryKey: ["chemistry-reports"] });
+        queryClient.invalidateQueries({ queryKey: ["notifications"] }); // 추가
       }
     });
 
@@ -66,8 +70,10 @@ export function useSseConnection() {
         const payload: SseEventPayload = JSON.parse(e.data);
         showToast(payload.message);
         queryClient.invalidateQueries({ queryKey: ["colleagues"] });
+        queryClient.invalidateQueries({ queryKey: ["notifications"] }); // 추가
       } catch {
         queryClient.invalidateQueries({ queryKey: ["colleagues"] });
+        queryClient.invalidateQueries({ queryKey: ["notifications"] }); // 추가
       }
     });
 

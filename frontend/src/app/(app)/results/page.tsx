@@ -26,7 +26,7 @@ export default function ResultsPage() {
   const results = data?.pages.flatMap((p) => p.results) ?? [];
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100dvh" }}>
+    <div style={{ minHeight: "100%" }}>
       {/* 상단 탭 */}
       <div
         style={{

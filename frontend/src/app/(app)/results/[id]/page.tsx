@@ -48,7 +48,7 @@ export default function ResultDetailPage({
   // 로딩
   if (status === "pending") {
     return (
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "20px 16px" }}>
+      <div style={{ padding: "20px 16px" }}>
         <div
           style={{
             height: 40,
@@ -80,8 +80,6 @@ export default function ResultDetailPage({
     return (
       <div
         style={{
-          maxWidth: 480,
-          margin: "0 auto",
           padding: "80px 16px",
           textAlign: "center",
           color: "var(--ink-faint)",
@@ -96,7 +94,7 @@ export default function ResultDetailPage({
   const profile = getDiscProfile(data.buckets);
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 80 }}>
+    <div style={{ paddingBottom: 80 }}>
       {/* 상단 백바 */}
       <div
         style={{

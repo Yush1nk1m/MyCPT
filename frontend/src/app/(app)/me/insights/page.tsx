@@ -667,10 +667,8 @@ export default function InsightsPage() {
   return (
     <div
       style={{
-        maxWidth: 480,
-        margin: "0 auto",
         background: "var(--paper-2)",
-        minHeight: "100vh",
+        minHeight: "100%",
       }}
     >
       <BackBar title="통계 비교 · 변화 추이" />

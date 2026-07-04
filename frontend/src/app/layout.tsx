@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { ToastContainer } from "../components/ui/Toast";
 import { SseProvider } from "../components/providers/SseProvider";
+import { KakaoSdkLoader } from "@/components/providers/KakaoSdkLoader";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,6 +34,7 @@ export default function RootLayout({
           <ToastContainer />
           <SseProvider />
         </Providers>
+        <KakaoSdkLoader />
       </body>
     </html>
   );

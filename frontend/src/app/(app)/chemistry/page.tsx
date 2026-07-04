@@ -118,7 +118,7 @@ export default function ChemistryPage() {
   const allReports = reports.data?.pages.flatMap((p) => p.reports) ?? [];
 
   return (
-    <div className="min-h-screen bg-[var(--paper)]">
+    <div className="min-h-full bg-[var(--paper)]">
       <div className="flex border-b border-[var(--line)] bg-white sticky top-0 z-10">
         <Link
           href="/colleagues"

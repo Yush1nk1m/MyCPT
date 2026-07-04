@@ -336,6 +336,13 @@
 5주차에서 검증용으로 우회했던 동료 등록 흐름을 포함한 잔여 화면을 완성하고,
 배치 작업과 전체 QA를 거쳐 배포 후 베타 테스트를 시작한다. 4일의 단축 주차이므로 정적 페이지보다 핵심 동선을 우선한다.
 
+### 알려진 문제 → 다음 세션 이월
+
+- [ ] 카카오톡 공유 시 intent:// 스킴 오류로 실패 (로컬 개발 환경 특성인지 실제 앱키/도메인 등록 이슈인지 원인 파악 필요)
+- [ ] 서비스 소개 시트 본문 텍스트 줄바꿈/가독성 개선
+- [ ] 케미 발행 NO_RESULT 에러 메시지가 실제 화면에 표시 안 됨 (onError 분기는 추가했으나 렌더링 확인 필요)
+- [ ] KakaoSdkLoader.tsx: Kakao.init() 인자 타입 오류 (NEXT_PUBLIC_KAKAO_JS_KEY: string | undefined)
+
 ### 계획
 
 **전역 셸 통합**
@@ -344,10 +351,29 @@ IA v0.3에 확정된 전역 컴포넌트(상단 헤더, 하단 탭바 4개, SSE 
 페어별 기능(코인/케미/SSE) 검증을 셸 통합 없이 개별 URL 접근으로 진행해, 셸 변수를 배제한 채 페이지 자체의 정확성에 집중하기 위함이었음.
 구현 대상 페이지 범위가 사실상 확정된 시점이므로, 모든 개별 페이지를 한 번에 엮는 통합 작업을 마무리 단계에 진행.
 
-- [ ] `(app)` route group 레이아웃 구현 — 헤더(로고/알림 종/프로필 칩 or 로그인 버튼) + 하단 탭바(홈/검사 결과/동료 & 케미/내 정보) + 푸터(면책 조항)
-- [ ] 비회원 잠김 탭 클릭 시 "로그인이 필요해요" 토스트 안내
-- [ ] 구현 페이지(`/me/coins`, `/colleagues`, `/colleagues/[id]`, `/chemistry`, `/chemistry/[id]`)를 `(app)` 레이아웃 하위로 편입
-- [ ] 검증: 4탭 전환 정상 동작, 비회원 잠김 탭 토스트 확인, 헤더 프로필 칩 클릭 시 `/me` 진입 확인
+- [x] (app) 라우트 그룹 레이아웃 구현 — 헤더(로고/코인/알림종/프로필칩 or 로그인버튼) + 하단 탭바 4개 + 헤더~탭바 사이 고정 스크롤 영역
+- [x] 비회원 잠김 탭 클릭 시 토스트 안내 (toastStore에 action 버튼 지원 추가)
+- [x] 헤더 알림 드롭다운 구현 (5주차 이월 항목 → 완료 전환)
+- [x] 탭에 속한 페이지 전체를 (app) 레이아웃 하위로 편입 (/, /results, /results/[id], /me/_, /colleagues/_, /chemistry/\*)
+- [x] middleware.ts PUBLIC_ROUTES 예외 추가 (/me/about, /me/help — access-matrix.md 스펙과의 기존 불일치 수정)
+- [x] 검증: 4탭 전환, 잠김 탭 토스트, 헤더 프로필 칩 진입 확인
+
+**QA 중 발견한 버그 수정**
+
+- [x] 로그아웃 시 헤더 미반영 (queryClient 캐시 동기 반영 누락)
+- [x] 헤더~탭바 사이 불필요한 스크롤 (페이지별 min-h-screen → min-h-full)
+- [x] results/me-insights 폭 480px 고정 제거
+- [x] SSE 알림 도착 시 헤더/알림센터 지연 반영 (["notifications"] 캐시 무효화 누락)
+- [x] 케미 발행 실패 메시지 NO_RESULT 분기 추가 (표시 안 되는 이슈 잔존 — 이월 참고)
+- [ ] 에러 메시지 토스트 전환 — colleagues/[id], colleagues 일부 완료, me/profile 등 잔여분 있음
+
+**홈 화면 리뉴얼**
+
+- [x] IA v0.3 확정안 4-알약 CTA로 재작성 (이전엔 CTA① 하나만 구현된 상태였음)
+- [x] about-sheet 신규 구현 (4장 캐러셀)
+- [x] 공유 시트(타인 평정 요청) Step1~3 신규 구현, testSheetStore에 share 모드 추가
+- [x] 카카오톡 공유 SDK 연동 (동작 미확인 — 이월 참고)
+- [x] testSheetStore 슬라이스 패턴으로 리팩터링 (chrome/selfAssessment/share 3분리)
 
 **이월 — 5주차 미완료 프론트엔드**
 
@@ -375,19 +401,13 @@ IA v0.3에 확정된 전역 컴포넌트(상단 헤더, 하단 탭바 4개, SSE 
 
 ### 실행 기록
 
-| 날짜       | 내용                                                                                                                                                                                                                                                                                                                                                                                                                                          | 산출물                                                                                                                  |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 06.30 (화) | NotificationApi/V1Controller에 GET /notifications/stream 엔드포인트 추가 (SseService.connect() 연동 누락분). 발행자 본인 SSE push 누락 수정 (ChemistryReportProcessor). SSE 페이로드 키 reportId → referenceId 통일. 전역 SSE 연결 구조로 전환 (useSseConnection, SseProvider — 페이지별 개별 연결 제거). Next.js rewrites 프록시의 gzip 압축이 SSE 스트리밍을 버퍼링하는 문제 발견 — SSE만 백엔드 직접 연결로 분리(NEXT_PUBLIC_BACKEND_URL). | NotificationApi, NotificationV1Controller, ChemistryReportProcessor, useSseConnection, SseProvider, next.config.ts 우회 |
-|            | `/invite/[code]` 동료 초대 수락 페이지, `/assessments/[token]` 타인 평정                                                                                                                                                                                                                                                                                                                                                                      |
-
-응시 페이지 구현 (로딩/에러[만료·자기초대·이미동료·코드없음]/자동등록/완료 전 상태
-커버). `scenario-test-design.md` 신규 작성 — dev*scenario_seed.sql 기반 QA 테스트
-계정 4종(user-a~d) + 시나리오 케이스 정의. SC-Invite-*(6종), SC-Assess-\_ 전 케이스
-검증 완료. | invite/[code]/page.tsx, assessments/[token]/page.tsx,
-scenario-test-design.md, dev_scenario_seed.sql |
-| 07.01 (수) | ChemistryCacheService 구독자 대기 5분 타임아웃 추가 (무한 대기 → IllegalStateException, waitingMap 자가 정리). ChemistryReportProcessor.recover() 파라미터 시그니처 버그 수정 (Long reportId → ChemistryReportIssuedEvent event — Spring Retry 매칭 계약 위반이라 recover 미호출 위험 있었음). ChemistryCache updated_at 컬럼 추가. ChemistryCacheRecoveryScheduler 신규 (10분 주기 스테일 GENERATING 복구 + ERROR→READY 조용한 교정, NULL 경유 없이 발행자 역할 재사용 방식). | ChemistryCache, ChemistryCacheRepository, ChemistryReportRepository, ChemistryTxHelper, ChemistryCacheService, ChemistryReportProcessor, ChemistryCacheRecoveryScheduler, schema.sql |
-| 07.02 (목) | ChemistryReportProcessor.recover() 시그니처 수정 검증 IT 추가. ChemistryCacheService 구독자 타임아웃을 SUBSCRIBER_WAIT_TIMEOUT_MINUTES 하드코딩에서 @Value(chemistry.subscriber-wait-timeout-seconds) 외부화로 전환 (테스트 가능성 확보). ChemistryCacheRecoveryScheduler IT 3건 신규 (ChemistryCacheRecoverySchedulerTest). 동시성 정합성 검증 부하 테스트 신규 (@RepeatedTest 30회, ChemistryCacheServiceIntegrationTest). | ChemistryCacheService, application.yml, ChemistryCacheServiceIntegrationTest, ChemistryCacheRecoverySchedulerTest, test-design.md |
-| 07.03 (금) | 만료 동료 코드/평정 토큰 삭제 기술 스택 재검토 — 최초 Spring Batch로 설계했으나 규모 대비 오버엔지니어링 판단, @Scheduled 방식으로 전환 확정(ChemistryCacheRecoveryScheduler와 동일 패턴 통일). service-design.md/architecture-design.md/architecture.puml/database-design.md/README.md 배치 기술스택 문구 수정. ExpiredDataCleanupScheduler 구현 — PeerCodeRepository/AssessmentTokenRepository에 deleteByExpiresAtBefore() 추가, 두 삭제를 단일 트랜잭션으로 처리. IT 1건 통과. | ExpiredDataCleanupScheduler, PeerCodeRepository, AssessmentTokenRepository, ExpiredDataCleanupSchedulerTest, service-design.md, architecture-design.md, architecture.puml, database-design.md, README.md |
+| 날짜       | 내용                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | 산출물                                                                                                                                                                                                                        |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 06.30 (화) | NotificationApi/V1Controller에 GET /notifications/stream 엔드포인트 추가 (SseService.connect() 연동 누락분). 발행자 본인 SSE push 누락 수정 (ChemistryReportProcessor). SSE 페이로드 키 reportId → referenceId 통일. 전역 SSE 연결 구조로 전환 (useSseConnection, SseProvider — 페이지별 개별 연결 제거). Next.js rewrites 프록시의 gzip 압축이 SSE 스트리밍을 버퍼링하는 문제 발견 — SSE만 백엔드 직접 연결로 분리(NEXT_PUBLIC_BACKEND_URL). `/invite/[code]` 동료 초대 수락 페이지, `/assessments/[token]` 타인 평정 응시 페이지 구현 (로딩/에러[만료·자기초대·이미동료·코드없음]/자동등록/완료 전 상태 커버). `scenario-test-design.md` 신규 작성 — dev_scenario_seed.sql 기반 QA 테스트 계정 4종(user-a~d) + 시나리오 케이스 정의. SC-Invite-_(6종), SC-Assess-_ 전 케이스 검증 완료. | NotificationApi, NotificationV1Controller, ChemistryReportProcessor, useSseConnection, SseProvider, next.config.ts 우회, invite/[code]/page.tsx, assessments/[token]/page.tsx, scenario-test-design.md, dev_scenario_seed.sql |
+| 07.01 (수) | ChemistryCacheService 구독자 대기 5분 타임아웃 추가 (무한 대기 → IllegalStateException, waitingMap 자가 정리). ChemistryReportProcessor.recover() 파라미터 시그니처 버그 수정 (Long reportId → ChemistryReportIssuedEvent event — Spring Retry 매칭 계약 위반이라 recover 미호출 위험 있었음). ChemistryCache updated_at 컬럼 추가. ChemistryCacheRecoveryScheduler 신규 (10분 주기 스테일 GENERATING 복구 + ERROR→READY 조용한 교정, NULL 경유 없이 발행자 역할 재사용 방식).                                                                                                                                                                                                                                                                                                            | ChemistryCache, ChemistryCacheRepository, ChemistryReportRepository, ChemistryTxHelper, ChemistryCacheService, ChemistryReportProcessor, ChemistryCacheRecoveryScheduler, schema.sql                                          |
+| 07.02 (목) | ChemistryReportProcessor.recover() 시그니처 수정 검증 IT 추가. ChemistryCacheService 구독자 타임아웃을 SUBSCRIBER_WAIT_TIMEOUT_MINUTES 하드코딩에서 @Value(chemistry.subscriber-wait-timeout-seconds) 외부화로 전환 (테스트 가능성 확보). ChemistryCacheRecoveryScheduler IT 3건 신규 (ChemistryCacheRecoverySchedulerTest). 동시성 정합성 검증 부하 테스트 신규 (@RepeatedTest 30회, ChemistryCacheServiceIntegrationTest).                                                                                                                                                                                                                                                                                                                                                              | ChemistryCacheService, application.yml, ChemistryCacheServiceIntegrationTest, ChemistryCacheRecoverySchedulerTest, test-design.md                                                                                             |
+| 07.03 (금) | 만료 동료 코드/평정 토큰 삭제 기술 스택 재검토 — 최초 Spring Batch로 설계했으나 규모 대비 오버엔지니어링 판단, @Scheduled 방식으로 전환 확정(ChemistryCacheRecoveryScheduler와 동일 패턴 통일). service-design.md/architecture-design.md/architecture.puml/database-design.md/README.md 배치 기술스택 문구 수정. ExpiredDataCleanupScheduler 구현 — PeerCodeRepository/AssessmentTokenRepository에 deleteByExpiresAtBefore() 추가, 두 삭제를 단일 트랜잭션으로 처리. IT 1건 통과.                                                                                                                                                                                                                                                                                                         | ExpiredDataCleanupScheduler, PeerCodeRepository, AssessmentTokenRepository, ExpiredDataCleanupSchedulerTest, service-design.md, architecture-design.md, architecture.puml, database-design.md, README.md                      |
+| 07.04 (토) | 전역 셸 통합(Header/TabBar/NotifDropdown/AppShell 레이아웃) 완료. QA 중 발견된 버그 5건 수정(로그아웃 헤더 미반영, 스크롤 영역, 페이지 폭, SSE 알림 캐시, 케미 에러 메시지). 홈 화면을 IA v0.3 확정 4-CTA로 재작성, about-sheet 및 공유 시트(타인 평정 요청) 신규 구현, testSheetStore 슬라이스 리팩터링.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Header, TabBar, NotifDropdown, (app)/layout.tsx, ShareStep2Label, ShareStep3Link, AboutSheet, testSheet/{chromeSlice,selfAssessmentSlice,shareSlice}.ts, middleware.ts                                                        |
 
 ### 완료 확인 체크리스트
 

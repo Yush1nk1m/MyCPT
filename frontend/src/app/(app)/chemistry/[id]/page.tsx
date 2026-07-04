@@ -144,7 +144,7 @@ export default function ChemistryDetailPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-[var(--paper)]">
+    <div className="min-h-full bg-[var(--paper)]">
       <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-[var(--line)] sticky top-0 z-10">
         <button
           onClick={() => router.back()}

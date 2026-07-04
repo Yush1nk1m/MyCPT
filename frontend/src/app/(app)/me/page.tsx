@@ -1,6 +1,8 @@
 "use client";
 
 import { useMe } from "@/hooks/useMe";
+import { useAuthStore } from "@/stores/authStore";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
 interface MenuItem {
@@ -45,20 +47,24 @@ const MENU_SECTIONS: MenuSection[] = [
 export default function MeHubPage() {
   const { data: me, isLoading } = useMe();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const clearAuth = useAuthStore((s) => s.clear);
 
   async function handleLogout() {
     await fetch("/api/v1/auth/logout", {
       method: "POST",
       credentials: "include",
     });
-    // authStore.clear()는 useMe의 error 핸들러가 처리
+    // 캐시 재요청(비동기) 대신 즉시 동기적으로 반영 - 헤더 등 useMe() 사용처에 지연 없이 전파됨
+    clearAuth();
+    queryClient.setQueryData(["me"], null);
     router.push("/");
   }
 
   if (isLoading) return <MeHubSkeleton />;
 
   return (
-    <div className="flex flex-col min-h-screen bg-paper">
+    <div className="flex flex-col min-h-full bg-paper">
       {/* 프로필 영역 */}
       <div className="flex items-center gap-4 px-4 py-6 bg-white border-b border-line">
         <button
@@ -133,7 +139,7 @@ export default function MeHubPage() {
 
 function MeHubSkeleton() {
   return (
-    <div className="flex flex-col min-h-screen bg-paper animate-pulse">
+    <div className="flex flex-col min-h-full bg-paper animate-pulse">
       <div className="flex items-center gap-4 px-4 py-6 bg-white border-b border-line">
         <div className="w-16 h-16 rounded-full bg-paper-2" />
         <div className="flex flex-col gap-2">

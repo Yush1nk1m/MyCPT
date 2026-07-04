@@ -4,7 +4,7 @@
 
 import { useState, useRef } from "react";
 import { useMe } from "@/hooks/useMe";
-import { useAuthStore } from "@/stores/autoStore";
+import { useAuthStore } from "@/stores/authStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -120,7 +120,7 @@ function MeProfileForm({
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-paper">
+    <div className="flex flex-col min-h-full bg-paper">
       {/* 뒤로가기 바 */}
       <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-line">
         <button onClick={() => router.back()} className="text-ink p-1">
@@ -284,7 +284,7 @@ export default function MeProfilePage() {
 
   if (isLoading || !me) {
     return (
-      <div className="flex flex-col min-h-screen bg-paper">
+      <div className="flex flex-col min-h-full bg-paper">
         <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-line">
           <div className="h-4 w-24 rounded bg-paper-2 animate-pulse" />
         </div>
