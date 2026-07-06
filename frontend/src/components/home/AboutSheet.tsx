@@ -6,17 +6,17 @@ const SLIDES = [
   {
     emoji: "🧭",
     title: "역량, 어떻게 나타날까요?",
-    body: "역량은 지식, 기술, 태도 세 가지가 합쳐져 만들어져요. MyCPT(나의 역량)는 이 중에서도 스스로 알아차리기 어려운 '태도'와 '성향'을 발견하도록 돕는 걸 목표로 해요.",
+    body: "역량은 지식, 기술, 태도 세 가지가 합쳐져 만들어져요.\nMyCPT(나의 역량)는 이 중에서도 스스로 알아차리기 어려운 태도적 역량을 발견하도록 돕는 걸 목표로 해요.",
   },
   {
     emoji: "🪞",
     title: "첫 걸음, 나 알아가기",
-    body: "직무 적성 검사로 자주 쓰이는 DISC 척도로 24개 질문에 답하면, 내 성향의 강점과 주의할 점을 정리해서 보여드려요.",
+    body: "직무 적성 검사로 자주 쓰이는 DISC 척도로 24개 질문에 답해주세요.\n내 성향의 강점과 주의할 점을 정리해서 보여드려요.",
   },
   {
     emoji: "🤝",
     title: "두 번째 걸음, 동료와의 케미",
-    body: "나와 동료의 DISC 성향을 함께 분석해서, 함께 일할 때 어떤 방식으로 협업하면 좋을지 방향을 제안해 드려요.",
+    body: "나와 동료의 DISC 성향을 분석한 후,\n함께 일할 때 어떤 방식으로 협업하면 좋을지 방향을 제안해 드려요.",
   },
   {
     emoji: "🌱",
@@ -47,7 +47,7 @@ export function AboutSheet({ onClose }: { onClose: () => void }) {
         <div className="flex flex-col items-center text-center gap-3 min-h-[220px] justify-center">
           <span className="text-4xl">{slide.emoji}</span>
           <h2 className="text-lg font-bold text-ink">{slide.title}</h2>
-          <p className="text-[13px] text-ink-soft leading-relaxed">
+          <p className="text-[13px] text-ink-soft leading-relaxed whitespace-pre-line">
             {slide.body}
           </p>
         </div>

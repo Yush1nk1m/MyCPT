@@ -52,14 +52,20 @@ async function fetchColleague(id: string): Promise<ColleagueResponse> {
   if (res.status === 401) throw new Error("UNAUTHORIZED");
   if (res.status === 403) throw new Error("FORBIDDEN");
   if (res.status === 404) throw new Error("NOT_FOUND");
-  if (!res.ok) throw new Error("FETCH_ERROR");
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.code ?? "FETCH_ERROR");
+  }
   return res.json();
 }
 
 async function fetchCoinBalance(): Promise<CoinBalanceResponse> {
   const res = await fetch("/api/v1/coins", { credentials: "include" });
   if (res.status === 401) throw new Error("UNAUTHORIZED");
-  if (!res.ok) throw new Error("FETCH_ERROR");
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.code ?? "FETCH_ERROR");
+  }
   return res.json();
 }
 
@@ -73,7 +79,10 @@ async function fetchChemistryReports(
     credentials: "include",
   });
   if (res.status === 401) throw new Error("UNAUTHORIZED");
-  if (!res.ok) throw new Error("FETCH_ERROR");
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.code ?? "FETCH_ERROR");
+  }
   return res.json();
 }
 
@@ -87,7 +96,10 @@ async function postChemistryReport(partnerId: number): Promise<void> {
   if (res.status === 401) throw new Error("UNAUTHORIZED");
   if (res.status === 422) throw new Error("INSUFFICIENT_COINS");
   if (res.status === 403) throw new Error("FORBIDDEN");
-  if (!res.ok) throw new Error("FETCH_ERROR");
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.code ?? "FETCH_ERROR");
+  }
 }
 
 async function deleteColleague(id: string): Promise<void> {
@@ -96,7 +108,10 @@ async function deleteColleague(id: string): Promise<void> {
     credentials: "include",
   });
   if (res.status === 401) throw new Error("UNAUTHORIZED");
-  if (!res.ok) throw new Error("FETCH_ERROR");
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.code ?? "FETCH_ERROR");
+  }
 }
 
 // ── 케미 발행 확인 모달 ───────────────────────────────────────────────────────

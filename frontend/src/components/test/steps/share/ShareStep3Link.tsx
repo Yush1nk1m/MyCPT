@@ -2,7 +2,8 @@
 
 import { useTestSheetStore } from "@/stores/testSheetStore";
 import { useMe } from "@/hooks/useMe";
-import { useToast } from "@/hooks/useToast";
+import { useToast } from "../../../../hooks/useToast";
+import { useKakaoShare } from "../../../../hooks/useKakaoShare";
 
 export function ShareStep3Link() {
   const shareStatus = useTestSheetStore((s) => s.shareStatus);
@@ -11,6 +12,7 @@ export function ShareStep3Link() {
   const createShareLink = useTestSheetStore((s) => s.createShareLink);
   const { data: me } = useMe();
   const showToast = useToast();
+  const { share } = useKakaoShare();
 
   const url = shareToken
     ? `${window.location.origin}/assessments/${shareToken}`
@@ -22,21 +24,12 @@ export function ShareStep3Link() {
   }
 
   function handleKakaoShare() {
-    if (!window.Kakao?.isInitialized()) {
-      showToast("카카오 공유 준비 중이에요. 링크 복사를 이용해 주세요.");
-      return;
-    }
-    window.Kakao.Share.sendDefault({
-      objectType: "feed",
-      content: {
-        title: `${me?.nickname ?? "친구"}님은 어떤 사람일까요?`,
-        description: "1분이면 끝나는 DISC 성향 평가로 답해주세요",
-        imageUrl: `${window.location.origin}/og-share.png`,
-        link: { mobileWebUrl: url, webUrl: url },
-      },
-      buttons: [
-        { title: "평가하러 가기", link: { mobileWebUrl: url, webUrl: url } },
-      ],
+    share({
+      title: `${me?.nickname ?? "친구"}님은 어떤 사람일까요?`,
+      description: "5분이면 끝나는 DISC 성향 평가로 답해주세요.",
+      imageUrl: `${window.location.origin}/og-share.png`,
+      url,
+      buttonTitle: "평가하러 가기",
     });
   }
 
@@ -81,7 +74,7 @@ export function ShareStep3Link() {
           className="flex-1 py-2.5 rounded-xl text-[13px] font-bold"
           style={{ background: "var(--kakao)", color: "var(--kakao-ink)" }}
         >
-          카카오톡 공유
+          💬 카카오톡 공유
         </button>
       </div>
       <p className="text-[11px] text-ink-faint text-center mt-2">

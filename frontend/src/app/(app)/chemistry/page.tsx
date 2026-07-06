@@ -31,7 +31,10 @@ async function fetchChemistryReports(
     credentials: "include",
   });
   if (res.status === 401) throw new Error("UNAUTHORIZED");
-  if (!res.ok) throw new Error("FETCH_ERROR");
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.code ?? "FETCH_ERROR");
+  }
   return res.json();
 }
 

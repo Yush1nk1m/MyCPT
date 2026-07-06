@@ -32,7 +32,10 @@ async function fetchChemistryReport(
   if (res.status === 401) throw new Error("UNAUTHORIZED");
   if (res.status === 403) throw new Error("FORBIDDEN");
   if (res.status === 404) throw new Error("NOT_FOUND");
-  if (!res.ok) throw new Error("FETCH_ERROR");
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.code ?? "FETCH_ERROR");
+  }
   return res.json();
 }
 

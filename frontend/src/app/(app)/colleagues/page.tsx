@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/useToast";
+import { useKakaoShare } from "../../../hooks/useKakaoShare";
 import Link from "next/link";
 
 // ── 타입 ──────────────────────────────────────────────────────────────────────
@@ -239,6 +240,7 @@ export default function ColleaguesPage() {
   const queryClient = useQueryClient();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const { share } = useKakaoShare();
 
   const peerCode = useQuery({
     queryKey: ["peer-code"],
@@ -337,10 +339,14 @@ export default function ColleaguesPage() {
               className="py-2.5 rounded-[10px] text-[12px] font-bold text-[var(--ink)] border border-[var(--line)]"
               style={{ background: "#FEE500" }}
               onClick={() => {
-                // 카카오톡 공유 — KakaoSDK 미연동 시 URL 복사로 대체
-                navigator.clipboard.writeText(
-                  `안녕하세요! MyCPT 동료 코드를 알려드릴게요: ${myCode}`,
-                );
+                share({
+                  title: "MyCPT 동료가 되어주세요.",
+                  description:
+                    "DISC 성향을 비교하고 케미 보고서를 받아볼 수 있어요.",
+                  imageUrl: `${window.location.origin}/og-share.png`,
+                  url: `${window.location.origin}/invite/${myCode}`,
+                  buttonTitle: "동료 등록하러 가기",
+                });
               }}
             >
               💬 카카오톡 공유
