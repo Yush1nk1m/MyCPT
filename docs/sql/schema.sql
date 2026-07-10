@@ -18,6 +18,7 @@ CREATE TABLE users (
     coins             TINYINT           NOT NULL DEFAULT 3        COMMENT '현재 코인 잔액 (0~3)',
     next_coin_at      DATETIME          NULL                      COMMENT '다음 코인 충전 예정 시각. NULL이면 만충 상태',
     created_at        DATETIME          NOT NULL                  COMMENT '가입 시각',
+    deleted_at        DATETIME          NULL                      COMMENT '탈퇴 처리 시각. NULL이면 활성 회원',
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_kakao_id (kakao_id)

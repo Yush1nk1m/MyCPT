@@ -1,24 +1,25 @@
 # MyCPT API 명세서
 
-**문서 버전**: v0.9
-**작성일**: '26.06.26.
+**문서 버전**: v0.10
+**작성일**: '26.07.10.
 **작성자**: 김유신
 
 ---
 
 ## 변경 이력
 
-| 버전 | 변경 내용                                                                                                                                                                                                        | 날짜       |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| v0.1 | 초안 작성 (28개 엔드포인트)                                                                                                                                                                                      | '26.05.24. |
-| v0.2 | POST /assessments testType 파라미터 추가. DELETE /users/me 신규 추가. 타인 평정 링크 클라이언트 URL 구조 명시.                                                                                                   | '26.05.25. |
-| v0.3 | POST /assessments/{token}/submit 신규 추가. POST /results 응답 코드 200 → 201. POST /chemistry-reports INSUFFICIENT_COINS 409 → 422.                                                                             | '26.05.25. |
-| v0.4 | GET /auth/me 응답에 nextCoinAt 추가. profile_image_url로 컬럼명 통일 반영.                                                                                                                                       | '26.05.26. |
-| v0.5 | JWT 인증 방식으로의 변경에 따른 인증 API 명세 수정                                                                                                                                                               | '26.05.27. |
-| v0.6 | GET /questions 제거 (문항 프론트 위임). POST /results/score · POST /assessments/{token}/submit 요청 바디를 원점수 직접 전송 방식으로 변경.                                                                       | '26.05.30. |
-| v0.7 | 비회원 로그인 시 DISC 결과 저장을 위해 OAuth 로그인에 redirect 기능 추가                                                                                                                                         | '26.06.08. |
-| v0.8 | POST /results/score 요청/응답에서 testType 제거 (엔드포인트가 검사 유형 결정). POST /results 요청에서 testType 제거. POST /assessments 요청에서 testType 제거. 검사 유형 확장 시 전용 엔드포인트 분리 방침 명시. | '26.06.16. |
-| v0.9 | 9.케미 섹션 전면 개정 — Lazy Caching + SELECT FOR UPDATE + Redis Pub/Sub 동시성 제어 흐름 다이어그램 추가. POST /chemistry-reports 설명에 AFTER_COMMIT 트리거·중복 방지·SSE/인앱 알림 반영.                      | '26.06.26. |
+| 버전  | 변경 내용                                                                                                                                                                                                        | 날짜       |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| v0.1  | 초안 작성 (28개 엔드포인트)                                                                                                                                                                                      | '26.05.24. |
+| v0.2  | POST /assessments testType 파라미터 추가. DELETE /users/me 신규 추가. 타인 평정 링크 클라이언트 URL 구조 명시.                                                                                                   | '26.05.25. |
+| v0.3  | POST /assessments/{token}/submit 신규 추가. POST /results 응답 코드 200 → 201. POST /chemistry-reports INSUFFICIENT_COINS 409 → 422.                                                                             | '26.05.25. |
+| v0.4  | GET /auth/me 응답에 nextCoinAt 추가. profile_image_url로 컬럼명 통일 반영.                                                                                                                                       | '26.05.26. |
+| v0.5  | JWT 인증 방식으로의 변경에 따른 인증 API 명세 수정                                                                                                                                                               | '26.05.27. |
+| v0.6  | GET /questions 제거 (문항 프론트 위임). POST /results/score · POST /assessments/{token}/submit 요청 바디를 원점수 직접 전송 방식으로 변경.                                                                       | '26.05.30. |
+| v0.7  | 비회원 로그인 시 DISC 결과 저장을 위해 OAuth 로그인에 redirect 기능 추가                                                                                                                                         | '26.06.08. |
+| v0.8  | POST /results/score 요청/응답에서 testType 제거 (엔드포인트가 검사 유형 결정). POST /results 요청에서 testType 제거. POST /assessments 요청에서 testType 제거. 검사 유형 확장 시 전용 엔드포인트 분리 방침 명시. | '26.06.16. |
+| v0.9  | 9.케미 섹션 전면 개정 — Lazy Caching + SELECT FOR UPDATE + Redis Pub/Sub 동시성 제어 흐름 다이어그램 추가. POST /chemistry-reports 설명에 AFTER_COMMIT 트리거·중복 방지·SSE/인앱 알림 반영.                      | '26.06.26. |
+| v0.10 | `DELETE /users/me` 삭제 정책 상세 명시(하드삭제/유지/익명화 구분, 카카오 Admin Key unlink). `GET /users/me/withdrawal-info` 신규 추가(탈퇴 전 삭제 항목 카운트).                                                 | '26.07.10. |
 
 ---
 
@@ -280,7 +281,17 @@ Spring Security JWT 기반.
 - 인증: 회원 전용
 - 설명: 회원 탈퇴를 처리한다. 탈퇴 사유를 선택적으로 전달할 수 있으며,
   클라이언트에서 2단 확인(사유 선택 → 최종 확인) 후 호출한다.
-  탈퇴 즉시 JWT를 무효화(블랙리스트 또는 단기 만료 방식)하고 카카오 연결을 해제한다.
+  탈퇴 즉시 JWT를 무효화(블랙리스트 또는 단기 만료 방식)하고, 카카오 Admin Key 기반
+  `POST /v1/user/unlink`(kapi.kakao.com)로 카카오 연결을 해제한다 — 사용자 액세스 토큰을
+  별도 저장하지 않고 서버 보유 Admin Key + kakaoId만으로 처리한다.
+
+  **삭제 정책**: `tests`/`disc_tests`(본인 검사 이력 전체), `coin_transactions`,
+  `peer_codes`, `assessment_tokens`(본인 소유), `notifications`(수신 알림),
+  `colleagues`(본인이 속한 동료 관계 전체 — 상대방 동료 목록에서도 함께 사라짐)는
+  하드 삭제한다. `chemistry_reports`는 삭제하지 않는다 — 상대방이 이전 보고서를
+  계속 열람할 수 있어야 하기 때문. `users` 행은 삭제하지 않고 `kakao_id`/`birth_year`/
+  `gender`만 NULL 처리, `nickname`/`profile_image_url`은 보존한다(닉네임 변경 시
+  이전 케미 보고서 상대측에 "탈퇴한 사용자"처럼 혼란을 주는 것을 방지).
 
 **요청 바디**
 
@@ -299,6 +310,36 @@ Spring Security JWT 기반.
 | 응답 코드 | 설명               |
 | --------- | ------------------ |
 | `200`     | 탈퇴 성공          |
+| `401`     | 인증되지 않은 요청 |
+
+---
+
+### `GET /users/me/withdrawal-info` — 탈퇴 전 삭제 항목 카운트
+
+- 인증: 회원 전용
+- 설명: 회원탈퇴 Step 1 화면에서 "삭제될 항목"을 정량으로 보여주기 위한 카운트 조회.
+  `GET /auth/me`에 포함하지 않는 이유: 헤더 등 일반 페이지 로드마다 불필요한 집계
+  쿼리가 발생하는 것을 막기 위해 탈퇴 페이지 전용으로 분리.
+
+**응답 바디 (200)**
+
+```json
+{
+  "resultCount": 5,
+  "chemistryCount": 4,
+  "colleagueCount": 5
+}
+```
+
+| 필드             | 타입   | 설명                                       |
+| ---------------- | ------ | ------------------------------------------ |
+| `resultCount`    | number | 본인 검사 이력 수 (SELF+OTHER 합산)        |
+| `chemistryCount` | number | 발행자 또는 대상자로 참여한 케미 보고서 수 |
+| `colleagueCount` | number | 현재 동료 관계 수                          |
+
+| 응답 코드 | 설명               |
+| --------- | ------------------ |
+| `200`     | 성공               |
 | `401`     | 인증되지 않은 요청 |
 
 ---

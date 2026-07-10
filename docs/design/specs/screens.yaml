@@ -553,9 +553,12 @@ last_updated: 2026-05-27
   wireframe: 와이어프레임 P4 - 내 정보.html#leave-1
   components: [BackBar, CheckRow, TextArea, DangerWarningBox]
   api:
-    - { method: GET, path: /auth/me, note: "삭제 항목 카운트 표시용" }
+    - { method: GET, path: /users/me/withdrawal-info, note: "삭제 항목 카운트 표시용" }
   states:
     default: 사유 체크리스트 + 자유 입력 + 삭제 항목 정량 노출
+  notes: |
+    CheckRow는 UI상 사유 프리셋 선택용이지만 API 전송 시 단일 reason 문자열로 결합
+    (복수선택+자유입력을 하나의 문자열로 합쳐 전송. 서버는 reason 하나만 받음).
 
 - id: me-leave-step2
   label: 회원탈퇴 Step 2 — 최종 확인
@@ -566,7 +569,7 @@ last_updated: 2026-05-27
   wireframe: 와이어프레임 P4 - 내 정보.html#leave-2
   components: [DialogCard, Scrim, TypeToConfirmInput]
   api:
-    - { method: DELETE, path: /users/me, body: { reasons, comment } }
+    - { method: DELETE, path: /users/me, body: { reason } }
   states:
     default: "탈퇴할게요" 정확 입력 시에만 진행 버튼 활성
   validation:

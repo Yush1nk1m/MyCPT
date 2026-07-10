@@ -1,7 +1,7 @@
 # MyCPT 데이터베이스 설계 문서
 
-**문서 버전**: v0.14
-**작성일**: '26.07.03.
+**문서 버전**: v0.15
+**작성일**: '26.07.10.
 **작성자**: 김유신
 
 ---
@@ -24,6 +24,7 @@
 | v0.12 | `chemistry_cache` 사전 삽입 방침 변경 (6,561행 seeding). `status VARCHAR(20)` 컬럼 추가 (NULL→GENERATING→READY 락 라이프사이클). `chemistry_reports.status` 초기값 GENERATING → NULL 로 변경 (chemistry_cache 락 이후 INSERT되므로). | '26.06.24. |
 | v0.13 | chemistry_cache `updated_at` 컬럼 추가 (GENERATING 락 정체 탐지 및 배치 복구 기준). 스테일 캐시 복구 배치 섹션 추가.                                                                                                                 | '26.07.01. |
 | v0.14 | 만료 코드/토큰 삭제 배치를 Spring Batch → @Scheduled로 전환. ExpiredDataCleanupBatch → ExpiredDataCleanupScheduler 이름 변경.                                                                                                        | '26.07.03. |
+| v0.15 | 회원 탈퇴 정책 반영. `users.deleted_at` 컬럼 추가, `kakao_id` NOT NULL → NULL. 탈퇴 시 익명화(soft delete) 대상과 하드 삭제 대상 구분 — §1.2 참조.                                                                                   | '26.07.10. |
 
 ---
 
@@ -77,6 +78,7 @@
 - `statistics` 테이블 없음 — MVP에서 `tests JOIN disc_tests` 직접 집계 쿼리로 대체. 사용자 수만 명 초과 시점에 집계 테이블 또는 Redis 캐싱 도입 검토.
 - `assessment_tokens`는 `used=TRUE` 처리로 중복 제출 방지. 만료 토큰은 `peer_codes` 배치와 통합 삭제.
 - `disc_cache`는 초기화 스크립트에 의해 3^4=81개 행이 `report=NULL`로 사전 삽입됨. 최초 조회 시 LLM을 호출해 UPDATE. 이로써 `disc_tests → disc_cache` FK 제약이 항상 만족됨.
+- **회원 탈퇴는 하드 삭제가 아닌 부분 익명화** — `chemistry_reports`/`colleagues`가 `users`를 NOT NULL FK로 참조하고, 상대방이 이전 케미 보고서를 계속 열람해야 하므로 `users` 행 자체는 유지한다. `kakao_id`/`birth_year`/`gender`만 NULL 처리하고 `nickname`은 보존한다. 상세 삭제 범위는 `service-design.md` §회원 탈퇴 정책 참조.
 
 ---
 
@@ -94,6 +96,7 @@ erDiagram
     TINYINT      coins                "0~3"
     DATETIME     next_coin_at         "NULL이면 만충"
     DATETIME     created_at
+    DATETIME     deleted_at           "NULL이면 활성"
   }
 
   disc_cache {
@@ -274,8 +277,8 @@ Enum chemistry_report_status_enum {
 
 Table users [note: '회원 정보. 카카오 OAuth 기반 가입'] {
   id                BIGINT       [pk, increment,    note: '내부 식별자']
-  kakao_id          VARCHAR(50)  [unique, not null,  note: '카카오 고유 식별자']
-  nickname          VARCHAR(30)  [not null,          note: '서비스 닉네임 (카카오 닉네임 초기값, 수정 가능)']
+  kakao_id          VARCHAR(50)  [unique, null,      note: '카카오 고유 식별자. 탈퇴 시 NULL 처리']
+  nickname          VARCHAR(30)  [not null,          note: '서비스 닉네임. 탈퇴해도 유지(케미 보고서 상대측 표시용)']
   profile_image_url VARCHAR(300) [null,              note: '프로필 이미지 Full URL. 카카오 기본 이미지 또는 S3 Full URL. NULL이면 기본 이미지 사용']
   birth_year        YEAR         [null,              note: '로그인 후 프로필 설정 시 입력. NULL이면 미입력']
   gender            gender_enum  [null,              note: 'M: 남성, F: 여성, N: 선택 안 함']
