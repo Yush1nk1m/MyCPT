@@ -42,6 +42,9 @@ public interface ColleagueRepository extends JpaRepository<Colleague, Long> {
         @Param("userBId") Long userBId
     );
 
+    @Query("SELECT COUNT(c) FROM Colleague c WHERE c.userA.id = :userId OR c.userB.id = :userId")
+    long countByUserId(@Param("userId") Long userId);
+
     // 동료 삭제용 - 권한 포함 조회는 서비스에서 findByIdAndUserId로 처리 후 삭제
     // (별도 DELETE 쿼리 불필요 - JpaRepository.delete() 사용)
 }

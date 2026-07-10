@@ -27,4 +27,6 @@ public interface PeerCodeRepository extends JpaRepository<PeerCode, Long> {
     boolean existsByCode(String code);
 
     long deleteByExpiresAtBefore(LocalDateTime cutoff);
+
+    void deleteByUserId(Long userId);
 }

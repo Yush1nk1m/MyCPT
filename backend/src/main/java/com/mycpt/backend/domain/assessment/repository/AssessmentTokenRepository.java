@@ -12,4 +12,6 @@ public interface AssessmentTokenRepository extends JpaRepository<AssessmentToken
     Optional<AssessmentToken> findByToken(String token);
 
     long deleteByExpiresAtBefore(LocalDateTime cutoff);
+
+    long deleteBySubjectId(Long subjectId);
 }

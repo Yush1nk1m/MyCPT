@@ -56,4 +56,7 @@ public interface ChemistryReportRepository extends JpaRepository<ChemistryReport
     List<ChemistryReport> findByRequesterId(@Param("requesterId") Long requesterId);
 
     List<ChemistryReport> findByCacheIdAndStatus(ChemistryCacheId cacheId, ChemistryReportStatus status);
+
+    @Query("SELECT COUNT(cr) FROM ChemistryReport cr WHERE cr.requester.id = :userId OR cr.partner.id = :userId")
+    long countByUserId(@Param("userId") Long userId);
 }

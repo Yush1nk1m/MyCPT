@@ -21,10 +21,11 @@ public class User {
     private Long id;
 
     // 카카오가 발급하는 사용자 고유 식별자(숫자이지만 VARCHAR 타입으로 관리)
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(unique = true, length = 50)
     private String kakaoId;
 
     // 사용자 닉네임
+    // 탈퇴해도 유지 - chemistry_reports가 이 값을 참조 표시하므로 익명화 대상 아님
     @Column(nullable = false, length = 30)
     private String nickname;
 
@@ -55,6 +56,9 @@ public class User {
     // 사용자 가입 시각
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    // 탈퇴 처리 시각. NULL이면 활성 회원
+    private LocalDateTime deletedAt;
 
     /**
      * 정적 팩토리 메서드
@@ -118,5 +122,18 @@ public class User {
         if (this.coins < 3 && this.nextCoinAt == null) {
             this.nextCoinAt = now.plusHours(24);
         }
+    }
+
+    /**
+     * 회원 탈퇴 처리 — 익명화(soft delete)
+     * kakao_id/birth_year/gender만 NULL 처리. nickname/profile_image_url은 보존한다.
+     * chemistry_reports가 이 행을 FK로 참조하고, 상대방이 이전 보고서를 계속 열람해야 하므로
+     * users 행 자체는 삭제하지 않는다 (service-design.md §회원 탈퇴 정책 참조).
+     */
+    public void withdraw() {
+        this.kakaoId = null;
+        this.birthYear = null;
+        this.gender = null;
+        this.deletedAt = LocalDateTime.now();
     }
 }

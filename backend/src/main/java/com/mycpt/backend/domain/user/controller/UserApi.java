@@ -1,12 +1,11 @@
 package com.mycpt.backend.domain.user.controller;
 
 import com.mycpt.backend.domain.auth.dto.UserPrincipal;
-import com.mycpt.backend.domain.user.dto.UpdateProfileImageResponse;
-import com.mycpt.backend.domain.user.dto.UpdateProfileRequest;
-import com.mycpt.backend.domain.user.dto.UpdateProfileResponse;
+import com.mycpt.backend.domain.user.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,5 +32,26 @@ public interface UserApi {
     ResponseEntity<UpdateProfileImageResponse> updateProfileImage(
             @AuthenticationPrincipal UserPrincipal principal,
             MultipartFile image
+    );
+
+    @Operation(
+            summary = "탈퇴 전 삭제 항목 카운트 조회",
+            description = "회원탈퇴 Step 1 화면에서 삭제될 항목 수를 보여준다.",
+            security = @SecurityRequirement(name = "cookieAuth")
+    )
+    ResponseEntity<WithdrawalInfoResponse> getWithdrawalInfo(
+            @AuthenticationPrincipal UserPrincipal principal
+    );
+
+    @Operation(
+            summary = "회원 탈퇴",
+            description = "회원 탈퇴를 처리한다. 본인 소유 데이터는 하드 삭제, chemistry_reports는 유지. " +
+                    "카카오 Admin Key로 연결 해제 후 JWT 쿠키를 무효화한다.",
+            security = @SecurityRequirement(name = "cookieAuth")
+    )
+    ResponseEntity<Void> withdraw(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody(required = false) WithdrawRequest request,
+            HttpServletResponse response
     );
 }

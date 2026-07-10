@@ -46,4 +46,10 @@ public interface DiscTestRepository extends JpaRepository<DiscTest, Long> {
         WHERE dt.id = :testId
     """)
     Optional<DiscTest> findByTestIdWithDetail(@Param("testId") Long testId);
+
+    @Query("SELECT dt FROM DiscTest dt WHERE dt.user.id = :userId")
+    List<DiscTest> findAllByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT COUNT(dt) FROM DiscTest dt WHERE dt.user.id = :userId")
+    long countByUserId(@Param("userId") Long userId);
 }

@@ -23,4 +23,6 @@ public interface CoinTransactionRepository extends JpaRepository<CoinTransaction
             @Param("cursor") Long cursor,
             Pageable pageable
     );
+
+    long deleteByUserId(Long userId);
 }
