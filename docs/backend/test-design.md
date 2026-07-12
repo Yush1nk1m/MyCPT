@@ -349,6 +349,21 @@ IT-AuthFlow-로그인후JWT쿠키발급-성공
 | --------------------------------- | ------------------ | --------- |
 | ST-PeerCodeRepo-사용자별삭제-성공 | `deleteByUserId()` | 삭제 검증 |
 
+---
+
+### ColleagueRepository (ST)
+
+[[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/colleague/repository/ColleagueRepositoryTest.java)]
+
+> 기존에 `ColleagueRepository` 전용 슬라이스 테스트 파일이 없어 `countByUserId()`만 우선 신규 작성.
+> `findAllByUserId`/`findByPair`/`existsByPair`는 현재 `ColleagueServiceTest`(UT, Mock)로만 커버되는 상태 — 별도 보강 필요 시 논의.
+
+| Test ID                              | 행위              | 상황                                         |
+| ------------------------------------ | ----------------- | -------------------------------------------- |
+| ST-ColleagueRepo-사용자별카운트-성공 | `countByUserId()` | userA/userB 양쪽 역할 모두 카운트되는지 검증 |
+
+---
+
 ### ColleagueService (UT)
 
 [[Test Code](../../backend/src/test/java/com/mycpt/backend/domain/colleague/service/ColleagueServiceTest.java)]

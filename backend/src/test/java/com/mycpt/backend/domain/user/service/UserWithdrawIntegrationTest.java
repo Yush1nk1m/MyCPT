@@ -16,6 +16,7 @@ import com.mycpt.backend.domain.colleague.entity.Colleague;
 import com.mycpt.backend.domain.colleague.entity.PeerCode;
 import com.mycpt.backend.domain.colleague.repository.ColleagueRepository;
 import com.mycpt.backend.domain.colleague.repository.PeerCodeRepository;
+import com.mycpt.backend.domain.colleague.service.ColleagueService;
 import com.mycpt.backend.domain.result.entity.DiscTest;
 import com.mycpt.backend.domain.result.repository.DiscTestRepository;
 import com.mycpt.backend.domain.user.client.KakaoUnlinkClient;
@@ -42,6 +43,7 @@ public class UserWithdrawIntegrationTest extends IntegrationTestSupport {
 
     @Autowired UserService userService;
     @Autowired ChemistryService chemistryService;
+    @Autowired ColleagueService colleagueService;
     @Autowired UserRepository userRepository;
     @Autowired ColleagueRepository colleagueRepository;
     @Autowired ChemistryReportRepository chemistryReportRepository;
@@ -160,8 +162,14 @@ public class UserWithdrawIntegrationTest extends IntegrationTestSupport {
             createSelfResult(me);
             userService.withdraw(me.getId(), null);
 
-            // when / then - A row는 존재(익명화)하므로 NOT_FOUND가 아닌 FORBIDDEN
-            // (ColleagueService는 @Autowired로 주입받아 실제 빈을 사용)
+            // when
+            assertThatThrownBy(() -> colleagueService.get(me.getId(), partner.getId()))
+                    // then
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> {
+                        BusinessException be = (BusinessException) e;
+                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
+                    });
         }
 
         @Test
