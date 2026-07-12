@@ -2,6 +2,7 @@ package com.mycpt.backend.domain.user.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mycpt.backend.domain.user.dto.UpdateProfileRequest;
+import com.mycpt.backend.domain.user.dto.WithdrawalInfoResponse;
 import com.mycpt.backend.domain.user.entity.User;
 import com.mycpt.backend.domain.user.enums.Gender;
 import com.mycpt.backend.domain.user.service.UserService;
@@ -67,6 +68,69 @@ class UserV1ControllerTest extends MvcTestSupport {
             mockMvc.perform(patch("/api/v1/users/me")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
+                    // then
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("DELETE /api/v1/users/me")
+    class Withdraw {
+
+        @Test
+        @DisplayName("[ST-UserCtrl-탈퇴-성공]")
+        void 탈퇴_성공() throws Exception {
+            // given
+            doNothing().when(userService).withdraw(any(), any());
+
+            // when
+            mockMvc.perform(delete("/api/v1/users/me")
+                            .with(authenticated(testUser()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    // then
+                    .andExpect(status().isOk())
+                    .andExpect(cookie().maxAge("accessToken", 0));
+        }
+
+        @Test
+        @DisplayName("[ST-UserCtrl-탈퇴-미인증]")
+        void 탈퇴_미인증() throws Exception {
+            // when
+            mockMvc.perform(delete("/api/v1/users/me")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    // then
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/users/me/withdrawal-info")
+    class GetWithdrawalInfo {
+
+        @Test
+        @DisplayName("[ST-UserCtrl-탈퇴전카운트조회-성공]")
+        void 탈퇴전카운트조회_성공() throws Exception {
+            // given
+            given(userService.getWithdrawalInfo(any()))
+                    .willReturn(new WithdrawalInfoResponse(5L, 4L, 3L));
+
+            // when
+            mockMvc.perform(get("/api/v1/users/me/withdrawal-info")
+                            .with(authenticated(testUser())))
+                    // then
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.resultCount").value(5))
+                    .andExpect(jsonPath("$.chemistryCount").value(4))
+                    .andExpect(jsonPath("$.colleagueCount").value(3));
+        }
+
+        @Test
+        @DisplayName("[ST-UserCtrl-탈퇴전카운트조회-미인증]")
+        void 탈퇴전카운트조회_미인증() throws Exception {
+            // when
+            mockMvc.perform(get("/api/v1/users/me/withdrawal-info"))
                     // then
                     .andExpect(status().isUnauthorized());
         }

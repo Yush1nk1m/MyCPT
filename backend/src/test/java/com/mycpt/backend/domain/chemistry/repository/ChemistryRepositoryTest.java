@@ -134,4 +134,23 @@ public class ChemistryRepositoryTest extends JpaTestSupport {
             assertThat(result).allMatch(r -> r.getId() < third.getId());
         }
     }
+
+    @Nested
+    @DisplayName("ChemistryReportRepository.countByUserId()")
+    class CountByUserId {
+
+        @Test
+        @DisplayName("[ST-ChemistryReportRepo-사용자별카운트-성공]")
+        void 사용자별카운트_성공() {
+            // given
+            saveReport(userA, userB, ChemistryReportStatus.READY);
+            saveReport(userC, userA, ChemistryReportStatus.READY);
+
+            // when
+            long count = chemistryReportRepository.countByUserId(userA.getId());
+
+            // then
+            assertThat(count).isEqualTo(2);
+        }
+    }
 }

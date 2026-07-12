@@ -21,8 +21,10 @@ import static org.assertj.core.api.Assertions.*;
 @DisplayName("DiscTestRepository 슬라이스 테스트")
 class DiscTestRepositoryTest extends JpaTestSupport {
 
-    @Autowired private DiscTestRepository discTestRepository;
-    @Autowired private UserRepository userRepository;
+    @Autowired
+    private DiscTestRepository discTestRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     private User savedUser;
 
@@ -70,7 +72,7 @@ class DiscTestRepositoryTest extends JpaTestSupport {
         @DisplayName("[ST-DiscTestRepo-커서페이지네이션-커서검증]")
         void 커서페이지네이션_커서검증() {
             // given
-            DiscTest first  = saveDiscTest(savedUser, RaterType.SELF, null);
+            DiscTest first = saveDiscTest(savedUser, RaterType.SELF, null);
             DiscTest second = saveDiscTest(savedUser, RaterType.SELF, null);
             saveDiscTest(savedUser, RaterType.SELF, null); // third — cursor 기준점
 
@@ -150,6 +152,74 @@ class DiscTestRepositoryTest extends JpaTestSupport {
 
             // then
             assertThat(result).isEmpty();
+        }
+    }
+
+    // ── findAllByUserId() ──────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("findAllByUserId()")
+    class FindAllByUserId {
+
+        @Test
+        @DisplayName("[ST-DiscTestRepo-사용자별전체조회-성공]")
+        void 사용자별전체조회_성공() {
+            // given
+            saveDiscTest(savedUser, RaterType.SELF, null);
+            saveDiscTest(savedUser, RaterType.OTHER, "친구");
+            User other = userRepository.save(User.create("kakao-2", "민준", null));
+            saveDiscTest(other, RaterType.SELF, null);
+
+            // when
+            List<DiscTest> results = discTestRepository.findAllByUserId(savedUser.getId());
+
+            // then
+            assertThat(results).hasSize(2);
+        }
+    }
+
+    // ── countByUserId() ───────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("countByUserId()")
+    class CountByUserId {
+
+        @Test
+        @DisplayName("[ST-DiscTestRepo-사용자별카운트-성공]")
+        void 사용자별카운트_성공() {
+            // given
+            saveDiscTest(savedUser, RaterType.SELF, null);
+            saveDiscTest(savedUser, RaterType.OTHER, "친구");
+
+            // when
+            long count = discTestRepository.countByUserId(savedUser.getId());
+
+            // then
+            assertThat(count).isEqualTo(2);
+        }
+    }
+
+    // ── deleteAllByUser() (JOINED 상속) ───────────────────────────────────────────
+
+    @Nested
+    @DisplayName("deleteAllByUser")
+    class DeleteAllByUser {
+
+        @Test
+        @DisplayName("[ST-DiscTestRepo-사용자별삭제-부모자식모두삭제]")
+        void 사용자별삭제_부모자식모두삭제() {
+            // given
+            saveDiscTest(savedUser, RaterType.SELF, null);
+            saveDiscTest(savedUser, RaterType.OTHER, "친구");
+            discTestRepository.flush();
+
+            // when
+            List<DiscTest> toDelete = discTestRepository.findAllByUserId(savedUser.getId());
+            discTestRepository.deleteAll(toDelete);
+            discTestRepository.flush();
+
+            // then
+            assertThat(discTestRepository.findAllByUserId(savedUser.getId())).isEmpty();
         }
     }
 }
