@@ -135,8 +135,9 @@
     <div class="rule"></div>
     <div class="eyebrow">벤치마크 · 최종 보고서 · v0.5</div>
     <h1>설계 문서는 AI 에이전트를 더 효율적으로 만드는가</h1>
-    <p class="sub">동일한 스텁 구현 과제를 <b>설계 문서가 있는 조건(C1)</b>과 <b>없는 조건(C2, 순수 TDD)</b>에서
-      반복 수행해, 완료까지의 비용·시간·토큰을 측정했다. 핵심 질문: <em>설계 문서 기반 개발이 순수 TDD보다 효율적인가?</em></p>
+    <p class="sub">동일한 스텁 구현 과제를 <b>두 조건 모두 TDD로</b> 개발하되, 한쪽만 <b>설계 문서가 보조</b>하도록
+      두고(C1=문서 有, C2=문서 無) 완료까지의 비용·시간·토큰을 측정했다. 독립 변인은 <b>설계 문서의 존재</b> 하나다.
+      핵심 질문: <em>설계 문서가 TDD를 보조하면 더 효율적인가?</em></p>
     <div class="metastrip" id="metastrip"></div>
   </div>
 </header>
@@ -161,9 +162,9 @@
           테스트+프롬프트만으로 완전히 결정되는 코드엔 문서가 더 줄 것이 없다. 두 대상의 <b>대비</b>가 이 실험의 가장 견고한 발견이다.</p>
       </div>
     </div>
-    <p class="lead" style="margin-top:20px">종합하면, “설계 문서 &gt; TDD”는 <b>무조건 참이 아니라 조건부 참</b>이다 —
-      <em>문서는 설계 의도가 코드 밖 문서에 흩어져 있을 때만, 시간·토큰 기준 약 10–18%의 이점으로 돕는다.</em>
-      원래 가설이던 “3배”는 어디에서도 나타나지 않았다.</p>
+    <p class="lead" style="margin-top:20px">종합하면, “설계 문서가 TDD를 보조하면 더 효율적인가”의 답은 <b>조건부로 그렇다</b>이다 —
+      <em>두 조건 모두 TDD로 개발하며, 설계 문서는 설계 의도가 코드·테스트 밖에 흩어져 있을 때만 그 과정을 보조해
+      시간·토큰 기준 약 10–18%의 이점을 준다.</em> 단순·자기완결 로직에서는 이점이 없다.</p>
   </div>
 </section>
 
@@ -256,7 +257,7 @@
     <div class="grid2" style="margin-top:14px">
       <div>
         <ul class="clean">
-          <li><b>2 조건 × 2 대상.</b> C1=설계 문서 有, C2=문서 물리 삭제. 대상은 <span class="mono">ScoringService</span>(단순)·<span class="mono">ChemistryCacheService</span>(복잡).</li>
+          <li><b>2 조건 × 2 대상.</b> 두 조건 모두 원본 기준 테스트로 개발(TDD)하며 <b>독립 변인은 설계 문서의 존재 하나</b> — C1=문서 有, C2=문서 물리 삭제. 대상은 <span class="mono">ScoringService</span>(단순)·<span class="mono">ChemistryCacheService</span>(복잡).</li>
           <li><b>격리.</b> 매 런은 <span class="mono">git archive</span>로 만든 <b>히스토리 제거 사본</b>에서 수행 — 원본 구현·문서를 <span class="mono">git show</span>로도 복원 불가.</li>
           <li><b>스텁화.</b> 대상 메서드 본문을 제거(<span class="mono">UnsupportedOperationException</span>), 주석 전량 삭제 후 <b>프롬프트로 이관</b> → 코드 내 스펙 누설 0, 양 조건 동일 전달.</li>
           <li><b>성공 오라클.</b> 기준 테스트 클래스만 실행, 종료코드로 green 판정. 정지 조건을 테스트에 위임해 변인을 문서 하나로 통제.</li>
