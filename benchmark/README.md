@@ -19,6 +19,7 @@
 | `emit_row.py` | JSON+오라클 → JSONL 1행, `run_outcome` 분류 | §3.4·§8 |
 | `aggregate.py` | 셀별 통계 + C2/C1 효율 배수 | §8 |
 | `safety_check.sh` | 메인 저장소 무영향 검증 | §5.3 |
+| `report/` | 최종 보고서(HTML·Markdown) + 데이터 생성 스크립트 | §8 |
 
 ## 실행 순서 (§9)
 

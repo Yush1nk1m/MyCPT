@@ -1,0 +1,455 @@
+<title>설계 문서 효과 벤치마크 — 최종 보고서</title>
+<style>
+  :root{
+    --paper:#f5f6f4; --raise:#ffffff; --ink:#14181c; --strong:#0c0f12;
+    --muted:#5b6670; --faint:#8a939a; --line:#dce0da; --line2:#e8ebe6;
+    --c1:#0f8a80; --c1-soft:#0f8a8022; --c2:#c26a2e; --c2-soft:#c26a2e22;
+    --accent:#2f3a8c; --flag:#b23a2b;
+    --sig-strong:#2f3a8c; --sig-weak:#7d86b8;
+    --shadow:0 1px 2px #14181c0d,0 8px 24px -12px #14181c1f;
+    --mono:ui-monospace,"SF Mono","SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --paper:#14181a; --raise:#1b2023; --ink:#e7ebe6; --strong:#f4f7f2;
+      --muted:#9aa4a8; --faint:#6c767b; --line:#2a3136; --line2:#232a2e;
+      --c1:#2fb3a6; --c1-soft:#2fb3a622; --c2:#d98a4a; --c2-soft:#d98a4a22;
+      --accent:#8b96e0; --flag:#e07a68; --sig-strong:#8b96e0; --sig-weak:#5b649a;
+      --shadow:0 1px 2px #0006,0 10px 28px -14px #0009;
+    }
+  }
+  :root[data-theme="light"]{
+    --paper:#f5f6f4; --raise:#ffffff; --ink:#14181c; --strong:#0c0f12; --muted:#5b6670;
+    --faint:#8a939a; --line:#dce0da; --line2:#e8ebe6; --c1:#0f8a80; --c1-soft:#0f8a8022;
+    --c2:#c26a2e; --c2-soft:#c26a2e22; --accent:#2f3a8c; --flag:#b23a2b;
+    --sig-strong:#2f3a8c; --sig-weak:#7d86b8; --shadow:0 1px 2px #14181c0d,0 8px 24px -12px #14181c1f;
+  }
+  :root[data-theme="dark"]{
+    --paper:#14181a; --raise:#1b2023; --ink:#e7ebe6; --strong:#f4f7f2; --muted:#9aa4a8;
+    --faint:#6c767b; --line:#2a3136; --line2:#232a2e; --c1:#2fb3a6; --c1-soft:#2fb3a622;
+    --c2:#d98a4a; --c2-soft:#d98a4a22; --accent:#8b96e0; --flag:#e07a68;
+    --sig-strong:#8b96e0; --sig-weak:#5b649a; --shadow:0 1px 2px #0006,0 10px 28px -14px #0009;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); font-size:17px; line-height:1.65;
+    font-feature-settings:"kern","liga";
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1000px; margin:0 auto; padding:0 24px}
+  .prose{max-width:68ch}
+  h1,h2,h3{color:var(--strong); text-wrap:balance; letter-spacing:-0.02em; line-height:1.12; font-weight:800}
+  .mono{font-family:var(--mono); font-variant-numeric:tabular-nums}
+  .eyebrow{font-family:var(--mono); font-size:.72rem; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:600}
+  a{color:var(--accent)}
+
+  /* Masthead */
+  header.mast{border-bottom:1px solid var(--line); padding:64px 0 30px; margin-bottom:8px}
+  header.mast .rule{height:3px;width:52px;background:var(--accent);border-radius:2px;margin-bottom:22px}
+  header.mast h1{font-size:clamp(2rem,5vw,3.15rem); margin:.1em 0 .35em}
+  header.mast p.sub{font-size:1.12rem; color:var(--muted); max-width:60ch; margin:0}
+  .metastrip{display:flex; flex-wrap:wrap; gap:8px 10px; margin-top:26px}
+  .chip{font-family:var(--mono); font-size:.75rem; color:var(--muted); background:var(--raise);
+    border:1px solid var(--line); border-radius:999px; padding:5px 11px; box-shadow:var(--shadow)}
+  .chip b{color:var(--ink); font-weight:600}
+  .chip .k{color:var(--faint); text-transform:uppercase; letter-spacing:.08em; font-size:.66rem}
+
+  section{padding:44px 0; border-bottom:1px solid var(--line2)}
+  section > .wrap > .eyebrow{display:block; margin-bottom:10px}
+  h2.sh{font-size:1.6rem; margin:0 0 6px}
+  .lead{color:var(--muted); max-width:68ch; margin:.2em 0 0}
+  p{margin:1em 0}
+
+  /* Verdict cards */
+  .verdicts{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:8px}
+  .vcard{background:var(--raise); border:1px solid var(--line); border-radius:14px; padding:22px 22px 20px;
+    box-shadow:var(--shadow); position:relative; overflow:hidden}
+  .vcard::before{content:""; position:absolute; inset:0 auto 0 0; width:4px; background:var(--accent)}
+  .vcard.h1::before{background:var(--c1)} .vcard.h2::before{background:var(--c2)}
+  .vcard .tag{font-family:var(--mono); font-size:.72rem; letter-spacing:.1em; color:var(--faint); text-transform:uppercase}
+  .vcard h3{font-size:1.16rem; margin:.35em 0 .3em}
+  .vcard .status{display:inline-flex; align-items:center; gap:7px; font-family:var(--mono); font-size:.8rem;
+    font-weight:600; padding:3px 10px; border-radius:999px; border:1px solid var(--line); margin-bottom:12px}
+  .status.qual{color:var(--flag); border-color:color-mix(in srgb,var(--flag) 40%,var(--line))}
+  .status.yes{color:var(--c1); border-color:color-mix(in srgb,var(--c1) 45%,var(--line))}
+  .status .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+  .vcard p{margin:.4em 0 0; font-size:.98rem; color:var(--ink)}
+
+  /* Chart card */
+  .chartcard{background:var(--raise); border:1px solid var(--line); border-radius:14px; padding:20px 20px 12px;
+    box-shadow:var(--shadow); margin-top:20px}
+  .chartcard .ct{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:4px}
+  .chartcard .ct h3{font-size:1.02rem; margin:0}
+  .chartcard .ct .note{font-family:var(--mono); font-size:.76rem; color:var(--muted)}
+  .legend{display:flex; gap:16px; align-items:center; font-family:var(--mono); font-size:.75rem; color:var(--muted); margin:2px 0 6px}
+  .legend .sw{display:inline-flex; align-items:center; gap:6px}
+  .legend .box{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .svgscroll{overflow-x:auto; overflow-y:hidden}
+  svg{display:block; max-width:100%; height:auto}
+  svg text{font-family:var(--mono)}
+
+  /* Data table */
+  .tablecard{overflow-x:auto; margin-top:18px; border:1px solid var(--line); border-radius:12px; background:var(--raise); box-shadow:var(--shadow)}
+  table{border-collapse:collapse; width:100%; font-size:.86rem; min-width:560px}
+  th,td{text-align:right; padding:9px 14px; border-bottom:1px solid var(--line2); font-family:var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap}
+  th{color:var(--faint); font-weight:600; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; background:color-mix(in srgb,var(--paper) 60%,transparent)}
+  td.metric,th.metric{text-align:left; color:var(--ink); font-family:var(--sans); font-weight:600}
+  tr:last-child td{border-bottom:none}
+  .c1n{color:var(--c1)} .c2n{color:var(--c2)}
+  .sig{font-weight:700}
+  .sig.s2,.sig.s3{color:var(--sig-strong)} .sig.s1{color:var(--sig-weak)} .sig.s0{color:var(--faint)}
+  td.hi{background:var(--c1-soft)}
+
+  .callout{background:var(--raise); border:1px solid var(--line); border-left:4px solid var(--flag);
+    border-radius:12px; padding:18px 20px; box-shadow:var(--shadow); margin-top:18px}
+  .callout h3{font-size:1.02rem; margin:0 0 .3em; color:var(--flag)}
+  .callout p{margin:.3em 0 0; font-size:.95rem}
+
+  ul.clean{list-style:none; padding:0; margin:1em 0; display:grid; gap:10px}
+  ul.clean li{position:relative; padding-left:22px; color:var(--ink)}
+  ul.clean li::before{content:""; position:absolute; left:4px; top:.62em; width:7px;height:7px;border-radius:2px;
+    background:var(--accent); transform:rotate(45deg)}
+  ul.clean li b{color:var(--strong)}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:24px}
+  dl.meta{margin:0; display:grid; grid-template-columns:auto 1fr; gap:8px 16px; font-size:.9rem}
+  dl.meta dt{font-family:var(--mono); font-size:.74rem; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); align-self:center}
+  dl.meta dd{margin:0; color:var(--ink)}
+
+  footer{padding:40px 0 64px; color:var(--faint); font-size:.82rem; font-family:var(--mono)}
+
+  @media (max-width:720px){
+    body{font-size:16px}
+    .verdicts,.grid2{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .barfill,.dot,.lolli{transition:opacity .4s ease}
+  }
+</style>
+
+<header class="mast">
+  <div class="wrap">
+    <div class="rule"></div>
+    <div class="eyebrow">벤치마크 · 최종 보고서 · v0.5</div>
+    <h1>설계 문서는 AI 에이전트를 더 효율적으로 만드는가</h1>
+    <p class="sub">동일한 스텁 구현 과제를 <b>설계 문서가 있는 조건(C1)</b>과 <b>없는 조건(C2, 순수 TDD)</b>에서
+      반복 수행해, 완료까지의 비용·시간·토큰을 측정했다. 핵심 질문: <em>설계 문서 기반 개발이 순수 TDD보다 효율적인가?</em></p>
+    <div class="metastrip" id="metastrip"></div>
+  </div>
+</header>
+
+<section id="verdict">
+  <div class="wrap">
+    <span class="eyebrow">한눈에 — 가설 판정</span>
+    <div class="verdicts">
+      <div class="vcard h1">
+        <span class="tag">H1 · 문서가 더 저렴한가</span>
+        <span class="status qual"><span class="dot"></span>조건부 · 방향 일치, 통계는 경계선</span>
+        <h3>복잡한 코드에서만, 그것도 완만하게</h3>
+        <p>동시성·실패복구가 얽힌 <b>T-chem</b>에서 문서 有(C1)가 모든 지표에서 저렴했지만,
+          비용 격차는 <span class="mono">1.08×</span>(p=<span class="mono">.101</span>, 유의 못 미침).
+          유의에 도달한 건 <b>출력 토큰</b>(p=<span class="mono">.036</span>)과 <b>벽시계 시간</b>(p=<span class="mono">.065</span>)뿐이다.</p>
+      </div>
+      <div class="vcard h2">
+        <span class="tag">H2 · 효과는 코드 성격에 의존하는가</span>
+        <span class="status yes"><span class="dot"></span>강하게 지지됨</span>
+        <h3>설계 의도가 코드 밖에 있을 때만 작동</h3>
+        <p>순수 도메인 로직 <b>T-score</b>에서는 문서 효과가 <b>사실상 0</b>(모든 지표 <span class="mono">≈1.0×</span>).
+          테스트+프롬프트만으로 완전히 결정되는 코드엔 문서가 더 줄 것이 없다. 두 대상의 <b>대비</b>가 이 실험의 가장 견고한 발견이다.</p>
+      </div>
+    </div>
+    <p class="lead" style="margin-top:20px">종합하면, “설계 문서 &gt; TDD”는 <b>무조건 참이 아니라 조건부 참</b>이다 —
+      <em>문서는 설계 의도가 코드 밖 문서에 흩어져 있을 때만, 시간·토큰 기준 약 10–18%의 이점으로 돕는다.</em>
+      원래 가설이던 “3배”는 어디에서도 나타나지 않았다.</p>
+  </div>
+</section>
+
+<section id="overview">
+  <div class="wrap">
+    <span class="eyebrow">효과 크기 개관</span>
+    <h2 class="sh">C2 ÷ C1 배수 — 1.0에서 오른쪽으로 갈수록 “문서가 아꼈다”</h2>
+    <p class="lead">각 지표의 중앙값 비(문서 無 ÷ 문서 有). <span class="mono">1.0</span> 세로선이 “차이 없음”.
+      막대가 오른쪽으로 뻗을수록 문서 없는 C2가 그만큼 더 썼다는 뜻. 채운 점은 통계적으로 유의(p&lt;.1), 빈 점은 유의하지 않음.</p>
+    <div class="chartcard">
+      <div class="ct"><h3>T-chem · 동시성·캐시·실패복구</h3><span class="note">C1 n=13 · C2 n=13 · Mann–Whitney U</span></div>
+      <div class="svgscroll" id="ratio-chem"></div>
+    </div>
+    <div class="chartcard">
+      <div class="ct"><h3>T-score · 순수 도메인 로직 (대조군)</h3><span class="note">C1 n=11 · C2 n=10</span></div>
+      <div class="svgscroll" id="ratio-score"></div>
+    </div>
+    <p class="lead" style="margin-top:16px">T-chem의 막대들은 일제히 <span class="mono">1.0</span>의 오른쪽에 서고,
+      T-score의 막대들은 <span class="mono">1.0</span>에 달라붙는다. 이 시각적 대비가 곧 H2다.</p>
+  </div>
+</section>
+
+<section id="dist-chem">
+  <div class="wrap">
+    <span class="eyebrow">분포 · T-chem</span>
+    <h2 class="sh">복잡한 코드 — 겹치지만 일관되게 밀린다</h2>
+    <p class="lead">런 하나가 점 하나. 상자는 IQR(25–75%), 굵은 세로선이 중앙값. C1(티일)과 C2(앰버)의 상자가
+      상당히 겹치는 것이 보이는데, 이 겹침이 곧 “방향은 맞지만 p값이 경계선”인 이유다.</p>
+    <div class="chartcard">
+      <div class="legend">
+        <span class="sw"><span class="box" style="background:var(--c1)"></span>C1 · 문서 有</span>
+        <span class="sw"><span class="box" style="background:var(--c2)"></span>C2 · 문서 無 (TDD)</span>
+        <span class="sw" style="margin-left:auto">각 점 = 1 런</span>
+      </div>
+      <div id="dist-chem-cost"></div>
+      <div id="dist-chem-dur"></div>
+      <div id="dist-chem-out"></div>
+    </div>
+    <div class="tablecard" id="tbl-chem"></div>
+  </div>
+</section>
+
+<section id="dist-score">
+  <div class="wrap">
+    <span class="eyebrow">분포 · T-score (대조군)</span>
+    <h2 class="sh">단순한 코드 — 두 조건이 포개진다</h2>
+    <p class="lead">여기서는 C1과 C2 상자가 거의 완전히 겹친다. 문서가 있으나 없으나 결과가 같다 —
+      테스트와 프롬프트만으로 이 로직이 온전히 결정되기 때문이다.</p>
+    <div class="chartcard">
+      <div class="legend">
+        <span class="sw"><span class="box" style="background:var(--c1)"></span>C1 · 문서 有</span>
+        <span class="sw"><span class="box" style="background:var(--c2)"></span>C2 · 문서 無 (TDD)</span>
+        <span class="sw" style="margin-left:auto">각 점 = 1 런</span>
+      </div>
+      <div id="dist-score-cost"></div>
+      <div id="dist-score-dur"></div>
+      <div id="dist-score-out"></div>
+    </div>
+    <div class="tablecard" id="tbl-score"></div>
+  </div>
+</section>
+
+<section id="nuance">
+  <div class="wrap">
+    <span class="eyebrow">해석 시 주의할 두 가지</span>
+    <h2 class="sh">숫자를 잘못 읽지 않기</h2>
+    <div class="grid2" style="margin-top:14px">
+      <div class="callout" style="border-left-color:var(--accent)">
+        <h3 style="color:var(--accent)">달러는 노력 차이를 과소평가한다</h3>
+        <p>T-chem에서 비용 격차(<span class="mono">1.08×</span>)가 시간(<span class="mono">1.16×</span>)·처리토큰(<span class="mono">1.18×</span>)보다
+          작다. 이유는 C2가 더 하는 일의 대부분이 <b>값싼 cache_read(문맥 되읽기)</b>라 달러로는 덜 잡히기 때문.
+          즉 문서는 “에이전트가 하는 일의 양”을 눈에 띄게 줄이지만, 그 절약분이 저렴한 문맥읽기라 <b>달러 절감은 완만</b>하다.</p>
+      </div>
+      <div class="callout">
+        <h3>p값만 보면 안 되는 사례</h3>
+        <p>T-score의 <b>로컬 도구시간</b>은 <span class="mono">1.11×</span>, p=<span class="mono">.027</span>로 “유의”하게 나온다.
+          그러나 실제 차이는 <span class="mono">8s → 9s</span>, 단 <b>1초</b>다. 통계적 유의성과 실질적 크기는 별개 —
+          gradle 한 번 더 돈 정도의 무의미한 차이이며, T-score의 “무효과” 결론을 뒤집지 않는다.</p>
+      </div>
+    </div>
+    <p class="lead" style="margin-top:20px"><b>턴 수는 어디서도 변하지 않았다</b>(모든 셀 <span class="mono">1.00×</span>).
+      문서는 작업 <em>단계 수</em>를 줄이지 않는다 — 각 단계에서 하는 일(문맥 읽기·코드 재작성·테스트 재실행)을 가볍게 만들 뿐이다.</p>
+  </div>
+</section>
+
+<section id="method">
+  <div class="wrap">
+    <span class="eyebrow">방법론 · 통제 · 위협</span>
+    <h2 class="sh">어떻게 측정했나</h2>
+    <div class="grid2" style="margin-top:14px">
+      <div>
+        <ul class="clean">
+          <li><b>2 조건 × 2 대상.</b> C1=설계 문서 有, C2=문서 물리 삭제. 대상은 <span class="mono">ScoringService</span>(단순)·<span class="mono">ChemistryCacheService</span>(복잡).</li>
+          <li><b>격리.</b> 매 런은 <span class="mono">git archive</span>로 만든 <b>히스토리 제거 사본</b>에서 수행 — 원본 구현·문서를 <span class="mono">git show</span>로도 복원 불가.</li>
+          <li><b>스텁화.</b> 대상 메서드 본문을 제거(<span class="mono">UnsupportedOperationException</span>), 주석 전량 삭제 후 <b>프롬프트로 이관</b> → 코드 내 스펙 누설 0, 양 조건 동일 전달.</li>
+          <li><b>성공 오라클.</b> 기준 테스트 클래스만 실행, 종료코드로 green 판정. 정지 조건을 테스트에 위임해 변인을 문서 하나로 통제.</li>
+          <li><b>통제.</b> 모델 <span class="mono">claude-sonnet-5</span> 고정(보조 haiku &lt;1%), 동일 프롬프트·동일 커밋·순차 실행. <span class="mono">CLAUDE.md</span>(PDCA)는 축 분리를 위해 모든 조건에서 제외.</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="font-size:1.02rem; margin:0 0 .4em">타당성 위협 (함께 보고)</h3>
+        <ul class="clean">
+          <li><b>주석→프롬프트 이관의 상한.</b> C2도 제거된 주석을 그대로 받으므로, C1의 잔여 이득은 “문서에만 있는 정보”로 제한된다. 이는 <b>보수적</b> 설계 — 그럼에도 C1이 싸면 주장이 강해진다.</li>
+          <li><b>대상 2종의 한계.</b> 두 서비스로 H2를 완전히 일반화할 수 없다. “경향의 방향”으로만 사용.</li>
+          <li><b>모델 한정.</b> 결론은 Sonnet에 한정. 다른 모델로의 일반화는 미검증.</li>
+          <li><b>표본·검정력.</b> 셀당 n=10–13. 비용의 ~8% 차이를 유의 수준에서 확정하기엔 검정력이 부족하다 — 방향은 일관하나 단정은 보류.</li>
+        </ul>
+        <div class="callout" style="border-left-color:var(--c1); margin-top:14px">
+          <p style="margin:0"><b>데이터 품질:</b> 총 48런 중 <b>47런 성공</b>, 상한 초과·타임아웃 <span class="mono">0</span>건.
+            T-chem C1의 1런은 CLI JSON이 비어 지표가 유실(테스트 자체는 통과)되어 집계에서 제외했다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    설계 문서 효과 벤치마크 · MyCPT · 기준 커밋 <span id="foot-commit"></span> ·
+    모델 claude-sonnet-5 · 총 48런 · Mann–Whitney U(양측, 정규근사·동점보정) ·
+    상세 설계: docs/benchmark/benchmark-design.md
+  </div>
+</footer>
+
+<script>
+const DATA = {"targets": {"chem": {"label": "T-chem · 동시성·캐시·실패복구", "n1": 13, "n2": 13, "n1_total": 14, "n2_total": 13, "metrics": {"cost": {"label": "비용", "unit": "$", "C1": {"n": 13, "min": 0.6343088, "max": 1.0190386999999999, "q1": 0.7607020999999999, "med": 0.8280664999999999, "q3": 0.9002047999999999, "mean": 0.8291783153846154, "sd": 0.10967070727544653, "values": [0.6343, 0.6813, 0.733, 0.7607, 0.7807, 0.8077, 0.8281, 0.8557, 0.8609, 0.9002, 0.9178, 0.9998, 1.019]}, "C2": {"n": 13, "min": 0.7460042, "max": 1.0857485, "q1": 0.8545495999999999, "med": 0.8946185, "q3": 0.9770501000000001, "mean": 0.9103709307692308, "sd": 0.08932479169156005, "values": [0.746, 0.8014, 0.8396, 0.8545, 0.8657, 0.8697, 0.8946, 0.9565, 0.9664, 0.9771, 0.9848, 0.9929, 1.0857]}, "ratio": 1.080370356728596, "p": 0.10079209270783762, "sig": "ns"}, "dur": {"label": "벽시계 시간", "unit": "s", "C1": {"n": 13, "min": 150.272, "max": 302.332, "q1": 189.845, "med": 208.347, "q3": 244.185, "mean": 217.45507692307692, "sd": 40.17609006220479, "values": [150.272, 170.726, 179.341, 189.845, 197.383, 207.467, 208.347, 230.352, 231.838, 244.185, 256.891, 257.937, 302.332]}, "C2": {"n": 13, "min": 209.356, "max": 304.068, "q1": 211.805, "med": 242.041, "q3": 275.047, "mean": 245.65007692307694, "sd": 34.37506828516079, "values": [209.356, 209.794, 210.785, 211.805, 216.281, 230.894, 242.041, 244.89, 246.965, 275.047, 294.656, 296.869, 304.068]}, "ratio": 1.1617205911292219, "p": 0.06486987027995905, "sig": "*"}, "api": {"label": "API 시간", "unit": "s", "C1": {"n": 13, "min": 108.698, "max": 248.751, "q1": 144.828, "med": 162.562, "q3": 188.333, "mean": 169.13823076923077, "sd": 37.15029579787788, "values": [108.698, 128.492, 135.383, 144.828, 154.634, 157.711, 162.562, 167.57, 179.326, 188.333, 202.263, 220.246, 248.751]}, "C2": {"n": 13, "min": 149.513, "max": 242.96, "q1": 165.595, "med": 187.304, "q3": 197.909, "mean": 185.29607692307692, "sd": 24.800230195772652, "values": [149.513, 161.568, 161.913, 165.595, 169.943, 173.45, 187.304, 188.806, 189.168, 197.909, 204.473, 216.247, 242.96]}, "ratio": 1.152200391235344, "p": 0.16617010468287607, "sig": "ns"}, "local": {"label": "로컬 도구시간", "unit": "s", "C1": {"n": 13, "min": 9.186, "max": 82.086, "q1": 41.922, "med": 43.505, "q3": 45.785, "mean": 48.31684615384616, "sd": 18.404443940134733, "values": [9.186, 39.897, 41.574, 41.922, 42.234, 42.749, 43.505, 43.958, 45.017, 45.785, 72.641, 77.565, 82.086]}, "C2": {"n": 13, "min": 40.842, "max": 125.534, "q1": 42.831, "med": 47.443, "q3": 61.108, "mean": 60.354, "sd": 26.137825055183622, "values": [40.842, 42.088, 42.492, 42.831, 46.21, 46.981, 47.443, 48.226, 54.737, 61.108, 78.409, 107.701, 125.534]}, "ratio": 1.0905183312262958, "p": 0.12393580567274265, "sig": "ns"}, "out": {"label": "출력 토큰", "unit": "tok", "C1": {"n": 13, "min": 6927, "max": 17268, "q1": 12837.0, "med": 13834.0, "q3": 15415.0, "mean": 13602.923076923076, "sd": 2509.446505369981, "values": [6927, 11307, 12281, 12837, 13174, 13182, 13834, 14214, 14436, 15415, 15683, 16280, 17268]}, "C2": {"n": 13, "min": 11471, "max": 20334, "q1": 14923.0, "med": 15315.0, "q3": 16622.0, "mean": 15711.615384615385, "sd": 2036.936407695165, "values": [11471, 13505, 14806, 14923, 15111, 15144, 15315, 15598, 16589, 16622, 17336, 17497, 20334]}, "ratio": 1.1070550816828104, "p": 0.03550389064941184, "sig": "**"}, "bill": {"label": "총 처리토큰", "unit": "tok", "C1": {"n": 13, "min": 588500, "max": 1511130, "q1": 844736.0, "med": 1025091.0, "q3": 1199512.0, "mean": 1024325.5384615385, "sd": 284121.6338885149, "values": [588500, 632252, 654683, 844736, 857472, 1017310, 1025091, 1121515, 1192835, 1199512, 1265986, 1405210, 1511130]}, "C2": {"n": 13, "min": 687841, "max": 1537119, "q1": 944374.0, "med": 1204770.0, "q3": 1312053.0, "mean": 1125455.4615384615, "sd": 259205.83020971974, "values": [687841, 746142, 823859, 944374, 968314, 1109237, 1204770, 1250832, 1257325, 1312053, 1373762, 1415293, 1537119]}, "ratio": 1.175281023831055, "p": 0.3559671197337311, "sig": "ns"}, "turns": {"label": "턴", "unit": "turn", "C1": {"n": 13, "min": 18, "max": 29, "q1": 23.0, "med": 25.0, "q3": 26.0, "mean": 24.076923076923077, "sd": 3.173484822267118, "values": [18, 18, 22, 23, 23, 24, 25, 25, 26, 26, 27, 27, 29]}, "C2": {"n": 13, "min": 21, "max": 30, "q1": 24.0, "med": 25.0, "q3": 27.0, "mean": 25.307692307692307, "sd": 2.2320950966995246, "values": [21, 23, 24, 24, 24, 25, 25, 25, 26, 27, 27, 28, 30]}, "ratio": 1.0, "p": 0.4533164616521401, "sig": "ns"}}}, "score": {"label": "T-score · 순수 도메인 로직", "n1": 11, "n2": 10, "n1_total": 11, "n2_total": 10, "metrics": {"cost": {"label": "비용", "unit": "$", "C1": {"n": 11, "min": 0.1835583, "max": 0.2352285, "q1": 0.19463625, "med": 0.20554730000000002, "q3": 0.224319, "mean": 0.20896381818181817, "sd": 0.017084685667729565, "values": [0.1836, 0.1915, 0.1927, 0.1966, 0.2029, 0.2055, 0.2089, 0.2195, 0.2291, 0.2331, 0.2352]}, "C2": {"n": 10, "min": 0.1927131, "max": 0.29028220000000005, "q1": 0.19623512499999998, "med": 0.210167, "q3": 0.22874244999999996, "mean": 0.21862572, "sd": 0.02915392872635866, "values": [0.1927, 0.1937, 0.1961, 0.1968, 0.2006, 0.2198, 0.2226, 0.2308, 0.243, 0.2903]}, "ratio": 1.0224751188655845, "p": 0.549471691823942, "sig": "ns"}, "dur": {"label": "벽시계 시간", "unit": "s", "C1": {"n": 11, "min": 37.452, "max": 72.075, "q1": 38.451, "med": 48.213, "q3": 56.295, "mean": 48.87118181818182, "sd": 10.841868128343782, "values": [37.452, 38.202, 38.351, 38.551, 42.709, 48.213, 48.58, 55.69, 56.9, 60.86, 72.075]}, "C2": {"n": 10, "min": 42.704, "max": 71.264, "q1": 44.57575, "med": 48.2505, "q3": 54.897000000000006, "mean": 51.8338, "sd": 9.241043023382154, "values": [42.704, 43.041, 44.149, 45.856, 47.427, 49.074, 54.819, 54.923, 65.081, 71.264]}, "ratio": 1.0007777985190716, "p": 0.5035147104262714, "sig": "ns"}, "api": {"label": "API 시간", "unit": "s", "C1": {"n": 11, "min": 29.087, "max": 63.911, "q1": 30.2605, "med": 39.465, "q3": 48.9285, "mean": 40.61936363636364, "sd": 11.030571692698825, "values": [29.087, 29.377, 30.149, 30.372, 34.208, 39.465, 39.906, 48.649, 49.208, 52.481, 63.911]}, "C2": {"n": 10, "min": 33.473, "max": 63.804, "q1": 34.3745, "med": 39.4275, "q3": 45.0545, "mean": 42.4859, "sd": 9.85883770482099, "values": [33.473, 33.912, 34.296, 34.61, 37.262, 41.593, 44.099, 45.373, 56.437, 63.804]}, "ratio": 0.9990497909540098, "p": 0.549471691823942, "sig": "ns"}, "local": {"label": "로컬 도구시간", "unit": "s", "C1": {"n": 11, "min": 6.482, "max": 9.115, "q1": 8.119499999999999, "med": 8.379, "q3": 8.587499999999999, "mean": 8.251818181818182, "sd": 0.640738326702707, "values": [6.482, 7.979, 8.075, 8.164, 8.251, 8.379, 8.402, 8.501, 8.674, 8.748, 9.115]}, "C2": {"n": 10, "min": 7.46, "max": 11.56, "q1": 8.76525, "med": 9.3385, "q3": 10.0085, "mean": 9.3479, "sd": 1.240668888140587, "values": [7.46, 7.481, 8.644, 9.129, 9.231, 9.446, 9.539, 10.165, 10.824, 11.56]}, "ratio": 1.1145124716553287, "p": 0.026543707627723956, "sig": "**"}, "out": {"label": "출력 토큰", "unit": "tok", "C1": {"n": 11, "min": 1829, "max": 2862, "q1": 2102.5, "med": 2152.0, "q3": 2390.5, "mean": 2272, "sd": 302.70928147466685, "values": [1829, 2081, 2100, 2105, 2135, 2152, 2169, 2246, 2535, 2778, 2862]}, "C2": {"n": 10, "min": 1948, "max": 3690, "q1": 2058.25, "med": 2470.5, "q3": 2644.75, "mean": 2496.8, "sd": 519.4283011157555, "values": [1948, 1982, 2057, 2062, 2396, 2545, 2611, 2656, 3021, 3690]}, "ratio": 1.1480018587360594, "p": 0.6985353583033387, "sig": "ns"}, "bill": {"label": "총 처리토큰", "unit": "tok", "C1": {"n": 11, "min": 178240, "max": 297597, "q1": 208487.0, "med": 236841.0, "q3": 296011.5, "mean": 243267.54545454544, "sd": 43291.79630739133, "values": [178240, 205502, 208299, 208675, 211162, 236841, 240116, 294542, 297481, 297488, 297597]}, "C2": {"n": 10, "min": 205146, "max": 385368, "q1": 208890.5, "med": 235169.5, "q3": 284837.75, "mean": 254428, "sd": 54747.14130071085, "values": [205146, 208036, 208518, 210008, 233806, 236533, 267941, 290470, 298454, 385368]}, "ratio": 0.9929425226206611, "p": 0.9719131339533063, "sig": "ns"}, "turns": {"label": "턴", "unit": "turn", "C1": {"n": 11, "min": 8, "max": 10, "q1": 9.0, "med": 9.0, "q3": 10.0, "mean": 9.272727272727273, "sd": 0.7496555682941201, "values": [8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 10]}, "C2": {"n": 10, "min": 7, "max": 12, "q1": 8.25, "med": 9.0, "q3": 10.0, "mean": 9.4, "sd": 1.5620499351813308, "values": [7, 8, 8, 9, 9, 9, 10, 10, 12, 12]}, "ratio": 1.0, "p": 0.9123175385627256, "sig": "ns"}}}}, "meta": {"total_runs": 48, "cli_error": 1, "capped": 0, "wall_timeout": 0, "model": "claude-sonnet-5", "base_commit": "04173fd"}};
+
+const $ = (id)=>document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, txt){
+  const e=document.createElementNS(NS,tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  if(txt!=null) e.textContent=txt;
+  return e;
+}
+function cssvar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+const METRIC_ORDER = ["cost","dur","api","local","out","bill","turns"];
+function fmt(v, unit){
+  if(unit==="$") return "$"+v.toFixed(3);
+  if(unit==="s") return v.toFixed(v<20?1:0)+"s";
+  if(unit==="tok") return v>=1000? (v/1000).toFixed(v>=100000?0:1)+"k" : Math.round(v);
+  if(unit==="turn") return v.toFixed(v%1?1:0);
+  return v;
+}
+
+/* ---------- meta strip ---------- */
+(function(){
+  const m=DATA.meta;
+  const items=[["실험 단위","2 조건 × 2 대상"],["총 런",m.total_runs],["모델",m.model],
+    ["상한 초과",m.capped],["타임아웃",m.wall_timeout],["기준 커밋",m.base_commit]];
+  const box=$("metastrip");
+  items.forEach(([k,v])=>{
+    const c=document.createElement("span"); c.className="chip";
+    c.innerHTML=`<span class="k">${k}</span> <b>${v}</b>`; box.appendChild(c);
+  });
+  $("foot-commit").textContent=m.base_commit;
+})();
+
+/* ---------- ratio chart ---------- */
+function ratioChart(mount, tgt){
+  const T=DATA.targets[tgt];
+  const W=720, rowH=34, padT=14, padB=30, padL=118, padR=54;
+  const H=padT+padB+METRIC_ORDER.length*rowH;
+  const xmin=0.85, xmax=1.32;
+  const X=v=>padL+(v-xmin)/(xmax-xmin)*(W-padL-padR);
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:W,role:"img",fill:cssvar("--muted")});
+  // gridlines
+  [0.9,1.0,1.1,1.2,1.3].forEach(g=>{
+    const isBase=Math.abs(g-1)<1e-9;
+    svg.appendChild(el("line",{x1:X(g),y1:padT-4,x2:X(g),y2:H-padB+4,
+      stroke:isBase?cssvar("--ink"):cssvar("--line"),"stroke-width":isBase?1.5:1,
+      "stroke-dasharray":isBase?"":"3 4"}));
+    svg.appendChild(el("text",{x:X(g),y:H-padB+18,"text-anchor":"middle","font-size":11},g.toFixed(1)+"×"));
+  });
+  METRIC_ORDER.forEach((mk,i)=>{
+    const md=T.metrics[mk];
+    const y=padT+i*rowH+rowH/2;
+    const r=Math.min(Math.max(md.ratio,xmin),xmax);
+    const sig=md.sig!=="ns";
+    const col = md.ratio>=1? cssvar("--c2") : cssvar("--c1");
+    // label
+    const lab=el("text",{x:padL-12,y:y+4,"text-anchor":"end","font-size":12.5,fill:cssvar("--ink")},md.label);
+    svg.appendChild(lab);
+    // connector from baseline to ratio
+    svg.appendChild(el("line",{x1:X(1.0),y1:y,x2:X(r),y2:y,stroke:col,"stroke-width":3,"stroke-linecap":"round",opacity:sig?0.95:0.5}));
+    // lollipop
+    const dot=el("circle",{cx:X(r),cy:y,r:6.5,stroke:col,"stroke-width":2,
+      fill:sig?col:cssvar("--raise"),class:"lolli"});
+    svg.appendChild(dot);
+    // value + p
+    svg.appendChild(el("text",{x:W-padR+8,y:y+4,"text-anchor":"start","font-size":11,
+      fill:sig?cssvar("--ink"):cssvar("--faint")},md.ratio.toFixed(2)+"×"));
+  });
+  mount.innerHTML=""; mount.appendChild(svg);
+}
+
+/* ---------- distribution (strip + box) ---------- */
+function distChart(mountId, tgt, mk){
+  const md=DATA.targets[tgt].metrics[mk];
+  const mount=$(mountId); if(!mount) return;
+  const W=720, laneH=52, padT=40, gap=6, padB=34, padL=64, padR=150;
+  const H=padT+padB+laneH*2+gap;
+  const all=[...md.C1.values,...md.C2.values];
+  let lo=Math.min(...all), hi=Math.max(...all);
+  const span=hi-lo||1; lo-=span*0.08; hi+=span*0.08;
+  const X=v=>padL+(v-lo)/(hi-lo)*(W-padL-padR);
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:W,role:"img","aria-label":md.label,fill:cssvar("--muted")});
+  // title
+  svg.appendChild(el("text",{x:0,y:18,"font-size":13,"font-weight":"700",fill:cssvar("--ink")},md.label));
+  const sigClass = md.sig==="ns"?cssvar("--faint"):cssvar("--ink");
+  svg.appendChild(el("text",{x:W,y:18,"text-anchor":"end","font-size":11.5,fill:sigClass},
+    `C2/C1 ${md.ratio.toFixed(2)}×   p=${md.p.toFixed(3)} ${md.sig}`));
+  // x ticks
+  const ticks=4;
+  for(let t=0;t<=ticks;t++){
+    const v=lo+(hi-lo)*t/ticks;
+    svg.appendChild(el("line",{x1:X(v),y1:padT-6,x2:X(v),y2:H-padB+4,stroke:cssvar("--line2"),"stroke-width":1}));
+    svg.appendChild(el("text",{x:X(v),y:H-padB+18,"text-anchor":"middle","font-size":10.5},fmt(v,md.unit)));
+  }
+  [["C1",md.C1,cssvar("--c1")],["C2",md.C2,cssvar("--c2")]].forEach(([name,s,col],li)=>{
+    const yc=padT+li*(laneH+gap)+laneH/2;
+    // lane label
+    svg.appendChild(el("text",{x:padL-12,y:yc-4,"text-anchor":"end","font-size":11.5,"font-weight":"700",fill:col},name));
+    svg.appendChild(el("text",{x:padL-12,y:yc+9,"text-anchor":"end","font-size":9.5,fill:cssvar("--faint")},"n="+s.n));
+    // whisker min-max
+    svg.appendChild(el("line",{x1:X(s.min),y1:yc,x2:X(s.max),y2:yc,stroke:col,"stroke-width":1,opacity:.35}));
+    // IQR box
+    const bx=X(s.q1), bw=X(s.q3)-X(s.q1);
+    svg.appendChild(el("rect",{x:bx,y:yc-15,width:Math.max(bw,1),height:30,rx:5,
+      fill:col,"fill-opacity":0.13,stroke:col,"stroke-opacity":0.4}));
+    // dots (deterministic jitter)
+    s.values.forEach((v,idx)=>{
+      const j=((idx*97+37)%100)/100-0.5; // -0.5..0.5
+      svg.appendChild(el("circle",{cx:X(v),cy:yc+j*18,r:3.4,fill:col,"fill-opacity":0.72,class:"dot"}));
+    });
+    // median line
+    svg.appendChild(el("line",{x1:X(s.med),y1:yc-16,x2:X(s.med),y2:yc+16,stroke:col,"stroke-width":2.5,"stroke-linecap":"round"}));
+    // median value
+    svg.appendChild(el("text",{x:W-4,y:yc+(li?14:-6),"text-anchor":"end","font-size":11,fill:col,"font-weight":"700"},
+      "med "+fmt(s.med,md.unit)));
+  });
+  mount.innerHTML=""; mount.appendChild(svg);
+}
+
+/* ---------- table ---------- */
+function buildTable(mountId, tgt){
+  const T=DATA.targets[tgt];
+  const sigcls=s=>s==="***"?"s3":s==="**"?"s2":s==="*"?"s1":"s0";
+  let h=`<table><thead><tr>
+    <th class="metric">지표</th>
+    <th>C1 중앙값</th><th>C1 mean±sd</th>
+    <th>C2 중앙값</th><th>C2 mean±sd</th>
+    <th>C2/C1</th><th>p</th><th>유의</th></tr></thead><tbody>`;
+  METRIC_ORDER.forEach(mk=>{
+    const m=T.metrics[mk], u=m.unit;
+    const hi = (m.sig!=="ns" && m.ratio>1.02) ? "hi":"";
+    h+=`<tr>
+      <td class="metric">${m.label}<span style="color:var(--faint);font-weight:400"> · ${u==='$'?'USD':u}</span></td>
+      <td class="c1n">${fmt(m.C1.med,u)}</td>
+      <td>${fmt(m.C1.mean,u)}<span style="color:var(--faint)"> ±${fmt(m.C1.sd,u==='$'?'$':u)}</span></td>
+      <td class="c2n">${fmt(m.C2.med,u)}</td>
+      <td>${fmt(m.C2.mean,u)}<span style="color:var(--faint)"> ±${fmt(m.C2.sd,u==='$'?'$':u)}</span></td>
+      <td class="${hi}">${m.ratio.toFixed(2)}×</td>
+      <td>${m.p.toFixed(3)}</td>
+      <td class="sig ${sigcls(m.sig)}">${m.sig}</td>
+    </tr>`;
+  });
+  h+=`</tbody></table>`;
+  $(mountId).innerHTML=h;
+}
+
+/* ---------- render ---------- */
+function renderAll(){
+  ratioChart($("ratio-chem"),"chem");
+  ratioChart($("ratio-score"),"score");
+  ["cost","dur","out"].forEach(mk=>{
+    distChart("dist-chem-"+mk,"chem",mk);
+    distChart("dist-score-"+mk,"score",mk);
+  });
+  buildTable("tbl-chem","chem");
+  buildTable("tbl-score","score");
+}
+renderAll();
+// re-render on theme toggle (colors are read from CSS vars)
+const mo=new MutationObserver(renderAll);
+mo.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+window.matchMedia("(prefers-color-scheme:dark)").addEventListener("change",renderAll);
+</script>
