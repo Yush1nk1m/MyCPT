@@ -26,6 +26,21 @@ cost = data.get("total_cost_usd")
 cli_is_error = bool(data.get("is_error", False))
 terminal_reason = str(data.get("terminal_reason", "") or "")
 
+# --- 신규 지표(v0.5): 시간 분해·총 처리토큰·턴당 비용·모델 분해 ---
+duration_ms = data.get("duration_ms")
+duration_api_ms = data.get("duration_api_ms")
+local_ms = (duration_ms - duration_api_ms) if (duration_ms is not None and duration_api_ms is not None) else None
+
+_tok = [usage.get(k) for k in
+        ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")]
+total_billable_tokens = sum(t for t in _tok if t is not None) if any(t is not None for t in _tok) else None
+
+num_turns = data.get("num_turns")
+cost_per_turn = (cost / num_turns) if (cost is not None and num_turns) else None
+
+# 모델별 비용 분해(§6 통제 확인). {모델: costUSD}
+model_costs = {m: mu.get("costUSD") for m, mu in (data.get("modelUsage", {}) or {}).items()}
+
 test_passed = None
 if test_rc == 0:
     test_passed = True
@@ -57,12 +72,17 @@ row = {
     "run_outcome": outcome,
     "test_passed": test_passed,
     "total_cost_usd": cost,
-    "num_turns": data.get("num_turns"),
+    "cost_per_turn": cost_per_turn,
+    "num_turns": num_turns,
     "input_tokens": usage.get("input_tokens"),
     "output_tokens": usage.get("output_tokens"),
     "cache_creation_input_tokens": usage.get("cache_creation_input_tokens"),
     "cache_read_input_tokens": usage.get("cache_read_input_tokens"),
-    "duration_ms": data.get("duration_ms"),
+    "total_billable_tokens": total_billable_tokens,
+    "duration_ms": duration_ms,
+    "duration_api_ms": duration_api_ms,
+    "local_ms": local_ms,
+    "model_costs": model_costs,
     "cli_rc": cli_rc,
     "cli_is_error": cli_is_error,
     "cli_subtype": data.get("subtype"),
