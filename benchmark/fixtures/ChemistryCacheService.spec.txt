@@ -1,0 +1,46 @@
+[클래스 ChemistryCacheService]
+chemistry_cache 락 기반 중복 LLM 호출 방지 서비스.
+
+발행자/구독자 분기:
+  [NULL]       → 발행자: GENERATING으로 변경 후 즉시 커밋(락 해제) → LLM 호출 → 완료 커밋 → Pub/Sub
+  [GENERATING] → 구독자: 대기자 맵 등록 후 CountDownLatch로 완료 대기
+  [READY+유효] → 즉시 캐시 반환
+  [READY+만료] → 발행자 경로 재진입 (refresh() 후 재생성)
+
+인메모리 맵:
+  waitingMap: Map<ChemistryCacheId, List<WaitingEntry>> — 버킷 조합별 대기자 목록
+  SseEmitter 맵은 SseService가 별도 소유 (관심사 분리)
+
+[필드]
+버킷 조합 -> 대기 중인 (userId, reportId, latch) 목록
+구독자 대기 타임아웃
+
+[메서드 getOrGenerate]
+케미 보고서 요청 진입점
+@return 완성된 보고서 텍스트
+콜백으로 구독자 등록 - 락 트랜잭션 내부에서 실행
+
+[메서드 generateAsPublisher]
+발행자 경로 - LLM 호출 -> 완료 커밋 -> Pub/Sub 발행
+
+[메서드 waitAsSubscriber]
+구독자 경로 - CountDownLatch로 대기
+발행자가 Pub/Sub 이벤트를 발행하면 ChemistryEventSubscriber가 releaseWaiters()를 호출
+등록된 대기자를 못 찾은 경우 (극히 드문 타이밍 이슈) - 캐시 직접 조회로 폴백
+
+[메서드 registerWaiter]
+대기자 맵에 등록. acquireLockAndDecideRole() 내(락 트랜잭션 내)에서 호출
+
+[메서드 getLatchForWaiter]
+등록된 대기자의 latch 반환
+
+[메서드 releaseWaiters]
+Pub/Sub 수신 후 ChemistryEventSubscriber가 호출
+해당 버킷 조합의 모든 대기자 latch를 해제하고 맵에서 제거
+@return 알림 대상 (userId, reportId) 목록 - SSE push에 사용
+
+[메서드 buildPrompt]
+TODO: 프롬프트 캐싱을 위한 블록 빌드 로직 구현
+
+[record WaitingEntry]
+대기자 정보 record. ChemistryEventSubscriber에서 SSE push 대상 식별에 사용
