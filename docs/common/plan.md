@@ -50,9 +50,9 @@
 | 동료 초대 수락 | `/invite/[code]` | ✅ |
 | 타인 평정 응시 | `/assessments/[token]` | ✅ |
 | 전역 셸(헤더·탭바·알림 드롭다운·토스트·SSE) | (app) 레이아웃 | ✅ |
-| **서비스 소개 & 약관** | `/me/about` | ⬜ |
-| **고객 문의 & FAQ** | `/me/help` | ⬜ |
-| **회원 탈퇴** | `/me/leave` | ⬜ |
+| 서비스 소개 & 약관 | `/me/about` | ✅ |
+| 고객 문의 & FAQ | `/me/help` | ✅ |
+| 회원 탈퇴 | `/me/leave` | ✅ |
 
 ### 전역·인프라
 
@@ -69,14 +69,9 @@
 
 우선순위 순. 이월·지연 작업은 전부 여기에 모은다.
 
-### P1 — 진행 중
+### P1 — 다음 (마무리)
 
-- 🚧 **프론트 정적/보조 3페이지 구현** — `/me/about`, `/me/help`, `/me/leave`
-  - `/me/leave`는 지난 세션 완료된 회원 탈퇴 백엔드(`DELETE /users/me`, `GET /users/me/withdrawal-info`)를 연동.
-  - 근거 문서: `design/specs/`(screens.yaml, empty-states.md), `frontend/component-map.md`, `api-design.md` v0.10.
-  - 세부 변경 명세는 착수 시 PDCA tmp 문서로 상세화.
-
-### P2 — 대기 (마무리)
+프론트 페이지 구현이 모두 끝나, 남은 것은 QA·배포·베타뿐이다.
 
 - ⬜ **전체 흐름 통합 QA** — 비회원 / 회원 / 타인 평정 / 케미 시나리오 end-to-end
 - ⬜ **배포 환경 구성** — AWS S3 스토리지 연동(로컬 → S3), 운영 리버스 프록시에서 SSE 압축 제외 설정
@@ -97,6 +92,7 @@
 
 | 날짜 | 작업 | 산출물 |
 | --- | --- | --- |
+| 07.14 | 계획 문서 전면 개정 + 프론트 정적/보조 3페이지 구현(`/me/about`·`/me/help`·`/me/leave`) | plan.md, me/about·help·leave/page.tsx, useWithdrawal.ts, lib/withdrawal.ts, scenario-test-design.md |
 | 07.13 | CLAUDE.md 범용 작업 지침으로 재작성, Entry-Point.md 신설(설계 문서 진입점 규약) | CLAUDE.md, docs/Entry-Point.md |
 | 07.12 | 회원 탈퇴 시나리오 테스트 + 누락 테스트 구현·검증, 백엔드 테스트 설계 문서 보강 | UserServiceTest, UserWithdrawIntegrationTest, UserV1ControllerTest, UserTest, 6개 Repository 테스트, test-design.md |
 | 07.10 | 회원 탈퇴 백엔드 API 구현 + 탈퇴 정책 확정 문서 개정 | `DELETE /users/me`, `GET /users/me/withdrawal-info`, KakaoUnlinkClient, UserService.withdraw, WithdrawRequest/WithdrawalInfoResponse, 6개 repo 삭제 메서드 / api-design.md v0.10, database-design.md, empty-states.md, screens.yaml, schema.sql |
