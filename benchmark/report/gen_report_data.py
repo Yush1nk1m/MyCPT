@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""runs.jsonl → report_data.json (보고서 임베드용 셀별 요약·사분위·Mann–Whitney U).
+"""runs.jsonl → report_data.json (보고서 임베드용 셀별 요약·사분위·유의도 검정).
 사용법: gen_report_data.py [runs.jsonl] [out.json]
-scipy 미사용(정규근사·동점보정 U 검정 직접 구현).
+
+유의도(설계 문서 §3.5): 각 지표·조건군에 Shapiro-Wilk 정규성 검정(α=.05) 후
+  두 군 모두 정규면 Welch t-검정(양측, 등분산 미가정), 아니면 Mann–Whitney U(양측).
+기술통계량 정렬: headline 배수(ratio)는 선택된 검정과 일치 — 정규(t)면 평균비, 비정규(U)면 중앙비.
+의존성: scipy(Shapiro-Wilk·검정).
 """
-import json, math, sys, statistics as st
-from collections import defaultdict, Counter
+import json, sys, statistics as st
+from collections import defaultdict
+from scipy import stats
 
 runs_path = sys.argv[1] if len(sys.argv) > 1 else "../results/runs.jsonl"
 out_path = sys.argv[2] if len(sys.argv) > 2 else "report_data.json"
@@ -18,28 +23,16 @@ for r in rows:
         cells[(r["target"], r["condition"])].append(r)
 
 
-def mwu(a, b):
-    """양측 Mann–Whitney U, 정규근사 + 동점보정 → p."""
-    n1, n2 = len(a), len(b); N = n1 + n2
-    allv = sorted([(v, 0) for v in a] + [(v, 1) for v in b])
-    ranks = [0.0] * N; i = 0
-    while i < N:
-        j = i
-        while j + 1 < N and allv[j + 1][0] == allv[i][0]:
-            j += 1
-        avg = (i + j + 2) / 2.0
-        for k in range(i, j + 1):
-            ranks[k] = avg
-        i = j + 1
-    R1 = sum(ranks[k] for k in range(N) if allv[k][1] == 0)
-    U1 = R1 - n1 * (n1 + 1) / 2.0; mu = n1 * n2 / 2.0
-    tie = Counter(v for v, _ in allv)
-    tcorr = sum(t**3 - t for t in tie.values())
-    sigma = math.sqrt(n1 * n2 / 12.0 * ((N + 1) - tcorr / (N * (N - 1))))
-    if sigma == 0:
-        return 1.0
-    z = (abs(U1 - mu) - 0.5) / sigma
-    return 2 * (1 - 0.5 * (1 + math.erf(z / math.sqrt(2))))
+def choose_test(a, b):
+    """각 군 Shapiro-Wilk(α=.05) → 둘 다 정규면 Welch t, 아니면 MWU.
+    반환: (test, p, sw_a, sw_b). test ∈ {welch_t, mwu}."""
+    sw_a = float(stats.shapiro(a).pvalue) if len(a) >= 3 else None
+    sw_b = float(stats.shapiro(b).pvalue) if len(b) >= 3 else None
+    if sw_a is not None and sw_b is not None and sw_a >= 0.05 and sw_b >= 0.05:
+        _, p = stats.ttest_ind(a, b, equal_var=False); test = "welch_t"
+    else:
+        _, p = stats.mannwhitneyu(a, b, alternative="two-sided"); test = "mwu"
+    return test, float(p), sw_a, sw_b
 
 
 def scale(key, v):
@@ -75,10 +68,16 @@ for target, tlabel in TARGETS:
     for mkey, jkey, mlabel, unit in METRICS:
         a = [scale(jkey, r[jkey]) for r in c1 if r.get(jkey) is not None]
         b = [scale(jkey, r[jkey]) for r in c2 if r.get(jkey) is not None]
-        p = mwu(a, b); sa, sb = summ(a), summ(b)
+        test, p, sw_a, sw_b = choose_test(a, b)
+        sa, sb = summ(a), summ(b)
+        stat = "mean" if test == "welch_t" else "median"
+        ratio_med = sb["med"] / sa["med"] if sa["med"] else None
+        ratio_mean = sb["mean"] / sa["mean"] if sa["mean"] else None
+        ratio = ratio_mean if stat == "mean" else ratio_med  # headline = 검정 정렬
         tobj["metrics"][mkey] = {
             "label": mlabel, "unit": unit, "C1": sa, "C2": sb,
-            "ratio": sb["med"] / sa["med"] if sa["med"] else None, "p": p,
+            "test": test, "stat": stat, "sw_c1": sw_a, "sw_c2": sw_b,
+            "ratio": ratio, "ratio_med": ratio_med, "ratio_mean": ratio_mean, "p": p,
             "sig": "***" if p < 0.01 else "**" if p < 0.05 else "*" if p < 0.1 else "ns"}
     out["targets"][target] = tobj
 out["meta"] = {"total_runs": len(rows),

@@ -19,7 +19,7 @@
 | `emit_row.py` | JSON+오라클 → JSONL 1행, `run_outcome` 분류 | §3.4·§8 |
 | `aggregate.py` | 셀별 통계 + C2/C1 효율 배수 | §8 |
 | `safety_check.sh` | 메인 저장소 무영향 검증 | §5.3 |
-| `report/` | 최종 보고서(HTML·Markdown) + 데이터 생성 스크립트 | §8 |
+| `report/` | 최종 보고서(HTML·Markdown) + 데이터 생성 스크립트(Shapiro→Welch t/U, scipy 의존) | §8·§3.5 |
 
 ## 실행 순서 (§9)
 
@@ -44,7 +44,12 @@ benchmark/run_cell.sh C2 chem  10 <3×C1_med_chem>
 # 4) 집계·시각화
 benchmark/aggregate.py
 benchmark/safety_check.sh                  # 사후 무영향 재확인
+
+# 5) 보고서 데이터 재생성 (scipy 필요: Shapiro-Wilk 후 Welch t / Mann–Whitney U)
+cd benchmark/report && python3 gen_report_data.py ../results/runs.jsonl report_data.json
 ```
+
+> **의존성**: 보고서 생성(`report/gen_report_data.py`)은 `scipy`를 사용한다(정규성 검정·검정 통계). 하니스 실행 자체는 불필요.
 
 ## 중요 — 실행 권한과 주체
 
