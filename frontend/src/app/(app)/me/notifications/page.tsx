@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { formatRelative } from "@/lib/format";
 
 // ── 타입 ──────────────────────────────────────────────────────────────────────
 
@@ -54,24 +55,6 @@ function typeIcon(type: NotificationResponse["type"]): string {
   if (type === "CHEMISTRY_REPORT") return "🤝";
   if (type === "COLLEAGUE_REGISTERED") return "👥";
   return "ⓘ";
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  const now = Date.now();
-  const diff = now - d.getTime();
-
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) return "방금 전";
-  if (minutes < 60) return `${minutes}분 전`;
-  if (hours < 24) return `${hours}시간 전`;
-  if (days < 7) return `${days}일 전`;
-
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
 }
 
 // ── 페이지 ───────────────────────────────────────────────────────────────────
@@ -175,7 +158,7 @@ export default function NotificationsPage() {
                   {notif.message}
                 </span>
                 <span className="text-[11px] text-[var(--ink-soft)] mt-0.5">
-                  {formatDate(notif.createdAt)}
+                  {formatRelative(notif.createdAt)}
                 </span>
               </div>
 

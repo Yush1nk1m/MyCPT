@@ -33,3 +33,8 @@ up-infra:
 
 down-infra:
 	@./docker-compose-ctl.sh down infra
+
+# ── 프론트 단위 테스트 ────────────────────────────────────────
+# 프론트 단위 테스트를 기존 frontend 컨테이너(node:22)에서 1회성 실행
+test-front:
+	@docker compose --env-file ../../../.env.dev --profile frontend run --rm frontend npx vitest run

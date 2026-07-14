@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/useToast";
 import { useKakaoShare } from "../../../hooks/useKakaoShare";
 import Link from "next/link";
+import { formatCode } from "@/lib/colleague";
 
 // ── 타입 ──────────────────────────────────────────────────────────────────────
 
@@ -78,14 +79,6 @@ function errorMessage(code: string): string {
   if (code === "SELF_INVITE") return "본인의 코드는 사용할 수 없어요.";
   if (code === "ALREADY_COLLEAGUE") return "이미 동료로 등록된 코드예요.";
   return "등록에 실패했어요";
-}
-
-// 코드 포맷: 입력값을 MYCPT-XXXX-XXX 형태로 자동 변환
-function formatCode(raw: string): string {
-  return raw
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .slice(0, 8);
 }
 
 // 코드 유효성: 대문자+숫자 8자리

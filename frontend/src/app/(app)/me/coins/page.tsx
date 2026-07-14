@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { calcRemaining, reasonLabel } from "@/lib/coin";
+import { formatDateTime } from "@/lib/format";
 
 // ── 타입 ──────────────────────────────────────────────────────────────────────
 
@@ -51,15 +53,6 @@ async function fetchCoinHistory(
 
 // ── 카운트다운 ────────────────────────────────────────────────────────────────
 
-function calcRemaining(nextCoinAt: string): string {
-  const diff = new Date(nextCoinAt).getTime() - Date.now();
-  if (diff <= 0) return "00 : 00 : 00";
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
-  return `${String(h).padStart(2, "0")} : ${String(m).padStart(2, "0")} : ${String(s).padStart(2, "0")}`;
-}
-
 // nextCoinAt이 null(만충)이면 null 반환
 // CoinContent가 balance.data 확정 후 마운트되므로 lazy initializer가 항상 실제 값으로 초기화됨
 function useCountdown(nextCoinAt: string | null): string | null {
@@ -79,21 +72,6 @@ function useCountdown(nextCoinAt: string | null): string | null {
   }, [nextCoinAt]);
 
   return remaining;
-}
-
-// ── 유틸 ─────────────────────────────────────────────────────────────────────
-
-function reasonLabel(tx: CoinTransactionResponse): string {
-  if (tx.reason === "SIGNUP") return "신규 가입 보너스";
-  if (tx.reason === "RECHARGE") return "자동 충전";
-  if (tx.reason === "CHEMISTRY_REPORT") return "케미 보고서 발행";
-  return tx.reason;
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 // ── CoinContent (balance 확정 후에만 마운트) ──────────────────────────────────
@@ -224,10 +202,10 @@ function CoinContent({ balance }: { balance: CoinBalanceResponse }) {
                 </div>
                 <div className="flex flex-col min-w-0 flex-1">
                   <span className="text-[12.5px] text-[var(--ink)] leading-snug">
-                    {reasonLabel(tx)}
+                    {reasonLabel(tx.reason)}
                   </span>
                   <span className="text-[11px] text-[var(--ink-soft)] mt-0.5">
-                    {formatDate(tx.createdAt)}
+                    {formatDateTime(tx.createdAt)}
                   </span>
                 </div>
                 <span

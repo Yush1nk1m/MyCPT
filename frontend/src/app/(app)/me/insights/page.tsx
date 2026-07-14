@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useComparison, useTrend } from "@/hooks/useStatistics";
+import { bucketToPercent, dominantDeviation } from "@/lib/disc/insights";
 
 // ── 상수 ──────────────────────────────────────────────────
 
@@ -107,11 +108,6 @@ function PageTabs({
       })}
     </div>
   );
-}
-
-// 버킷값(1~3)을 막대 높이 퍼센트로 변환 (1→33%, 2→66%, 3→100%)
-function bucketToPercent(bucket: number) {
-  return Math.round((bucket / 3) * 100);
 }
 
 // 비교 탭 — 4축 막대 차트
@@ -329,16 +325,9 @@ function InsightSentence({
   my: { d: number; i: number; s: number; c: number };
   avg: { d: number; i: number; s: number; c: number };
 }) {
-  // 편차 절대값이 가장 큰 축 찾기
-  const diffs = DISC_LABELS.map((axis) => {
-    const key = axis.toLowerCase() as "d" | "i" | "s" | "c";
-    return { axis, diff: my[key] - avg[key] };
-  });
-  const max = diffs.reduce((a, b) =>
-    Math.abs(a.diff) > Math.abs(b.diff) ? a : b,
-  );
+  const max = dominantDeviation(my, avg);
 
-  if (Math.abs(max.diff) === 0) {
+  if (max === null) {
     return (
       <p style={{ fontSize: 12, color: "var(--ink-soft)", lineHeight: 1.6 }}>
         또래 평균과 전반적으로 비슷한 성향이에요.
@@ -346,7 +335,6 @@ function InsightSentence({
     );
   }
 
-  const direction = max.diff > 0 ? "높아요" : "낮아요";
   const meta = DISC_META[max.axis];
 
   return (
@@ -355,7 +343,7 @@ function InsightSentence({
       <b style={{ color: meta.color }}>
         {max.axis}축({meta.name})
       </b>
-      이 특히 {direction}.
+      이 특히 {max.direction}.
     </p>
   );
 }

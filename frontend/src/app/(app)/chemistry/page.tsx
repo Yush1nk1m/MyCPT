@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { formatDateKo } from "@/lib/format";
+import { peerLabel } from "@/lib/chemistry";
 
 interface ChemistryReportSummary {
   reportId: number;
@@ -38,22 +40,6 @@ async function fetchChemistryReports(
   return res.json();
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-function peerLabel(report: ChemistryReportSummary): string {
-  const partnerName =
-    report.myRole === "REQUESTER"
-      ? report.partnerNickname
-      : report.requesterNickname;
-  return `나 ↔ ${partnerName}`;
-}
-
 function GeneratingCard({ report }: { report: ChemistryReportSummary }) {
   return (
     <div className="bg-white border-[1.5px] border-dashed border-[var(--accent)] rounded-[12px] p-4 flex flex-col gap-3">
@@ -63,7 +49,7 @@ function GeneratingCard({ report }: { report: ChemistryReportSummary }) {
             {peerLabel(report)}
           </span>
           <span className="text-[11px] text-[var(--ink-faint)] font-mono">
-            {formatDate(report.createdAt)}
+            {formatDateKo(report.createdAt)}
           </span>
         </div>
         <span className="shrink-0 text-[10px] font-bold text-[var(--accent)] border border-[var(--accent)] rounded-full px-2.5 py-0.5 animate-pulse">
@@ -92,7 +78,7 @@ function ReadyCard({ report }: { report: ChemistryReportSummary }) {
           {peerLabel(report)}
         </span>
         <span className="text-[11px] text-[var(--ink-soft)] font-mono">
-          {formatDate(report.createdAt)}
+          {formatDateKo(report.createdAt)}
         </span>
       </div>
       <span className="text-[var(--ink-faint)] text-sm shrink-0">›</span>

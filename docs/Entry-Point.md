@@ -1,6 +1,6 @@
 # Entry-Point — MyCPT 설계 문서 진입점
 
-**문서 버전**: v0.1
+**문서 버전**: v0.2
 **작성일**: '26.07.13.
 **작성자**: 김유신
 
@@ -8,6 +8,7 @@
 
 | 버전 | 변경 내용 | 날짜       |
 | ---- | --------- | ---------- |
+| v0.2 | 프론트 단위 테스트 설계 문서(`frontend/unit-test-design.md`) 등재, 테스트 명령 각주(Node ≥20.19·컨테이너 실행 대안) 추가 | '26.07.14. |
 | v0.1 | 초안 작성 | '26.07.13. |
 
 ---
@@ -21,7 +22,9 @@
 - **개요·기술 스택·실행 방법**: 루트 `Readme.md` 참조 (MyCPT — DISC 이론 기반 직무 역량 성향 분석 서비스, Spring Boot + Next.js 모노레포)
 - **테스트 명령**:
   - 백엔드: `cd backend && ./gradlew test` — Testcontainers 사용, Docker 데몬 필요
-  - 프론트엔드: `cd frontend && npx vitest run`
+  - 프론트엔드: `cd frontend && npx vitest run` [^1]
+
+[^1]: Node **≥ 20.19** 필요(`require(ESM)` 미지원 시 jsdom 로드 단계에서 `ERR_REQUIRE_ESM`로 실패). 저장소 정본은 `frontend/.nvmrc` = `20.20.2`. 컨테이너 실행 대안: `cd infra/docker/dev && make test-front`(기존 `node:22` 프론트 컨테이너 재사용).
 
 ## 작업 속성 → 필독 문서 매핑
 
@@ -31,7 +34,7 @@
 | 백엔드 API 추가·수정 | `common/api-design.md`, `common/architecture-design.md`(§4 패키지 구조), `backend/maintenance-guide.md`(버저닝·컨트롤러 네이밍) |
 | DB 스키마 변경 | `backend/database-design.md`, `sql/schema.sql` — 두 파일은 항상 동기 유지 |
 | 도메인 로직 (채점·버킷·LLM 캐시·케미·코인) | `common/service-design.md` §3(검사 설계)·§4(LLM 비용 최적화), `common/architecture-design.md` §3(데이터 흐름), `UML/` 시퀀스 다이어그램 |
-| 테스트 작성 | `common/test-process.md`(프로세스·역할·ID 포맷), `backend/test-design.md`, `frontend/scenario-test-design.md` |
+| 테스트 작성 | `common/test-process.md`(프로세스·역할·ID 포맷), `backend/test-design.md`, `frontend/scenario-test-design.md`, `frontend/unit-test-design.md` |
 | 프론트엔드 작업 | **`frontend/CLAUDE.md`(→ `frontend/AGENTS.md`) 필독** — 이 Next.js 버전은 학습 데이터와 다를 수 있어 `node_modules/next/dist/docs/` 가이드 참조가 강제됨. 이어서 `frontend/component-map.md`, `design/specs/`(화면·컴포넌트·상태 명세), `design/wireframe/` |
 | DISC 척도·문항 | `common/disc-scale-design.md` |
 | 일정·진행 현황 파악 | `common/plan.md` |
@@ -57,6 +60,7 @@
 | `backend/maintenance-guide.md` | API 버저닝 · 컨트롤러 네이밍 · 프로필 이미지 저장 · 케미 캐시 실패 복구 구조 |
 | `frontend/component-map.md` | 프론트엔드 컴포넌트 맵 |
 | `frontend/scenario-test-design.md` | 프론트엔드 시나리오 테스트 설계 |
+| `frontend/unit-test-design.md` | 프론트엔드 단위 테스트 설계(`lib/*`·`stores/*` 순수 로직) |
 | `design/specs/` | 화면(screens.yaml) · 컴포넌트(components.yaml) · 상태 머신 · 접근 매트릭스 · 디자인 토큰 |
 | `design/wireframe/` | 와이어프레임 (HTML/JSX) |
 | `sql/schema.sql` | DDL — `database-design.md`와 동기 유지 |

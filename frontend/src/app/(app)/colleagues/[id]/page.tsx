@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-query";
 import { useToast } from "@/hooks/useToast";
 import Link from "next/link";
+import { formatNextCharge } from "@/lib/coin";
 
 // ── 타입 ──────────────────────────────────────────────────────────────────────
 
@@ -115,15 +116,6 @@ async function deleteColleague(id: string): Promise<void> {
 }
 
 // ── 케미 발행 확인 모달 ───────────────────────────────────────────────────────
-
-function formatNextCharge(nextCoinAt: string | null): string {
-  if (!nextCoinAt) return "만충 상태";
-  const diff = new Date(nextCoinAt).getTime() - Date.now();
-  if (diff <= 0) return "곧 충전 예정";
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  return `약 ${h}시간 ${m}분 후`;
-}
 
 function ChemistryConfirmModal({
   coins,

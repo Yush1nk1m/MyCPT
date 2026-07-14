@@ -7,6 +7,7 @@ import { TypePill, BalancedPill } from "@/components/disc/TypePill";
 import { DiscBarsLarge } from "@/components/disc/DiscBarsLarge";
 import { ReportMarkdown } from "@/components/disc/ReportMarkdown";
 import { getDiscProfile } from "@/lib/disc/profile";
+import { formatDateDot } from "@/lib/format";
 
 type RaterType = "SELF" | "OTHER";
 
@@ -27,10 +28,6 @@ async function fetchResultDetail(id: string): Promise<ResultDetail> {
   if (res.status === 404) return Promise.reject(new Error("NOT_FOUND"));
   if (!res.ok) return Promise.reject(new Error("FETCH_ERROR"));
   return res.json();
-}
-
-function formatDate(iso: string): string {
-  return iso.slice(0, 10).replace(/-/g, ".");
 }
 
 export default function ResultDetailPage({
@@ -133,7 +130,7 @@ export default function ResultDetailPage({
               fontFamily: "var(--font-mono)",
             }}
           >
-            {formatDate(data.createdAt)}
+            {formatDateDot(data.createdAt)}
             {data.label && ` · ${data.label}`}
           </div>
         </div>

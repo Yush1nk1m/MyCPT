@@ -6,11 +6,7 @@ import { useResults, RaterType } from "@/hooks/useResults";
 import { TypePill, BalancedPill } from "@/components/disc/TypePill";
 import { DiscBarsLarge } from "@/components/disc/DiscBarsLarge";
 import { getDiscProfile } from "@/lib/disc/profile";
-
-// 날짜 포맷: "2026-05-24T14:30:00" → "2026.05.24"
-function formatDate(iso: string): string {
-  return iso.slice(0, 10).replace(/-/g, ".");
-}
+import { formatDateDot } from "@/lib/format";
 
 const TABS: { label: string; value: RaterType | null }[] = [
   { label: "내 검사 결과", value: "SELF" },
@@ -159,7 +155,7 @@ export default function ResultsPage() {
                     fontFamily: "var(--font-mono)",
                   }}
                 >
-                  {formatDate(r.createdAt)}
+                  {formatDateDot(r.createdAt)}
                 </span>
               </div>
               {/* 미니 막대 */}
