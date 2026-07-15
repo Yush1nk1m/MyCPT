@@ -1,23 +1,12 @@
 -- ============================================================
 -- docs/sql/dev_scenario_seed.sql
--- 초대 수락(/invite) + 타인 평정(/assessments) 시나리오 테스트용 시드
--- 전제: schema.sql 적용 완료. 여러 번 재실행 가능 (하단 초기화 블록 먼저 실행)
+-- 수동 QA 기본 시드 — 4개 dev 계정 + 초대 코드 + 평정 토큰
+-- 전제: schema.sql 적용 완료. qa/teardown.sql 선행 실행 필요
+--       (초기화 블록이 없으므로 단독 재실행은 안전하지 않다)
+-- 정본 실행 경로: cd infra/docker/dev && make qa-reset
 -- 로그인: 백엔드 GET /api/v1/dev/login?kakaoId={kakao_id}&returnTo=... 로 즉시 로그인
+-- 시나리오: docs/common/qa-test-design.md
 -- ============================================================
-
--- ── 0. 초기화 (재실행 전 기존 dev 계정 정리) ────────────────────────────
--- kakao_id가 'dev-user-%' 패턴인 계정만 정리 (실계정 영향 없음)
-
-DELETE FROM assessment_tokens WHERE subject_id IN
-    (SELECT id FROM users WHERE kakao_id LIKE 'dev-user-%');
-DELETE FROM colleagues WHERE user_a_id IN
-    (SELECT id FROM users WHERE kakao_id LIKE 'dev-user-%')
-    OR user_b_id IN (SELECT id FROM users WHERE kakao_id LIKE 'dev-user-%');
-DELETE FROM peer_codes WHERE user_id IN
-    (SELECT id FROM users WHERE kakao_id LIKE 'dev-user-%');
-DELETE FROM coin_transactions WHERE user_id IN
-    (SELECT id FROM users WHERE kakao_id LIKE 'dev-user-%');
-DELETE FROM users WHERE kakao_id LIKE 'dev-user-%';
 
 -- ── 1. users ──────────────────────────────────────────────────────────────
 -- 4개 계정, 각각 다른 조건을 담당 (dev-login으로 즉시 로그인 가능)
@@ -78,11 +67,3 @@ WHERE u.kakao_id LIKE 'dev-user-%';
 SELECT u.kakao_id AS subject, t.label, t.used, t.expires_at
 FROM assessment_tokens t JOIN users u ON u.id = t.subject_id
 WHERE u.kakao_id LIKE 'dev-user-%';
-
--- ============================================================
--- 범용 유틸 — 코인 강제 조정 (앱에서 보장 못하는 상태 재현용)
--- 케미 관련 시나리오 문서 작성 시 사용
--- ============================================================
--- UPDATE users SET coins = 0 WHERE kakao_id = 'dev-user-a';
--- INSERT INTO coin_transactions (user_id, amount, reason, balance_after, created_at)
--- SELECT id, -3, 'CHEMISTRY_REPORT', 0, NOW() FROM users WHERE kakao_id = 'dev-user-a';

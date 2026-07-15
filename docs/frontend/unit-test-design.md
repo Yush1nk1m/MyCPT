@@ -8,6 +8,7 @@
 
 | 버전 | 변경 내용 | 날짜       |
 | ---- | --------- | ---------- |
+| v0.2 | 수동 QA 문서 통합에 따른 참조 경로 갱신 (`frontend/scenario-test-design.md` → `common/qa-test-design.md`) | '26.07.15. |
 | v0.1 | 초안 작성 — 순수 로직 추출(`lib/*` 6모듈) + 단위 테스트 체계화 | '26.07.14. |
 
 ---
@@ -23,7 +24,7 @@
 ### 범위
 
 이 문서는 **순수 로직 단위 테스트**(`src/lib/**`, `src/stores/**`, `src/hooks/**` 중 순수
-훅)만 다룬다. 화면 단위 수동 QA 시나리오는 `frontend/scenario-test-design.md`를 참조한다.
+훅)만 다룬다. 화면 단위 수동 QA 시나리오는 `common/qa-test-design.md`를 참조한다.
 
 ### 실행
 

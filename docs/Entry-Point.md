@@ -1,6 +1,6 @@
 # Entry-Point — MyCPT 설계 문서 진입점
 
-**문서 버전**: v0.2
+**문서 버전**: v0.3
 **작성일**: '26.07.13.
 **작성자**: 김유신
 
@@ -8,6 +8,7 @@
 
 | 버전 | 변경 내용 | 날짜       |
 | ---- | --------- | ---------- |
+| v0.3 | 수동 QA 문서 통합 — `frontend/scenario-test-design.md` → `common/qa-test-design.md`(E2E 통합 흐름 추가), QA 시드 명령 등재 | '26.07.15. |
 | v0.2 | 프론트 단위 테스트 설계 문서(`frontend/unit-test-design.md`) 등재, 테스트 명령 각주(Node ≥20.19·컨테이너 실행 대안) 추가 | '26.07.14. |
 | v0.1 | 초안 작성 | '26.07.13. |
 
@@ -23,6 +24,7 @@
 - **테스트 명령**:
   - 백엔드: `cd backend && ./gradlew test` — Testcontainers 사용, Docker 데몬 필요
   - 프론트엔드: `cd frontend && npx vitest run` [^1]
+- **통합 QA 시드**: `cd infra/docker/dev && make qa-reset` (흐름 1~3) / `make qa-flow FLOW=4` (케미) / `make qa-teardown` (정리) / `make qa-status` (현황) — 규약은 `common/qa-test-design.md` §2
 
 [^1]: Node **≥ 20.19** 필요(`require(ESM)` 미지원 시 jsdom 로드 단계에서 `ERR_REQUIRE_ESM`로 실패). 저장소 정본은 `frontend/.nvmrc` = `20.20.2`. 컨테이너 실행 대안: `cd infra/docker/dev && make test-front`(기존 `node:22` 프론트 컨테이너 재사용).
 
@@ -34,8 +36,9 @@
 | 백엔드 API 추가·수정 | `common/api-design.md`, `common/architecture-design.md`(§4 패키지 구조), `backend/maintenance-guide.md`(버저닝·컨트롤러 네이밍) |
 | DB 스키마 변경 | `backend/database-design.md`, `sql/schema.sql` — 두 파일은 항상 동기 유지 |
 | 도메인 로직 (채점·버킷·LLM 캐시·케미·코인) | `common/service-design.md` §3(검사 설계)·§4(LLM 비용 최적화), `common/architecture-design.md` §3(데이터 흐름), `UML/` 시퀀스 다이어그램 |
-| 테스트 작성 | `common/test-process.md`(프로세스·역할·ID 포맷), `backend/test-design.md`, `frontend/scenario-test-design.md`, `frontend/unit-test-design.md` |
-| 프론트엔드 작업 | **`frontend/CLAUDE.md`(→ `frontend/AGENTS.md`) 필독** — 이 Next.js 버전은 학습 데이터와 다를 수 있어 `node_modules/next/dist/docs/` 가이드 참조가 강제됨. 이어서 `frontend/component-map.md`, `design/specs/`(화면·컴포넌트·상태 명세), `design/wireframe/` |
+| 테스트 작성 | `common/test-process.md`(프로세스·역할·ID 포맷), `backend/test-design.md`, `common/qa-test-design.md`, `frontend/unit-test-design.md` |
+| 통합 QA·배포 전 검증 | `common/qa-test-design.md`(화면 단위 시나리오 + E2E 흐름 + 시드 운용 규약), `common/test-process.md`(자동화 제외 영역) |
+| 프론트엔드 작업 | **`frontend/CLAUDE.md`(→ `frontend/AGENTS.md`) 필독** — 이 Next.js 버전은 학습 데이터와 다를 수 있어 `node_modules/next/dist/docs/` 가이드 참조가 강제됨. 이어서 `frontend/component-map.md`, `common/qa-test-design.md`(화면 시나리오), `design/specs/`(화면·컴포넌트·상태 명세), `design/wireframe/` |
 | DISC 척도·문항 | `common/disc-scale-design.md` |
 | 일정·진행 현황 파악 | `common/plan.md` |
 | 인프라·개발 환경 | `Readme.md` 실행 방법, `infra/docker/dev/` |
@@ -55,11 +58,11 @@
 | `common/disc-scale-design.md` | DISC 척도 · 문항 설계 |
 | `common/plan.md` | 개발 계획 · 주차별 실행 기록 |
 | `common/test-process.md` | 테스트 설계 프로세스 (테스트 종류 결정 기준, ID 포맷 `[UT\|ST\|IT]-[클래스명축약]-[행위]-[상황]`, 자동화 제외 영역) |
+| `common/qa-test-design.md` | 수동 QA 정본 — 화면 단위 시나리오 + E2E 통합 흐름 4종 · 시드 운용 규약 |
 | `backend/database-design.md` | ERD · 테이블 명세 (CTI 패턴) · 인덱스 전략 |
 | `backend/test-design.md` | 백엔드 테스트 케이스 ID 체계 · 도메인별 케이스 |
 | `backend/maintenance-guide.md` | API 버저닝 · 컨트롤러 네이밍 · 프로필 이미지 저장 · 케미 캐시 실패 복구 구조 |
 | `frontend/component-map.md` | 프론트엔드 컴포넌트 맵 |
-| `frontend/scenario-test-design.md` | 프론트엔드 시나리오 테스트 설계 |
 | `frontend/unit-test-design.md` | 프론트엔드 단위 테스트 설계(`lib/*`·`stores/*` 순수 로직) |
 | `design/specs/` | 화면(screens.yaml) · 컴포넌트(components.yaml) · 상태 머신 · 접근 매트릭스 · 디자인 토큰 |
 | `design/wireframe/` | 와이어프레임 (HTML/JSX) |

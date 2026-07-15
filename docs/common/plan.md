@@ -71,16 +71,25 @@
 
 ### P1 — 다음 (마무리)
 
-프론트 페이지 구현이 모두 끝나, 남은 것은 QA·배포·베타뿐이다.
+프론트 페이지 구현이 모두 끝나, 남은 것은 QA·프롬프트 교정·배포·베타다.
 
 - ⬜ **전체 흐름 통합 QA** — 비회원 / 회원 / 타인 평정 / 케미 시나리오 end-to-end
+  (설계·시드 규약: `common/qa-test-design.md`)
+- ⬜ **배포 전 — DISC 검사 결과 보고서 프롬프트 교정** — 사용자별 `{닉네임}님`으로 치환 가능한 구조로.
+  현재 `disc_cache.report`는 이름 미포함 원문을 버킷 단위로 공유하므로, 렌더링 시점에 이름을
+  삽입할 자리를 프롬프트가 일관되게 만들어줘야 한다
+- ⬜ **배포 전 — 케미 보고서 프롬프트 교정** — 프롬프트 캐싱(`cache_control` 마커) 활용.
+  현재 변수 분리 구조까지만 적용되어 있어 캐싱이 실제로 켜져 있지 않다
 - ⬜ **배포 환경 구성** — AWS S3 스토리지 연동(로컬 → S3), 운영 리버스 프록시에서 SSE 압축 제외 설정
 - ⬜ **베타 테스터 초대 + 설문조사 배포** (설문 초안 부록 C)
 
 ### 알려진 개선 여지 (기능 정상 동작, 우선순위 낮음)
 
+- ⬜ 설계 문서 구조 및 내용 전면 개정
 - ⬜ SSE 엔드포인트(`/notifications/stream`)를 범용 실시간 채널 경로(`/events/stream` 등)로 분리 검토
-- ⬜ 프롬프트 캐싱(`cache_control` 마커) 실제 활성화 — 현재 변수 분리 구조까지만 적용
+- ⬜ 비회원 결과 화면이 새로고침으로 복원되지 않음 — testSheet 스토어에 persist 미적용,
+  `sessionStorage['disc_result']`는 잔존하나 이를 읽어 화면을 복원하는 경로가 없어 24문항
+  재응시가 필요. 저장 전 이탈 시 이탈률 요인 (근거: `selfAssessmentSlice.ts:99·107`)
 - ⬜ 카카오톡 공유 링크 미표시 — localhost 한계, 배포 후 재검증
 - ⬜ 에러 메시지 토스트 전환 잔여분 (`me/profile` 등)
 
@@ -92,6 +101,7 @@
 
 | 날짜 | 작업 | 산출물 |
 | --- | --- | --- |
+| 07.15 | 통합 QA 설계 + 수동 QA 문서 통합 + 시드 setup/teardown 자동화 (FK RESTRICT로 깨져 있던 초기화 블록 정정) | qa-test-design.md(신설 — scenario-test-design.md 흡수), qa/teardown.sql, qa/flow-4-chemistry.sql, qa.sh, Makefile, dev_scenario_seed.sql, Entry-Point.md v0.3, unit-test-design.md v0.2, ScoringService Javadoc |
 | 07.14 | 프론트 순수 로직 추출 리팩토링(lib 6모듈) + 단위 테스트 체계화(40+케이스) + jsdom 환경 원인규명·Node 20.20.2 고정 | lib/{format,coin,assessment,colleague,chemistry,disc/insights}.ts + 각 __tests__, profile/questions/authStore/toastStore 테스트, 페이지 9종, .nvmrc, unit-test-design.md, Entry-Point.md |
 | 07.14 | 계획 문서 전면 개정 + 프론트 정적/보조 3페이지 구현(`/me/about`·`/me/help`·`/me/leave`) | plan.md, me/about·help·leave/page.tsx, useWithdrawal.ts, lib/withdrawal.ts, scenario-test-design.md |
 | 07.13 | CLAUDE.md 범용 작업 지침으로 재작성, Entry-Point.md 신설(설계 문서 진입점 규약) | CLAUDE.md, docs/Entry-Point.md |

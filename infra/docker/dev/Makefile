@@ -38,3 +38,18 @@ down-infra:
 # 프론트 단위 테스트를 기존 frontend 컨테이너(node:22)에서 1회성 실행
 test-front:
 	@docker compose --env-file ../../../.env.dev --profile frontend run --rm frontend npx vitest run
+
+# ── 통합 QA 시드 ──────────────────────────────────────────────
+# 시나리오는 docs/common/qa-test-design.md 참조
+# qa-reset: 흐름 1~3 / qa-flow FLOW=4: 케미 / qa-teardown: QA 종료 후 정리
+qa-reset:
+	@./qa.sh reset
+
+qa-teardown:
+	@./qa.sh teardown
+
+qa-flow:
+	@./qa.sh flow $(FLOW)
+
+qa-status:
+	@./qa.sh status
