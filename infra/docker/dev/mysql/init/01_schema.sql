@@ -1,8 +1,8 @@
 -- ============================================================
 -- MyCPT DDL
--- 버전: v0.10
--- 작성일: '26.06.15.
--- 변경: chemistry_cache -> chemistry_reports 테이블 생성 순서 변경 
+-- 버전: v0.11
+-- 작성일: '26.07.28.
+-- 변경: users.kakao_id NOT NULL -> NULL (탈퇴 익명화. database-design.md v0.15 미반영분 정정)
 -- ============================================================
 
 -- ============================================================
@@ -10,7 +10,7 @@
 -- ============================================================
 CREATE TABLE users (
     id                BIGINT            NOT NULL AUTO_INCREMENT   COMMENT '내부 식별자',
-    kakao_id          VARCHAR(50)       NOT NULL                  COMMENT '카카오 고유 식별자',
+    kakao_id          VARCHAR(50)       NULL                      COMMENT '카카오 고유 식별자. 탈퇴 시 NULL 처리(익명화)',
     nickname          VARCHAR(30)       NOT NULL                  COMMENT '서비스 닉네임 (카카오 닉네임 초기값, 수정 가능)',
     profile_image_url VARCHAR(300)      NULL                      COMMENT '프로필 이미지 Full URL. 카카오 기본 이미지 또는 S3 Full URL. NULL이면 기본 이미지 사용',
     birth_year        YEAR              NULL                      COMMENT '로그인 후 프로필 설정 시 입력. NULL이면 미입력 상태',

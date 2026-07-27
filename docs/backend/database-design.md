@@ -1,7 +1,7 @@
 # MyCPT 데이터베이스 설계 문서
 
-**문서 버전**: v0.15
-**작성일**: '26.07.10.
+**문서 버전**: v0.16
+**작성일**: '26.07.28.
 **작성자**: 김유신
 
 ---
@@ -25,6 +25,7 @@
 | v0.13 | chemistry_cache `updated_at` 컬럼 추가 (GENERATING 락 정체 탐지 및 배치 복구 기준). 스테일 캐시 복구 배치 섹션 추가.                                                                                                                 | '26.07.01. |
 | v0.14 | 만료 코드/토큰 삭제 배치를 Spring Batch → @Scheduled로 전환. ExpiredDataCleanupBatch → ExpiredDataCleanupScheduler 이름 변경.                                                                                                        | '26.07.03. |
 | v0.15 | 회원 탈퇴 정책 반영. `users.deleted_at` 컬럼 추가, `kakao_id` NOT NULL → NULL. 탈퇴 시 익명화(soft delete) 대상과 하드 삭제 대상 구분 — §1.2 참조.                                                                                   | '26.07.10. |
+| v0.16 | v0.15의 DDL 미반영분 정정 — `sql/schema.sql`·infra init 스크립트의 `users.kakao_id`를 NOT NULL → NULL로 동기화(v0.11). §3 DBML `users` 블록에 누락돼 있던 `deleted_at` 보완.                                                        | '26.07.28. |
 
 ---
 
@@ -285,6 +286,7 @@ Table users [note: '회원 정보. 카카오 OAuth 기반 가입'] {
   coins             TINYINT      [not null, default: 3, note: '현재 코인 잔액 (0~3)']
   next_coin_at      DATETIME     [null,              note: '다음 코인 충전 예정 시각. NULL이면 만충 상태']
   created_at        DATETIME     [not null,          note: '가입 시각']
+  deleted_at        DATETIME     [null,              note: '탈퇴 처리 시각. NULL이면 활성 회원']
 
   indexes {
     kakao_id [unique, name: 'uq_users_kakao_id']

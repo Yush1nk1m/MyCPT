@@ -101,6 +101,7 @@
 
 | 날짜 | 작업 | 산출물 |
 | --- | --- | --- |
+| 07.28 | 회원 탈퇴 QA 중 발견된 `kakao_id` NOT NULL 제약 정정 — 설계 문서(v0.15)와 DDL 간 불일치 해소 | schema.sql v0.11, infra init 01_schema.sql, database-design.md v0.16 |
 | 07.15 | 통합 QA 설계 + 수동 QA 문서 통합 + 시드 setup/teardown 자동화 (FK RESTRICT로 깨져 있던 초기화 블록 정정) | qa-test-design.md(신설 — scenario-test-design.md 흡수), qa/teardown.sql, qa/flow-4-chemistry.sql, qa.sh, Makefile, dev_scenario_seed.sql, Entry-Point.md v0.3, unit-test-design.md v0.2, ScoringService Javadoc |
 | 07.14 | 프론트 순수 로직 추출 리팩토링(lib 6모듈) + 단위 테스트 체계화(40+케이스) + jsdom 환경 원인규명·Node 20.20.2 고정 | lib/{format,coin,assessment,colleague,chemistry,disc/insights}.ts + 각 __tests__, profile/questions/authStore/toastStore 테스트, 페이지 9종, .nvmrc, unit-test-design.md, Entry-Point.md |
 | 07.14 | 계획 문서 전면 개정 + 프론트 정적/보조 3페이지 구현(`/me/about`·`/me/help`·`/me/leave`) | plan.md, me/about·help·leave/page.tsx, useWithdrawal.ts, lib/withdrawal.ts, scenario-test-design.md |
