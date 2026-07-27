@@ -58,6 +58,8 @@ public class SecurityConfig {
                         "/swagger-ui/**",   // 3-5-1. Swagger UI 정적 리소스
                         "/v3/api-docs/**"   // 3-5-2. OpenAPI 스펙 JSON 엔드포인트
                 ).permitAll()
+                // 개발 환경 테스트용(로그인 API 개방)
+                .requestMatchers("/api/v1/dev/login").permitAll()
                 // 카카오 로그인 버튼 클릭 시 진입점 허용
                 .requestMatchers("/api/v1/auth/kakao").permitAll()
                 // Spring Security OAuth2 내부 진입점 허용
