@@ -158,9 +158,9 @@ function CoinContent({ balance }: { balance: CoinBalanceResponse }) {
         className="px-4 py-3 text-[11px] text-[var(--ink-soft)] leading-relaxed border-b border-dashed border-[var(--accent)]"
         style={{ background: "oklch(0.97 0.03 95)" }}
       >
-        <b className="text-[var(--ink)]">안내</b> · 코인은 매일 자정에 1개씩
-        자동 충전되며, 최대 3개까지 보관됩니다. 케미 보고서 1회 발행에 1 코인이
-        사용돼요.
+        <b className="text-[var(--ink)]">안내</b> · 코인은 24시간마다 1개씩 자동
+        충전되며, 최대 3개까지 보관됩니다.<br></br>케미 보고서 1회 발행에 1
+        코인이 사용돼요.
       </div>
 
       {/* 사용 이력 */}
