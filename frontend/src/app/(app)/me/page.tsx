@@ -1,6 +1,7 @@
 "use client";
 
 import { useMe } from "@/hooks/useMe";
+import { useCoinBalance } from "@/hooks/useCoin";
 import { useAuthStore } from "@/stores/authStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -46,6 +47,8 @@ const MENU_SECTIONS: MenuSection[] = [
 
 export default function MeHubPage() {
   const { data: me, isLoading } = useMe();
+  // 코인은 ["coins","balance"]가 단일 출처 — ["me"].coins는 온디맨드 충전이 반영되지 않는다
+  const { data: coinBalance } = useCoinBalance(!!me);
   const router = useRouter();
   const queryClient = useQueryClient();
   const clearAuth = useAuthStore((s) => s.clear);
@@ -94,7 +97,9 @@ export default function MeHubPage() {
         </button>
         <div className="flex flex-col gap-0.5">
           <span className="font-bold text-base text-ink">{me?.nickname}</span>
-          <span className="text-xs text-ink-soft">코인 {me?.coins ?? 0}개</span>
+          <span className="text-xs text-ink-soft">
+            코인 {coinBalance?.coins ?? me?.coins ?? 0}개
+          </span>
         </div>
       </div>
 

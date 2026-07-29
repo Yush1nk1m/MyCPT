@@ -109,6 +109,10 @@ function MeProfileForm({
         queryClient.setQueryData(["me"], updated);
       }
 
+      // 생년·성별이 또래 평균 산출 근거이므로 통계 캐시를 무효화한다.
+      // 누락 시 저장 직후 1분(전역 staleTime) 동안 /me/insights가 이전 응답을 재사용한다.
+      queryClient.invalidateQueries({ queryKey: ["statistics"] });
+
       router.push("/me");
     } catch (err) {
       setError(

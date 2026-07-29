@@ -244,8 +244,8 @@ export default function ColleagueDetailPage() {
     mutationFn: () => postChemistryReport(Number(id)),
     onSuccess: () => {
       setModalOpen(false);
-      // 코인 잔량 갱신
-      queryClient.invalidateQueries({ queryKey: ["coins", "balance"] });
+      // 코인 잔량 + 사용 이력 갱신 (접두 매칭으로 balance/history 모두 포함)
+      queryClient.invalidateQueries({ queryKey: ["coins"] });
       // 보고서 목록 갱신
       queryClient.invalidateQueries({ queryKey: ["chemistry-reports", id] });
       router.push("/chemistry");

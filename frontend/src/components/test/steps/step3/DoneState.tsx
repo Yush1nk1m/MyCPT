@@ -15,6 +15,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ScoreResult } from "@/stores/testSheetStore";
 import { useMe } from "@/hooks/useMe";
 import { TypePill, BalancedPill } from "@/components/disc/TypePill";
@@ -34,6 +35,7 @@ interface DoneStateProps {
 export function DoneState({ result, onClose }: DoneStateProps) {
   const { data: meData, isLoading: meLoading } = useMe();
   const isAuthenticated = !!meData;
+  const queryClient = useQueryClient();
   const user = meData ?? null;
 
   const profile = getDiscProfile(result.buckets);
@@ -69,11 +71,14 @@ export function DoneState({ result, onClose }: DoneStateProps) {
         }
         setResultId(data.resultId);
         setSaveStatus("saved");
+        // 새 검사 결과가 통계·이력의 근거이므로 두 캐시를 무효화한다
+        queryClient.invalidateQueries({ queryKey: ["statistics"] });
+        queryClient.invalidateQueries({ queryKey: ["results"] });
       })
       .catch(() => {
         setSaveStatus("failed");
       });
-  }, [isAuthenticated, result.scores]);
+  }, [isAuthenticated, result.scores, queryClient]);
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto">

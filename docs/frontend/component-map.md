@@ -3,7 +3,7 @@
 > 프론트엔드 프로젝트각 파일의 단일 책임과 의존 관계를 기록합니다.
 > "이 파일은 무엇을 하는가"에만 답한다.
 
-**last updated**: '26.06.09.
+**last updated**: '26.07.29.
 
 ---
 
@@ -53,6 +53,30 @@ API 호출(`submitScores`)은 `fetch` 모킹으로 격리.
 | `useResults.ts`   | GET /results 무한 스크롤 훅. useInfiniteQuery 기반 커서 페이지네이션.                           | -   |
 
 테스트 전략: `renderHook`으로 상태 변화 검증. 스토어는 실제 인스턴스 사용.
+
+---
+
+## 쿼리 키 · 캐시 무효화 규약
+
+전역 `staleTime`은 1분(`app/providers.tsx`). 따라서 **쓰기(mutation) 후 그 결과에 의존하는 쿼리를 명시적으로 무효화하지 않으면 최대 1분간 이전 응답이 재사용된다.** 화면 이동은 캐시를 비우지 않으며, 새로고침만이 QueryClient를 재생성한다.
+
+| 쿼리 키 | 조회 대상 | 이 값을 바꾸는 쓰기 경로 |
+| --- | --- | --- |
+| `["me"]` | GET /auth/me | 프로필 저장, 탈퇴 |
+| `["statistics", "comparison"]` / `["statistics", "trend", days]` | GET /statistics/* | 프로필 저장(생년·성별), 검사 결과 저장 |
+| `["results", raterType]` | GET /results | 검사 결과 저장 |
+| `["coins", "balance"]` / `["coins", "history"]` | GET /coins, /coins/history | 케미 발행, 온디맨드 충전 |
+| `["colleagues"]`, `["chemistry-report*"]`, `["notifications"]` | 각 목록/상세 | 동료 등록·삭제, 케미 발행, SSE 수신 |
+
+⚠️ **코인 잔량의 단일 출처는 `["coins","balance"]`다.** `GET /auth/me` 응답에도 `coins` 필드가 있지만 **UI는 이 값을 읽지 않는다.** 온디맨드 충전은 `GET /coins`에서만 일어나므로(`CoinService.getBalance`), `["me"].coins`는 충전이 반영되지 않은 낡은 값일 수 있다. 코인을 표시하는 화면은 반드시 `useCoinBalance()`를 쓴다. (07.29 헤더 잔량 버그의 원인 — 버그 이력 참조)
+
+규칙:
+
+1. 쓰기 성공 직후 위 표에서 영향받는 키를 `invalidateQueries`로 무효화한다.
+2. 응답 본문으로 정확한 최신값을 알 수 있으면 `setQueryData`를 함께 써서 왕복을 줄인다(예: 프로필 저장의 `["me"]`).
+3. 접두 매칭을 활용한다 — `["statistics"]` 무효화는 comparison·trend를, `["coins"]` 무효화는 balance·history를 모두 포함한다.
+4. **한 값이 여러 키에 중복 존재하는지 먼저 확인한다** — 소비처가 읽는 키를 빠뜨리면 화면별로 갱신 여부가 갈린다.
+5. **새 쿼리 키나 새 쓰기 경로를 추가하면 이 표를 갱신한다.**
 
 ---
 
@@ -119,3 +143,5 @@ API 호출(`submitScores`)은 `fetch` 모킹으로 격리.
 | 05.30 | answeredCount 테스트 실패                     | useCallback 클로저가 currentIndex 캡처                 | handleAnswer를 스토어로 이동                         |
 | 06.09 | 균형형(2/2/2/2) 사용자가 주도형으로 표시      | getTopType이 페이지별로 중복 정의되어 균형형 처리 누락 | getDiscProfile을 lib/disc/profile.ts로 추출하여 공유 |
 | 06.09 | DoneState에서 로그인 상태에도 GuestCta 렌더링 | useAuthStore 초기값 false로 인한 타이밍 문제           | DoneState에서 useMe() 직접 호출로 교체               |
+| 07.29 | 프로필 저장 후 /me/insights가 "생년·성별 입력 필요" 배너 유지 (새로고침해야 반영) | 저장 시 ["statistics"] 캐시를 무효화하지 않아 staleTime 1분 동안 average=null 응답 재사용 | 프로필·검사 결과 저장 경로에 invalidateQueries 추가, 캐시 무효화 규약 문서화 |
+| 07.29 | 케미 발행 후 헤더 코인 잔량이 그대로 (새로고침해야 반영) | coins가 ["me"]·["coins","balance"] 두 캐시에 중복 존재. 발행은 후자만 무효화하는데 헤더는 전자를 읽음. 게다가 /auth/me는 온디맨드 충전을 하지 않아 충전분도 놓침 | 헤더·/me 화면을 useCoinBalance()로 이전해 coins 출처를 단일화 |

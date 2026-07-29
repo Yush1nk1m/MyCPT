@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useMe } from "@/hooks/useMe";
+import { useCoinBalance } from "@/hooks/useCoin";
 import { NotifDropdown } from "./NotifDropdown";
 
 async function fetchNotifications() {
@@ -26,6 +27,10 @@ export function Header() {
   });
   const notifications = data?.notifications ?? [];
 
+  // 코인은 ["coins","balance"]가 단일 출처 — ["me"].coins는 온디맨드 충전이 반영되지 않는다
+  // 로딩 중에는 me.coins를 폴백으로 써서 알약이 깜빡이지 않게 한다
+  const { data: coinBalance } = useCoinBalance(isAuthenticated);
+
   return (
     <header
       className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 bg-white border-b border-line"
@@ -42,7 +47,7 @@ export function Header() {
             href="/me/coins"
             className="flex items-center gap-1 px-2.5 py-1 rounded-pill border border-line text-[11px] font-semibold text-ink-soft"
           >
-            ⊙ {me.coins}
+            ⊙ {coinBalance?.coins ?? me.coins}
           </Link>
 
           <div className="relative">

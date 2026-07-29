@@ -47,10 +47,20 @@ async function fetchCoinHistory(
 
 // ── 훅 ───────────────────────────────────────────────────
 
-export function useCoinBalance() {
+/**
+ * 코인 잔량 조회 — UI에 표시하는 코인 값의 단일 출처.
+ *
+ * GET /auth/me 응답에도 coins 필드가 있지만 화면에서 사용하지 않는다.
+ * 온디맨드 충전은 GET /coins에서만 일어나므로(CoinService.getBalance),
+ * ["me"].coins는 충전이 반영되지 않은 낡은 값일 수 있다.
+ *
+ * @param enabled 비로그인 상태에서 401을 유발하지 않도록 호출 여부를 제어
+ */
+export function useCoinBalance(enabled: boolean = true) {
   return useQuery({
     queryKey: ["coins", "balance"],
     queryFn: fetchCoinBalance,
+    enabled,
   });
 }
 

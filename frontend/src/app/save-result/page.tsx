@@ -13,9 +13,11 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function SaveResultPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     async function saveAndRedirect() {
@@ -47,6 +49,10 @@ export default function SaveResultPage() {
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
+        // 새 검사 결과가 통계·이력의 근거이므로 두 캐시를 무효화한다
+        queryClient.invalidateQueries({ queryKey: ["statistics"] });
+        queryClient.invalidateQueries({ queryKey: ["results"] });
+
         // 저장 성공 - sessionStorage 정리
         try {
           sessionStorage.removeItem("disc_result");
@@ -61,7 +67,7 @@ export default function SaveResultPage() {
     }
 
     saveAndRedirect();
-  }, [router]);
+  }, [router, queryClient]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-paper">
